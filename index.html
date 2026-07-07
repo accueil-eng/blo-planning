@@ -589,7 +589,7 @@ setInterval(function(){
   });
 }, 30000);
 
-var NETLIFY_DATA_URL = "https://inspiring-cactus-effb63.netlify.app/data.json";
+var NETLIFY_DATA_URL = "https://blo-planning.accueil-450.workers.dev/data.json";
 
 function loadFromCloud(cb){
   function applyRemote(remote){
@@ -1874,7 +1874,7 @@ function showQRCode(salId){
   var sal=D.salaries.find(function(s){return s.id===salId;});
   if(!sal)return;
   // URL publique Netlify — garantit que le QR code fonctionne sur mobile
-  var netlifyUrl="https://inspiring-cactus-effb63.netlify.app";
+  var netlifyUrl="https://blo-planning.accueil-450.workers.dev";
   var baseUrl=(window.location.protocol==="file:")?netlifyUrl:(window.location.origin+window.location.pathname);
   var link=baseUrl+"?sal="+salId;
   var existing=document.getElementById("qr-modal");if(existing)existing.remove();
