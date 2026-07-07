@@ -558,7 +558,7 @@ var DN=["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 var GH_TOKEN = localStorage.getItem("gh_token")||"";
 // Token lecture seule intégré — permet aux salariés de lire les données en temps réel
 // sans passer par Netlify. Ne donne aucun accès en écriture.
-var GH_TOKEN_READONLY = "collez votre token ici";
+var GH_TOKEN_READONLY = "votre_token_ici";
 var _savedAt = "";
 var GH_REPO = "accueil-eng/blo-planning";
 var GH_FILE = "data.json";
@@ -5056,11 +5056,16 @@ function renderPtValidationsList(){
 
 function ptManualRefresh(){
   var btn=document.querySelector("#pt-refresh-bar button");
-  if(btn){btn.textContent="⏳ Chargement...";btn.disabled=true;}
+  if(btn){btn.innerHTML="⏳ Chargement...";btn.disabled=true;}
   loadFromCloud(function(){
-    if(btn){btn.innerHTML="<span>🔄</span><span>Actualiser les données</span>";btn.disabled=false;}
+    var nbChantiers=D.chantiers?D.chantiers.length:0;
+    var nbSalaries=D.salaries?D.salaries.length:0;
+    if(btn){
+      btn.innerHTML="✅ "+nbChantiers+" chantier(s) / "+nbSalaries+" salarié(s) chargé(s)";
+      btn.disabled=false;
+      setTimeout(function(){btn.innerHTML="<span>🔄</span><span> Actualiser les données</span>";},4000);
+    }
     RPOINTAGE();
-    showToast("✅ Données actualisées !");
   });
 }
 
