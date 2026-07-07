@@ -579,15 +579,17 @@ if(!D.absDemandes)D.absDemandes=[];
 
 // Auto-reload every 60s
 setInterval(function(){
+  // Ne pas recharger si une sauvegarde est en cours ou vient d'avoir lieu (< 10s)
+  if(_pendingSaveCount > 0) return;
+  if(_lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 10000) return;
   loadFromCloud(function(){
     RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
     if(_currentProfile==="bureau"){renderPtValidationsList();autoArchiveOldAbsDemandesSilent();}
     if(_currentProfile==="salarie"){renderMesDemandes();}
-    // Rafraîchir le pointage si l'onglet est actif
     var ptPg=document.getElementById("pg-pointage");
     if(ptPg&&ptPg.classList.contains("on"))RPOINTAGE();
   });
-}, 30000);
+}, 60000);
 
 var NETLIFY_DATA_URL = "https://blo-planning.accueil-450.workers.dev/data.json";
 
