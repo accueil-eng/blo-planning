@@ -5073,10 +5073,11 @@ function ptManualRefresh(){
   loadFromCloud(function(){
     var nbChantiers=D.chantiers?D.chantiers.length:0;
     var nbSalaries=D.salaries?D.salaries.length:0;
+    var chInfo=(D.chantiers||[]).map(function(c){return (c.ref||c.nom||"?")+(c.done?" [DONE]":"");}).join(", ");
     if(btn){
-      btn.innerHTML="✅ "+nbChantiers+" chantier(s) / "+nbSalaries+" salarié(s) chargé(s)";
+      btn.innerHTML="✅ "+nbChantiers+" chantier(s): "+chInfo+" / "+nbSalaries+" salarié(s)";
       btn.disabled=false;
-      setTimeout(function(){btn.innerHTML="<span>🔄</span><span> Actualiser les données</span>";},4000);
+      setTimeout(function(){btn.innerHTML="<span>🔄</span><span> Actualiser les données</span>";},6000);
     }
     RPOINTAGE();
   });
