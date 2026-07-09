@@ -564,7 +564,7 @@ var DN=["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 // ── GITHUB SYNC ──
 var GH_TOKEN = localStorage.getItem("gh_token")||"";
 // Token lecture seule — assemblé en morceaux pour éviter la détection automatique
-var LOGO_BLO = "https://blo-planning.accueil-450.workers.dev/logo.png"; // Logo hébergé sur Cloudflare
+var LOGO_BLO = "https://accueil-eng.github.io/blo-planning/logo.png"; // Logo hébergé sur Cloudflare
 var GH_TOKEN_READONLY = (function(){
   var p1="github_pat_11CFURVSQ0"; var p2="McPckDbF10wk_oTV7atzo6ro";
   var p3="KqRbwwxytCO7srbkS23zJjDZ"; var p4="xD18nimcX32LTONBl8hlCzdE";
@@ -603,7 +603,7 @@ setInterval(function(){
   });
 }, 60000);
 
-var NETLIFY_DATA_URL = "https://blo-planning.accueil-450.workers.dev/data.json";
+var NETLIFY_DATA_URL = "https://accueil-eng.github.io/blo-planning/data.json";
 
 function loadFromCloud(cb){
   function applyRemote(remote){
@@ -1894,7 +1894,7 @@ function showQRCode(salId){
   var sal=D.salaries.find(function(s){return s.id===salId;});
   if(!sal)return;
   // URL publique Netlify — garantit que le QR code fonctionne sur mobile
-  var netlifyUrl="https://blo-planning.accueil-450.workers.dev";
+  var netlifyUrl="https://accueil-eng.github.io/blo-planning";
   var baseUrl=(window.location.protocol==="file:")?netlifyUrl:(window.location.origin+window.location.pathname);
   var link=baseUrl+"?sal="+salId;
   var existing=document.getElementById("qr-modal");if(existing)existing.remove();
