@@ -620,17 +620,11 @@ function loadFromCloud(cb){
   if(!GH_TOKEN){
     var readToken = GH_TOKEN_READONLY;
     if(readToken){
-      // Lecture directe GitHub API avec token read-only → données toujours à jour
-      fetch(GH_API,{headers:{"Authorization":"token "+readToken,"Accept":"application/vnd.github.v3+json","Cache-Control":"no-cache"}})
+      // URL raw GitHub → toujours la dernière version, pas de cache API
+      var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?t="+Date.now();
+      fetch(rawUrl,{headers:{"Authorization":"token "+readToken,"Cache-Control":"no-cache","Pragma":"no-cache"}})
         .then(function(r){return r.ok?r.json():null;})
-        .then(function(data){
-          if(data&&data.content){
-            var b64=data.content.split("\n").join("");
-            var json=decodeURIComponent(escape(atob(b64)));
-            applyRemote(JSON.parse(json));
-          }
-          if(cb)cb();
-        })
+        .then(function(remote){applyRemote(remote);if(cb)cb();})
         .catch(function(){
           var local=localStorage.getItem(SK);
           if(local){try{D=JSON.parse(local);}catch(ex){}}
