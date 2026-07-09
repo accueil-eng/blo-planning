@@ -600,9 +600,9 @@ var NETLIFY_DATA_URL = "https://blo-planning.accueil-450.workers.dev/data.json";
 function loadFromCloud(cb){
   function applyRemote(remote){
     if(!remote)return;
-    // Ne pas écraser si les données locales sont plus récentes
-    // (sauvegarde en cours, Netlify/GitHub pas encore à jour)
-    if(_lastLocalSaveAt > 0 && (!remote._savedAt || remote._savedAt < _lastLocalSaveAt)){
+    // Ne pas écraser si les données locales sont plus récentes (Bureau uniquement)
+    // Sur le téléphone salarié _lastLocalSaveAt est toujours 0 donc on applique toujours
+    if(_lastLocalSaveAt > 0 && remote._savedAt && remote._savedAt < _lastLocalSaveAt){
       return;
     }
     D=remote;
@@ -620,12 +620,24 @@ function loadFromCloud(cb){
   if(!GH_TOKEN){
     var readToken = GH_TOKEN_READONLY;
     if(readToken){
-      // URL raw GitHub → toujours la dernière version, pas de cache API
-      var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?t="+Date.now();
-      fetch(rawUrl,{headers:{"Authorization":"token "+readToken,"Cache-Control":"no-cache","Pragma":"no-cache"}})
+      fetch(GH_API,{
+        cache:"no-store",
+        headers:{
+          "Authorization":"token "+readToken,
+          "Accept":"application/vnd.github.v3+json"
+        }
+      })
         .then(function(r){return r.ok?r.json():null;})
-        .then(function(remote){applyRemote(remote);if(cb)cb();})
-        .catch(function(){
+        .then(function(data){
+          if(data&&data.content){
+            var b64=data.content.split("\n").join("");
+            var json=decodeURIComponent(escape(atob(b64)));
+            applyRemote(JSON.parse(json));
+          }
+          if(cb)cb();
+        })
+        .catch(function(e){
+          console.log("Readonly fetch error:",e);
           var local=localStorage.getItem(SK);
           if(local){try{D=JSON.parse(local);}catch(ex){}}
           if(cb)cb();
