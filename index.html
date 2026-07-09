@@ -5334,10 +5334,16 @@ function ptAddChantier(salId,mois,annee){
   if(!sel||!sel.value)return;
   var ch=D.chantiers.find(function(c){return c.id===sel.value;});
   if(!ch)return;
-  // Add empty entry for first week to make it appear
+  // Ajouter une entrée pour chaque jour de la semaine en cours
   var weeks=getWeeksOfMonth(mois,annee);
-  if(weeks.length){ptSet(mois,annee,"ch_"+ch.id,salId,weeks[0],0,"0");}
+  if(weeks.length){
+    for(var di=0;di<5;di++){
+      ptSet(mois,annee,"ch_"+ch.id,salId,weeks[0],di,"0");
+    }
+  }
   save();
+  var debugVal=D.pointages?Object.keys(D.pointages).filter(function(k){return k.indexOf(ch.id)>=0;}).length:0;
+  showToast("✅ "+ch.nom+" ajouté — "+debugVal+" entrée(s)");
   RPOINTAGE();
 }
 
