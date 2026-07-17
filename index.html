@@ -25,6 +25,8 @@ body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--txt);min-
 .logo-txt small{font-weight:600;font-size:12px;color:var(--muted)}
 .tabs{display:flex;gap:0;overflow-x:auto}
 body.profile-salarie .tabs{display:none}
+body.profile-salarie .ptool{display:none}
+body.profile-salarie #sal-week-nav{display:flex!important}
 .tb{background:none;border:none;border-bottom:2px solid transparent;padding:14px 12px 12px;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tb:hover{color:var(--txt)}.tb.on{color:var(--acc);border-bottom-color:var(--acc)}
 .sind{font-size:11px;color:var(--green);padding:0 6px;opacity:0;transition:opacity .4s;flex-shrink:0}
@@ -224,6 +226,12 @@ body.profile-salarie .tabs{display:none}
 </header>
 
 <div id="absdemandes-banner" onclick="TAB('absences')" style="display:none;cursor:pointer;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:13px;font-weight:600;padding:10px 16px;text-align:center"></div>
+
+<div id="sal-week-nav" style="display:none;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--brd);gap:12px;position:sticky;top:0;z-index:10">
+  <button onclick="prevWeek()" style="flex:0 0 48px;height:48px;border-radius:12px;border:1px solid var(--brd2);background:var(--bg);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">◀</button>
+  <span id="sal-wlbl" style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;text-align:center;flex:1"></span>
+  <button onclick="nextWeek()" style="flex:0 0 48px;height:48px;border-radius:12px;border:1px solid var(--brd2);background:var(--bg);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">▶</button>
+</div>
 
 <div class="pg on" id="pg-planning">
   <div class="ptool">
@@ -915,8 +923,8 @@ function fmd(d){return d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"
 function fmw(w){var d=wd(w);return "Sem. du "+d[0].toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" au "+d[4].toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});}
 
 var CW="";
-function initW(){CW=ds(getMon(new Date()));document.getElementById("wdate").value=CW;document.getElementById("wlbl").textContent=fmw(CW);}
-function sw(w){CW=w;document.getElementById("wdate").value=CW;document.getElementById("wlbl").textContent=fmw(CW);RP();}
+function initW(){CW=ds(getMon(new Date()));document.getElementById("wdate").value=CW;document.getElementById("wlbl").textContent=fmw(CW);var sl=document.getElementById("sal-wlbl");if(sl)sl.textContent=fmw(CW);}
+function sw(w){CW=w;document.getElementById("wdate").value=CW;document.getElementById("wlbl").textContent=fmw(CW);var sl=document.getElementById("sal-wlbl");if(sl)sl.textContent=fmw(CW);RP();}
 function onWC(){var v=document.getElementById("wdate").value;if(v)sw(ds(getMon(pd(v))));}
 function prevWeek(){var d=pd(CW);d.setDate(d.getDate()-7);sw(ds(d));}
 function nextWeek(){var d=pd(CW);d.setDate(d.getDate()+7);sw(ds(d));}
@@ -4401,6 +4409,13 @@ function cleanPointageForFullDayAbsences(mois,annee){
 }
 
 function RPOINTAGE(){
+  try { _RPOINTAGE_inner(); } catch(e) {
+    var wrap=document.getElementById("pointage-wrap");
+    if(wrap) wrap.innerHTML="<div style='padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#dc2626;font-size:12px'><b>Erreur pointage:</b> "+e.message+"<br><small>"+e.stack+"</small></div>";
+    console.error("RPOINTAGE error:",e);
+  }
+}
+function _RPOINTAGE_inner(){
   var isSalMode=(_currentProfile==="salarie");
   if(isSalMode&&_salLockedId===null){
     var urlParams0=new URLSearchParams(window.location.search);
