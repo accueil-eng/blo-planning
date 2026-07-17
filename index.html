@@ -404,7 +404,7 @@ body.profile-salarie .tabs{display:none}
   <div class="arow" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <select id="pt-mois" style="height:34px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 10px;font-size:13px;background:var(--bg);color:var(--txt);outline:none" onchange="RPOINTAGE()">
       <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
-      <option value="4">Avril</option><option value="5">Mai</option><option value="6" selected>Juin</option>
+      <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
       <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
       <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
     </select>
@@ -5114,11 +5114,13 @@ function ptManualRefresh(){
   loadFromCloud(function(){
     var nbChantiers=D.chantiers?D.chantiers.length:0;
     var nbSalaries=D.salaries?D.salaries.length:0;
-    var chInfo=(D.chantiers||[]).map(function(c){return (c.ref||c.nom||"?")+(c.done?" [DONE]":"");}).join(", ");
+    var nbCells=D.cells?Object.keys(D.cells).length:0;
+    var salFound=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
+    var debugMsg="✅ "+nbSalaries+" sal / "+nbChantiers+" ch / "+nbCells+" cells"+(salFound?" — "+salFound.prenom:" — ID INTROUVABLE: "+_salLockedId);
     if(btn){
-      btn.innerHTML="✅ "+nbChantiers+" chantier(s): "+chInfo+" / "+nbSalaries+" salarié(s)";
+      btn.innerHTML=debugMsg;
       btn.disabled=false;
-      setTimeout(function(){btn.innerHTML="<span>🔄</span><span> Actualiser les données</span>";},6000);
+      setTimeout(function(){btn.innerHTML="<span>🔄</span><span> Actualiser</span>";},8000);
     }
     RPOINTAGE();
   });
@@ -6121,6 +6123,14 @@ function exportIndemCSV(){
 // Pas de pré-configuration automatique du token GitHub pour BLO : à saisir manuellement
 // via le bouton ☁️ de synchronisation si besoin (stocké uniquement dans le navigateur).
 initW();
+// Initialiser le sélecteur de mois/année au mois courant
+(function(){
+  var now=new Date();
+  var moisEl=document.getElementById("pt-mois");
+  var anneeEl=document.getElementById("pt-annee");
+  if(moisEl)moisEl.value=String(now.getMonth()+1);
+  if(anneeEl)anneeEl.value=String(now.getFullYear());
+})();
 setTimeout(function(){
   var imgEl=document.getElementById("header-logo");
   if(imgEl)imgEl.src=LOGO_BLO;
