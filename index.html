@@ -2364,39 +2364,61 @@ function showProfileModal() {
     _salLockedId=urlParams.get("sal");
     applyProfile("salarie");
 
-    // Afficher un écran de chargement
     var loadScreen=document.createElement("div");
     loadScreen.id="qr-load-screen";
-    loadScreen.style.cssText="position:fixed;inset:0;background:#f3f6f6;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:'DM Sans',sans-serif";
-    loadScreen.innerHTML="<div style='font-size:40px'>⏳</div><div style='font-weight:700;font-size:16px;color:#13201e'>Chargement en cours...</div><div id='qr-load-status' style='font-size:12px;color:#6b7c79'>Connexion aux données</div>";
+    loadScreen.style.cssText="position:fixed;inset:0;background:#f3f6f6;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:'DM Sans',sans-serif;padding:20px;text-align:center";
+    loadScreen.innerHTML="<div style='font-size:36px'>⏳</div><div style='font-weight:700;font-size:16px;color:#13201e'>Chargement...</div><div id='qr-load-status' style='font-size:12px;color:#6b7c79'>Connexion à GitHub...</div>";
     document.body.appendChild(loadScreen);
+
+    function setStatus(msg){var el=document.getElementById("qr-load-status");if(el)el.innerHTML=msg;}
 
     function finishLoad(){
       var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
       var screen=document.getElementById("qr-load-screen");
       if(!sal){
-        // Salarié pas trouvé
-        if(screen){
-          screen.innerHTML="<div style='font-size:40px'>❌</div><div style='font-weight:700;font-size:16px;color:#dc2626;text-align:center;padding:0 20px'>Compte introuvable.<br>Demandez un nouveau QR code.</div><div style='font-size:11px;color:#6b7c79;margin-top:8px'>ID: "+_salLockedId+"</div>";
-        }
+        if(screen){screen.innerHTML="<div style='font-size:36px'>❌</div><div style='font-weight:700;font-size:16px;color:#dc2626'>Compte introuvable.<br>Demandez un nouveau QR code.</div><div style='font-size:10px;color:#6b7c79;margin-top:8px;word-break:break-all'>"+_salLockedId+"</div><div style='font-size:11px;margin-top:6px'>Salariés chargés: "+(D.salaries?D.salaries.length:0)+"</div>";}
         return;
       }
       if(screen)screen.remove();
       TAB("pointage");
     }
 
-    // Tentative 1 : chargement immédiat
-    var statusEl=document.getElementById("qr-load-status");
-    if(statusEl)statusEl.textContent="Récupération des données...";
-    loadFromCloud(function(){
-      var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
-      if(sal){finishLoad();return;}
-      // Tentative 2 après 3 secondes (au cas où Netlify était en cours de déploiement)
-      if(statusEl)statusEl.textContent="Nouvelle tentative...";
-      setTimeout(function(){
-        loadFromCloud(finishLoad);
-      },3000);
-    });
+    var tentative=0;
+    function tryLoad(){
+      tentative++;
+      setStatus("Tentative "+tentative+"/3...<br><small>"+GH_REPO+"</small>");
+      var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?t="+Date.now();
+      fetch(rawUrl,{cache:"no-store"})
+        .then(function(r){
+          setStatus("HTTP "+r.status+(r.ok?" ✅":" ❌")+" — décodage...");
+          return r.ok?r.json():null;
+        })
+        .then(function(remote){
+          if(remote){
+            setStatus("OK — "+((remote.salaries||[]).length)+" sal / "+((remote.chantiers||[]).length)+" ch");
+            applyRemote(remote);
+            setTimeout(finishLoad,400);
+          } else if(tentative<3){
+            setStatus("Données vides, réessai dans 2s...");
+            setTimeout(tryLoad,2000);
+          } else {
+            setStatus("Utilisation données locales");
+            var loc=localStorage.getItem(SK);
+            if(loc){try{applyRemote(JSON.parse(loc));}catch(e){}}
+            setTimeout(finishLoad,400);
+          }
+        })
+        .catch(function(e){
+          setStatus("Erreur réseau: "+(e.message||"?")+"<br>Réessai "+(tentative+1)+"/3...");
+          if(tentative<3){setTimeout(tryLoad,2000);}
+          else{
+            var loc=localStorage.getItem(SK);
+            if(loc){try{applyRemote(JSON.parse(loc));}catch(ex){}}
+            setTimeout(finishLoad,400);
+          }
+        });
+    }
+    tryLoad();
     return;
   }
   var saved = localStorage.getItem("current_profile");
