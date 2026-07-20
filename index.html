@@ -114,8 +114,7 @@ body.profile-salarie #sal-week-nav{display:flex!important}
 .crm{font-size:13px;color:var(--dim);cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;background:none;border:none;font-family:inherit}
 .crm:hover{color:var(--red)}
 /* VEH BUTTON inline at end of chip */
-.chip-veh{display:none!important}
-.chip-veh-disabled-placeholder{display:inline-flex;align-items:center;gap:1px;padding:1px 4px;font-size:10px;font-weight:600;cursor:pointer;background:#e0f2fe;border:none;border-radius:4px;font-family:"DM Sans",sans-serif;color:#0369a1;flex-shrink:0;margin-left:auto;height:auto;transition:background .1s;white-space:nowrap}
+.chip-veh{display:inline-flex;align-items:center;gap:1px;padding:1px 4px;font-size:10px;font-weight:600;cursor:pointer;background:#e0f2fe;border:none;border-radius:4px;font-family:"DM Sans",sans-serif;color:#0369a1;flex-shrink:0;margin-left:auto;height:auto;transition:background .1s;white-space:nowrap}
 .chip-veh:hover{background:rgba(0,0,0,.06)}
 .chip-veh.has-veh{color:var(--txt)}
 .chip-veh .vdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
@@ -3568,11 +3567,54 @@ function RGANTT(){
   var cur2=getMon(startDate);
   while(cur2<=endDate){weeks.push(new Date(cur2));cur2=new Date(cur2.getTime()+7*24*60*60*1000);}
 
-  gWrap.innerHTML="";
-  if(!chantiers.length){
-    gWrap.innerHTML="<div class='empty'><p>Renseignez des dates dans les fiches chantiers.</p></div>";
-    return;
+  // ── SYNTHÈSE À L'INSTANT T ──
+  var synth=document.createElement("div");
+  synth.style.cssText="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px";
+
+  var totalSalaries=D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).length;
+  // Semaine courante
+  var cwMon2=today.getFullYear()+"-"+("0"+(today.getMonth()+1)).slice(-2)+"-"+("0"+today.getDate()).slice(-2);
+  var monCur=getMon(today);
+  var cwMonStr=monCur.getFullYear()+"-"+("0"+(monCur.getMonth()+1)).slice(-2)+"-"+("0"+monCur.getDate()).slice(-2);
+  var salAffCur=new Set();
+  var nRows=typeof getNR==="function"?getNR():6;
+  for(var rr=0;rr<nRows;rr++){
+    for(var dd=0;dd<5;dd++){
+      var cck=cwMonStr+"|"+rr+"|"+dd;
+      (D.cells[cck]||[]).forEach(function(sid){salAffCur.add(sid);});
+    }
   }
+  var nbAffCur=salAffCur.size;
+  var nbDispoCur=totalSalaries-nbAffCur;
+
+  // Besoin chantiers actifs cette semaine
+  var besoinCur=0;
+  var chantiersCur=[];
+  chantiers.forEach(function(ch){
+    var chS3=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
+    var chE3=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
+    var wE2=new Date(monCur.getTime()+7*24*60*60*1000);
+    if(chS3&&chE3&&monCur<chE3&&wE2>chS3){
+      besoinCur+=ch.effectifNecessaire||0;
+      if(ch.effectifNecessaire)chantiersCur.push(ch);
+    }
+  });
+  var ecart=besoinCur-nbAffCur;
+  var ecartColor=ecart>0?"#dc2626":ecart===0?"#16a34a":"#0d9488";
+  var ecartTxt=ecart>0?"⚠️ Manque "+ecart:ecart===0?"✅ Couvert":"➕ Surplus "+Math.abs(ecart);
+
+  function mkCard(val,label,bg,color){
+    var c=document.createElement("div");
+    c.style.cssText="flex:1;min-width:120px;background:"+bg+";border-radius:10px;padding:12px 16px;text-align:center";
+    c.innerHTML="<div style='font-size:28px;font-weight:800;color:"+color+"'>"+val+"</div><div style='font-size:11px;color:#6b7c79;margin-top:2px'>"+label+"</div>";
+    return c;
+  }
+  synth.appendChild(mkCard(totalSalaries,"Salariés total","#f0fdfa","#0d9488"));
+  synth.appendChild(mkCard(nbAffCur,"Affectés cette semaine","#fffbeb","#d97706"));
+  synth.appendChild(mkCard(nbDispoCur,"Disponibles","#f0fdf4","#16a34a"));
+  synth.appendChild(mkCard(besoinCur,"Besoins chantiers","#f5f3ff","#7c3aed"));
+  synth.appendChild(mkCard(ecartTxt,"Écart besoin/affecté","#fafafa",ecartColor));
+  gWrap.appendChild(synth);
 
   var LW=180,DW=160,WW=28;
   var wrap=document.createElement("div");wrap.style.cssText="overflow-x:auto;overflow-y:auto;max-height:75vh";
@@ -3624,14 +3666,32 @@ function RGANTT(){
     var tr=document.createElement("tr");
     var bg=ri%2===0?"#fff":"#f8f7f4";
 
-    // Name cell
+    // Name cell — avec input effectif inline
     var tdN=document.createElement("td");
     tdN.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:"+bg+";z-index:1;min-width:"+LW+"px";
-    var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px";
-    tdN.appendChild(dot);
     var nomTxt=(ch.ref?ch.ref+" - ":"")+ch.nom+(ch.ville?" ("+ch.ville+")":"");
-    if(ch.effectifNecessaire){nomTxt+=" <span style='font-size:10px;color:#0d9488;font-weight:700;background:#f0fdfa;border-radius:4px;padding:1px 5px;margin-left:4px'>👷"+ch.effectifNecessaire+"</span>";}
-    tdN.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+nomTxt;
+    var nomSpan=document.createElement("span");
+    nomSpan.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+nomTxt;
+    tdN.appendChild(nomSpan);
+
+    // Input effectif inline
+    var effWrap=document.createElement("span");
+    effWrap.style.cssText="display:inline-flex;align-items:center;gap:3px;margin-left:6px;vertical-align:middle";
+    effWrap.innerHTML="<span style='font-size:10px;color:#6b7c79'>👷</span>";
+    var effInp=document.createElement("input");
+    effInp.type="number";effInp.min="0";effInp.max="20";
+    effInp.value=ch.effectifNecessaire||"";
+    effInp.placeholder="?";
+    effInp.title="Effectif nécessaire pour ce chantier";
+    effInp.style.cssText="width:36px;height:20px;border:1px solid #5eead4;border-radius:4px;font-size:11px;font-weight:700;text-align:center;padding:0;color:#0d9488;background:#f0fdfa;outline:none";
+    effInp.addEventListener("change",(function(cid){return function(){
+      var v=parseInt(this.value)||null;
+      var c2=D.chantiers.find(function(x){return x.id===cid;});
+      if(c2){c2.effectifNecessaire=v;save();RGANTT();}
+    };})(ch.id));
+    effInp.addEventListener("click",function(e){e.stopPropagation();this.select();});
+    effWrap.appendChild(effInp);
+    tdN.appendChild(effWrap);
     tr.appendChild(tdN);
 
     // Dates cell
