@@ -208,6 +208,7 @@ body.profile-salarie #sal-week-nav{display:flex!important}
     <button class="tb" onclick="TAB('chantiers')">Chantiers</button>
     <button class="tb" onclick="TAB('salaries')">Salariés</button>
     <button class="tb" onclick="TAB('absences')" style="position:relative">Absences<span id="absdemandes-dot" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#dc2626"></span></button>
+    <button class="tb" onclick="TAB('vehicules')" style="position:relative">Véhicules<span id="veh-alert-dot" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#f97316"></span></button>
     <button class="tb" onclick="TAB('formation')">Formation</button>
     <button class="tb" onclick="TAB('gantt')">&#128197; Pr&#233;visionnel</button>
     <button class="tb" onclick="TAB('bilan')">&#128202; Bilan heures chantiers</button>
@@ -1703,6 +1704,10 @@ function editCh(id){
     return sel;
   }
   var fZoneE=mkRow("Zone (indemnités)",mkZoneSelect(ch.zoneEcouflant||""));
+
+  // Effectif nécessaire
+  var fEff=Object.assign(document.createElement("input"),{type:"number",min:"1",max:"20",value:ch.effectifNecessaire||"",placeholder:"ex: 3",style:"flex:1;height:32px;border:1px solid #0d9488;border-radius:6px;padding:0 8px;font-size:12px;outline:none"});
+  mkRow("👷 Effectif nécessaire",fEff);
   var fDeb=mkRow("📅 Date début réelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebut||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fDebPrev=mkRow("📅 Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebutPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fFinPrev=mkRow("📅 Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateFinPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
@@ -1712,7 +1717,7 @@ function editCh(id){
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
     if(!fNom.value.trim()){alert("Nom requis");return;}
-    ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;
+    ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;ch.effectifNecessaire=fEff.value?parseInt(fEff.value):null;
     saveNow();modal.remove();RC();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
@@ -2036,13 +2041,13 @@ function RV(){
   D.vehicules.forEach(function(v){
     [{f:"vidange",m:12,l:"Vidange"},{f:"ct",m:24,l:"CT"},{f:"antipol",m:12,l:"Anti-pol."}].forEach(function(c){
       var n=nD(v[c.f],c.m);if(!n)return;var diff=Math.round((pd(n)-new Date())/86400000);
-      if(diff<=60){var vn=(v.num?"N°"+v.num+" ":"")+(v.immat||v.model||"Veh");alerts.push({vn:vn,l:c.l,diff:diff,cls:diff<0?"late":"soon"});}
+      if(diff<=30){var vn=(v.num?"N°"+v.num+" ":"")+(v.immat||v.model||"Veh");alerts.push({vn:vn,l:c.l,diff:diff,cls:diff<0?"late":"soon"});}
     });
   });
   el.innerHTML="";
   if(alerts.length){
     var alertWrap=document.createElement("div");alertWrap.style.cssText="margin-bottom:14px;display:flex;flex-direction:column;gap:5px";
-    var atitle=document.createElement("div");atitle.style.cssText="font-size:12px;font-weight:600;color:#92400e";atitle.textContent="⚠️ Rappels (60j)";alertWrap.appendChild(atitle);
+    var atitle=document.createElement("div");atitle.style.cssText="font-size:12px;font-weight:600;color:#92400e";atitle.textContent="⚠️ Rappels — échéances dans 30 jours ou dépassées";alertWrap.appendChild(atitle);
     alerts.forEach(function(a){
       var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:8px;background:"+(a.cls==="late"?"var(--red-bg)":"var(--warn-bg)")+";border:1px solid "+(a.cls==="late"?"#fca5a5":"#fde047")+";border-radius:8px;padding:7px 12px;font-size:12px";
       row.innerHTML="<b>"+a.vn+"</b><span style='color:var(--muted)'>—</span>"+a.l+"<span style='margin-left:auto;font-weight:600;color:"+(a.cls==="late"?"var(--red)":"var(--warn)")+"'>"+(a.diff<0?"Dépassé de "+(-a.diff)+" j":"Dans "+a.diff+" j")+"</span>";
@@ -2105,6 +2110,9 @@ function RV(){
     tdDel.appendChild(delBtn);
   });
   wrap.appendChild(table);el.appendChild(wrap);
+  // Dot orange sur le bouton Véhicules si des rappels sont actifs
+  var vehDot=document.getElementById("veh-alert-dot");
+  if(vehDot)vehDot.style.display=alerts.length?"block":"none";
 }
 
 // ── COLOR PICKER ──
@@ -2130,7 +2138,7 @@ function XCSV(){
 
 // ── PROFILS ──
 var PROFILES = {
-  bureau: { name: "Bureau", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","salaries","absences","formation","pointage","indemnites"], readOnly: false },
+  bureau: { name: "Bureau", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites"], readOnly: false },
   analyse: { name: "Analyse", pin: "@@@@", color: "#0891b2", tabs: ["gantt","bilan"], readOnly: false },
   salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnly: true },
   planningpublic: { name: "Planning (lecture seule)", pin: null, color: "#0891b2", tabs: ["planning"], readOnly: true }
@@ -3424,6 +3432,10 @@ function addChantierFromGantt(){
   }
   var fZoneE2=mkRow("Zone (indemnités)",mkZoneSelect2());
 
+  // Effectif nécessaire
+  var fEff2=Object.assign(document.createElement("input"),{type:"number",min:"1",max:"20",placeholder:"ex: 3",style:"flex:1;height:32px;border:1px solid #0d9488;border-radius:6px;padding:0 8px;font-size:12px;outline:none"});
+  mkRow("👷 Effectif nécessaire",fEff2);
+
   // Date previsionnel
   var sep=document.createElement("div");sep.style.cssText="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:8px;margin-top:4px;padding:4px 8px;background:#ede9fe;border-radius:5px";sep.textContent="Période prévisionnelle";box.appendChild(sep);
   var fDP=mkRow("Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
@@ -3452,6 +3464,7 @@ function addChantierFromGantt(){
       dateDebutPrev:fDP.value,
       dateFinPrev:fFP.value,
       zoneEcouflant:fZoneE2.value||null,
+      effectifNecessaire:fEff2?parseInt(fEff2.value)||null:null,
       color:scGantt
     };
     D.chantiers.push(newCh);
@@ -3616,7 +3629,9 @@ function RGANTT(){
     tdN.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:"+bg+";z-index:1;min-width:"+LW+"px";
     var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px";
     tdN.appendChild(dot);
-    tdN.appendChild(document.createTextNode((ch.ref?ch.ref+" - ":"")+ch.nom+(ch.ville?" ("+ch.ville+")":"")));
+    var nomTxt=(ch.ref?ch.ref+" - ":"")+ch.nom+(ch.ville?" ("+ch.ville+")":"");
+    if(ch.effectifNecessaire){nomTxt+=" <span style='font-size:10px;color:#0d9488;font-weight:700;background:#f0fdfa;border-radius:4px;padding:1px 5px;margin-left:4px'>👷"+ch.effectifNecessaire+"</span>";}
+    tdN.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+nomTxt;
     tr.appendChild(tdN);
 
     // Dates cell
@@ -3672,7 +3687,75 @@ function RGANTT(){
     });
     tbody.appendChild(tr);
   });
-  tbl.appendChild(tbody);wrap.appendChild(tbl);gWrap.appendChild(wrap);
+  tbl.appendChild(tbody);
+
+  // ── LIGNE EFFECTIF DISPONIBLE PAR SEMAINE ──
+  var tfootEff=document.createElement("tfoot");
+  var trEff=document.createElement("tr");
+  var tdEffLabel=document.createElement("td");
+  tdEffLabel.colSpan=2;
+  tdEffLabel.style.cssText="border:1px solid #e2e8f0;padding:5px 8px;font-weight:700;font-size:11px;position:sticky;left:0;background:#1e3a5f;color:#fff;z-index:2";
+  tdEffLabel.textContent="👷 Effectif dispo (affecté planning)";
+  trEff.appendChild(tdEffLabel);
+
+  // Ligne besoin total
+  var trBesoin=document.createElement("tr");
+  var tdBesoinLabel=document.createElement("td");
+  tdBesoinLabel.colSpan=2;
+  tdBesoinLabel.style.cssText="border:1px solid #e2e8f0;padding:5px 8px;font-weight:700;font-size:11px;position:sticky;left:0;background:#374151;color:#fff;z-index:2";
+  tdBesoinLabel.textContent="🎯 Besoin total chantiers actifs";
+  trBesoin.appendChild(tdBesoinLabel);
+
+  var totalSals=D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).length;
+
+  weeks.forEach(function(w){
+    var wE=new Date(w.getTime()+7*24*60*60*1000);
+    var cwMon=w.getFullYear()+"-"+("0"+(w.getMonth()+1)).slice(-2)+"-"+("0"+w.getDate()).slice(-2);
+    var isNow2=(w<=today&&today<wE);
+
+    // Compter salariés affectés cette semaine
+    var salAffectes=new Set();
+    var n2=typeof getNR==="function"?getNR():6;
+    for(var r=0;r<n2;r++){
+      for(var di=0;di<5;di++){
+        var ck2=cwMon+"|"+r+"|"+di;
+        (D.cells[ck2]||[]).forEach(function(sId){salAffectes.add(sId);});
+      }
+    }
+    var nbAff=salAffectes.size;
+    var nbDispo=totalSals-nbAff;
+
+    // Besoin total des chantiers actifs cette semaine
+    var besoin=0;
+    chantiers.forEach(function(ch){
+      var chS2=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
+      var chE2=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
+      if(chS2&&chE2&&w<chE2&&wE>chS2&&ch.effectifNecessaire){besoin+=ch.effectifNecessaire;}
+    });
+
+    // Cellule dispo
+    var tdEff=document.createElement("td");
+    var ok=nbDispo>=0;
+    tdEff.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;background:"+(isNow2?"#fffde7":"#f0fdfa")+";color:#0d9488;width:"+WW+"px;min-width:"+WW+"px";
+    tdEff.innerHTML="<div style='font-size:9px;color:#6b7c79'>"+nbAff+"/"+totalSals+"</div>";
+    trEff.appendChild(tdEff);
+
+    // Cellule besoin
+    var tdB=document.createElement("td");
+    var manque=besoin-nbAff;
+    var couleurB=manque>0?"#dc2626":manque===0?"#0d9488":"#6b7c79";
+    tdB.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;background:"+(isNow2?"#fffde7":"#fff")+";color:"+couleurB+";width:"+WW+"px;min-width:"+WW+"px";
+    if(besoin>0){
+      tdB.innerHTML="<div>"+besoin+"</div><div style='font-size:9px'>"+(manque>0?"⚠️-"+manque:manque===0?"✅":"➕"+Math.abs(manque))+"</div>";
+    }
+    trBesoin.appendChild(tdB);
+  });
+
+  tfootEff.appendChild(trEff);
+  tfootEff.appendChild(trBesoin);
+  tbl.appendChild(tfootEff);
+
+  wrap.appendChild(tbl);gWrap.appendChild(wrap);
   if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Pr&#233;visionnel (hachuré)</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> R&#233;el (plein)</span><span style='color:#dc2626'>| Aujourd&#39;hui</span>";
 }
 
