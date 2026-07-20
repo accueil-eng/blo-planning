@@ -3567,54 +3567,7 @@ function RGANTT(){
   var cur2=getMon(startDate);
   while(cur2<=endDate){weeks.push(new Date(cur2));cur2=new Date(cur2.getTime()+7*24*60*60*1000);}
 
-  // ── SYNTHÈSE À L'INSTANT T ──
-  var synth=document.createElement("div");
-  synth.style.cssText="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px";
 
-  var totalSalaries=D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).length;
-  // Semaine courante
-  var cwMon2=today.getFullYear()+"-"+("0"+(today.getMonth()+1)).slice(-2)+"-"+("0"+today.getDate()).slice(-2);
-  var monCur=getMon(today);
-  var cwMonStr=monCur.getFullYear()+"-"+("0"+(monCur.getMonth()+1)).slice(-2)+"-"+("0"+monCur.getDate()).slice(-2);
-  var salAffCur=new Set();
-  var nRows=typeof getNR==="function"?getNR():6;
-  for(var rr=0;rr<nRows;rr++){
-    for(var dd=0;dd<5;dd++){
-      var cck=cwMonStr+"|"+rr+"|"+dd;
-      (D.cells[cck]||[]).forEach(function(sid){salAffCur.add(sid);});
-    }
-  }
-  var nbAffCur=salAffCur.size;
-  var nbDispoCur=totalSalaries-nbAffCur;
-
-  // Besoin chantiers actifs cette semaine
-  var besoinCur=0;
-  var chantiersCur=[];
-  chantiers.forEach(function(ch){
-    var chS3=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
-    var chE3=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
-    var wE2=new Date(monCur.getTime()+7*24*60*60*1000);
-    if(chS3&&chE3&&monCur<chE3&&wE2>chS3){
-      besoinCur+=ch.effectifNecessaire||0;
-      if(ch.effectifNecessaire)chantiersCur.push(ch);
-    }
-  });
-  var ecart=besoinCur-nbAffCur;
-  var ecartColor=ecart>0?"#dc2626":ecart===0?"#16a34a":"#0d9488";
-  var ecartTxt=ecart>0?"⚠️ Manque "+ecart:ecart===0?"✅ Couvert":"➕ Surplus "+Math.abs(ecart);
-
-  function mkCard(val,label,bg,color){
-    var c=document.createElement("div");
-    c.style.cssText="flex:1;min-width:120px;background:"+bg+";border-radius:10px;padding:12px 16px;text-align:center";
-    c.innerHTML="<div style='font-size:28px;font-weight:800;color:"+color+"'>"+val+"</div><div style='font-size:11px;color:#6b7c79;margin-top:2px'>"+label+"</div>";
-    return c;
-  }
-  synth.appendChild(mkCard(totalSalaries,"Salariés total","#f0fdfa","#0d9488"));
-  synth.appendChild(mkCard(nbAffCur,"Affectés cette semaine","#fffbeb","#d97706"));
-  synth.appendChild(mkCard(nbDispoCur,"Disponibles","#f0fdf4","#16a34a"));
-  synth.appendChild(mkCard(besoinCur,"Besoins chantiers","#f5f3ff","#7c3aed"));
-  synth.appendChild(mkCard(ecartTxt,"Écart besoin/affecté","#fafafa",ecartColor));
-  gWrap.appendChild(synth);
 
   var LW=180,DW=160,WW=28;
   var wrap=document.createElement("div");wrap.style.cssText="overflow-x:auto;overflow-y:auto;max-height:75vh";
@@ -3631,7 +3584,8 @@ function RGANTT(){
     return th;
   }
   tr0.appendChild(mkTH("Chantier","#13201e","#fff",LW,true));
-  tr0.appendChild(mkTH("Periode","#13201e","#fff",DW));
+  tr0.appendChild(mkTH("Période","#13201e","#fff",DW));
+  tr0.appendChild(mkTH("👷","#13201e","#fff",36));
 
   // Group weeks by month
   var lastM=-1,lastY=-1,curTH=null;
@@ -3650,6 +3604,7 @@ function RGANTT(){
   var tr1=document.createElement("tr");
   tr1.appendChild(mkTH("","#e2e8f0","",LW,true));
   tr1.appendChild(mkTH("","#e2e8f0","",DW));
+  tr1.appendChild(mkTH("","#e2e8f0","",36));
   weeks.forEach(function(w){
     var wk=getISOWeek(w);
     var isNow=(w<=today&&today<new Date(w.getTime()+7*24*60*60*1000));
@@ -3715,6 +3670,23 @@ function RGANTT(){
     tdD.appendChild(eb3);
     tr.appendChild(tdD);
 
+    // Cellule effectif nécessaire (inline)
+    var tdEff0=document.createElement("td");
+    tdEff0.style.cssText="border:1px solid #e2e8f0;padding:4px;text-align:center;width:36px;min-width:36px";
+    var effInp0=document.createElement("input");
+    effInp0.type="number";effInp0.min="0";effInp0.max="20";
+    effInp0.value=ch.effectifNecessaire||"";effInp0.placeholder="?";
+    effInp0.title="Effectif nécessaire";
+    effInp0.style.cssText="width:32px;height:22px;border:1px solid #5eead4;border-radius:4px;font-size:11px;font-weight:700;text-align:center;padding:0;color:#0d9488;background:#f0fdfa;outline:none";
+    effInp0.addEventListener("change",(function(cid){return function(){
+      var v=parseInt(this.value)||null;
+      var c2=D.chantiers.find(function(x){return x.id===cid;});
+      if(c2){c2.effectifNecessaire=v;save();RGANTT();}
+    };})(ch.id));
+    effInp0.addEventListener("click",function(e){e.stopPropagation();this.select();});
+    tdEff0.appendChild(effInp0);
+    tr.appendChild(tdEff0);
+
     var chS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
     var chE=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
     var chR=ch.dateDebut?new Date(ch.dateDebut):null;
@@ -3753,20 +3725,18 @@ function RGANTT(){
   var tfootEff=document.createElement("tfoot");
   var trEff=document.createElement("tr");
   var tdEffLabel=document.createElement("td");
-  tdEffLabel.colSpan=2;
+  tdEffLabel.colSpan=3;
   tdEffLabel.style.cssText="border:1px solid #e2e8f0;padding:5px 8px;font-weight:700;font-size:11px;position:sticky;left:0;background:#1e3a5f;color:#fff;z-index:2";
-  tdEffLabel.textContent="👷 Effectif dispo (affecté planning)";
+  var totSals=D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).length;
+  tdEffLabel.textContent="👷 Affectés / "+totSals+" salariés";
   trEff.appendChild(tdEffLabel);
 
-  // Ligne besoin total
   var trBesoin=document.createElement("tr");
   var tdBesoinLabel=document.createElement("td");
-  tdBesoinLabel.colSpan=2;
+  tdBesoinLabel.colSpan=3;
   tdBesoinLabel.style.cssText="border:1px solid #e2e8f0;padding:5px 8px;font-weight:700;font-size:11px;position:sticky;left:0;background:#374151;color:#fff;z-index:2";
-  tdBesoinLabel.textContent="🎯 Besoin total chantiers actifs";
+  tdBesoinLabel.textContent="🎯 Besoin / Écart";
   trBesoin.appendChild(tdBesoinLabel);
-
-  var totalSals=D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).length;
 
   weeks.forEach(function(w){
     var wE=new Date(w.getTime()+7*24*60*60*1000);
@@ -3783,7 +3753,7 @@ function RGANTT(){
       }
     }
     var nbAff=salAffectes.size;
-    var nbDispo=totalSals-nbAff;
+    var nbDispo=totSals-nbAff;
 
     // Besoin total des chantiers actifs cette semaine
     var besoin=0;
@@ -3795,18 +3765,18 @@ function RGANTT(){
 
     // Cellule dispo
     var tdEff=document.createElement("td");
-    var ok=nbDispo>=0;
-    tdEff.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;background:"+(isNow2?"#fffde7":"#f0fdfa")+";color:#0d9488;width:"+WW+"px;min-width:"+WW+"px";
-    tdEff.innerHTML="<div style='font-size:9px;color:#6b7c79'>"+nbAff+"/"+totalSals+"</div>";
+    tdEff.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;background:"+(isNow2?"#dbeafe":"#f0fdfa")+";color:#0d9488;width:"+WW+"px;min-width:"+WW+"px";
+    tdEff.innerHTML="<div style='font-size:10px;font-weight:700'>"+nbAff+"</div><div style='font-size:8px;color:#6b7c79'>"+nbDispo+" dispo</div>";
     trEff.appendChild(tdEff);
 
     // Cellule besoin
     var tdB=document.createElement("td");
     var manque=besoin-nbAff;
-    var couleurB=manque>0?"#dc2626":manque===0?"#0d9488":"#6b7c79";
-    tdB.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;background:"+(isNow2?"#fffde7":"#fff")+";color:"+couleurB+";width:"+WW+"px;min-width:"+WW+"px";
+    var couleurB=manque>0?"#dc2626":manque===0&&besoin>0?"#16a34a":"#6b7c79";
+    tdB.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;background:"+(isNow2?"#fef9c3":"#fff")+";color:"+couleurB+";width:"+WW+"px;min-width:"+WW+"px";
     if(besoin>0){
-      tdB.innerHTML="<div>"+besoin+"</div><div style='font-size:9px'>"+(manque>0?"⚠️-"+manque:manque===0?"✅":"➕"+Math.abs(manque))+"</div>";
+      var ecartTxt2=manque>0?"⚠️"+manque:manque===0?"✅":"➕"+Math.abs(manque);
+      tdB.innerHTML="<div>"+besoin+"</div><div style='font-size:9px'>"+ecartTxt2+"</div>";
     }
     trBesoin.appendChild(tdB);
   });
