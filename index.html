@@ -76,7 +76,7 @@ body.profile-salarie #sal-week-nav{display:flex!important}
 .ch-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 /* SPECIAL ROWS */
 .td-label.liv-l{background:#fefce8}.td-label.ua-l{background:#f0f9ff}
-.td-label.abs-l{background:#fff7ed}.td-label.depot-l{background:var(--green-bg)}.td-label.ind-l{background:#fdf2f8}
+.td-label.abs-l{background:#fff7ed}.td-label.depot-l{background:var(--green-bg)}.td-label.ind-l{background:#fdf2f8}.td-label.bday-l{background:#fef9c3}
 .spec-lbl{font-family:"Syne",sans-serif;font-weight:700;font-size:10px;padding:8px;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:4px}
 .spec-lbl.liv{color:#a16207}.spec-lbl.ua{color:#0369a1}.spec-lbl.abs{color:var(--orange)}.spec-lbl.depot{color:var(--green)}.spec-lbl.ind{color:#be185d}
 /* DATA CELL */
@@ -100,6 +100,8 @@ body.profile-salarie #sal-week-nav{display:flex!important}
 .chip-wrap.picked{opacity:.5}
 .chip-wrap.c-bday{background:linear-gradient(135deg,#fef9c3,#fde68a);border-color:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,.4)}
 .chip-wrap.c-apprenti{background:#dcfce7;border-color:#86efac}
+.chip-wrap.c-stagiaire{background:#fef9c3;border-color:#fde047}
+.chip-wrap.c-interimaire{background:#fff7ed;border-color:#fdba74}
 .chip-wrap.c-liv{background:#fff7ed;border-color:#fb923c;border-width:2px}
 .bday-banner{display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(90deg,#f59e0b,#f97316);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-top:2px;letter-spacing:.03em;animation:bdaypulse 1.5s infinite}
 .chip-handle{display:flex;align-items:center;justify-content:center;width:14px;min-width:14px;cursor:ew-resize;color:#94a3b8;font-size:10px;padding:0 1px;border-left:1px solid #99f6e4;margin-left:2px;user-select:none;flex-shrink:0}
@@ -1244,6 +1246,36 @@ function mkUACell(d){
   });
   return cc;
 }
+function mkBdayCell(d){
+  var cc=document.createElement("div");cc.className="cell-c";
+  var dt=wd(CW)[d];
+  var month=dt.getMonth()+1;
+  var day=dt.getDate();
+  var bdays=D.salaries.filter(function(s){
+    if(!s.ddn)return false;
+    var parts=s.ddn.split("-");
+    if(parts.length<3)return false;
+    return parseInt(parts[1])===month&&parseInt(parts[2])===day;
+  });
+  if(!bdays.length){
+    var e=document.createElement("div");e.style.cssText="font-size:10px;color:var(--dim);padding:3px 5px";e.textContent="—";cc.appendChild(e);
+    return cc;
+  }
+  bdays.forEach(function(sal){
+    var age="";
+    var parts=sal.ddn.split("-");
+    if(parts.length===3){
+      var birthYear=parseInt(parts[0]);
+      if(birthYear>1900)age=" ("+((wd(CW)[d].getFullYear())-birthYear)+" ans)";
+    }
+    var chip=document.createElement("div");
+    chip.style.cssText="display:inline-flex;align-items:center;gap:4px;background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;color:#92400e;margin:2px";
+    chip.innerHTML="🎂 "+sal.prenom+(sal.nom?" "+sal.nom[0]+".":"")+age;
+    cc.appendChild(chip);
+  });
+  return cc;
+}
+
 function mkAbsCell(d){
   var cc=document.createElement("div");cc.className="cell-c";
   var abs=allAbsDay(d);
@@ -1281,7 +1313,15 @@ function mkDepotCell(d){
   var asgn=asgVehs(d);
   var indIds={};
   Object.keys(D.vehIndispo).forEach(function(k){if(k.indexOf(CW+"|"+d+"|")===0)indIds[k.split("|")[2]]=1;});
-  var dvs=D.vehicules.filter(function(v){return !asgn[v.id]&&!indIds[v.id];});
+  var dvs=D.vehicules.filter(function(v){
+    if(asgn[v.id]||indIds[v.id])return false;
+    // Exclure les véhicules affectés à un salarié Bureau (toujours présent au bureau)
+    if(v.salAffecte){
+      var sal=D.salaries.find(function(s){return s.id===v.salAffecte;});
+      if(sal&&sal.isBureau)return false;
+    }
+    return true;
+  });
   if(!dvs.length){var e=document.createElement("div");e.style.cssText="font-size:10px;color:var(--dim);padding:3px 5px";e.textContent="—";cc.appendChild(e);return cc;}
   dvs.forEach(function(veh){
     var vcs=vCS(veh);var vcls=vcs?vcs.worst:"none";
@@ -1402,7 +1442,7 @@ function mkChip(eid,ck,di,idx,all){
 
   // Pas de détection automatique de livraison par nom (spécifique à un ancien salarié) pour BLO
   var isLiv=false;
-  wrap.className="chip-wrap"+(iAb?" c-abs":conf.length?" c-conf":isDup?" c-dup":isBday?" c-bday":"")+(sal.type==="apprenti"?" c-apprenti":"")+(isLiv?" c-liv":"");
+  wrap.className="chip-wrap"+(iAb?" c-abs":conf.length?" c-conf":isDup?" c-dup":isBday?" c-bday":"")+(sal.type==="apprenti"?" c-apprenti":sal.type==="stagiaire"?" c-stagiaire":sal.type==="interimaire"?" c-interimaire":"")+(isLiv?" c-liv":"");
 
   // NAME AREA is the drag zone
   wrap.style.cursor="grab";
@@ -1413,7 +1453,31 @@ function mkChip(eid,ck,di,idx,all){
   if(iAb){var ico=document.createElement("span");ico.className="cico";ico.title="Absent ce jour";ico.textContent="⚠️";top.appendChild(ico);}
   else if(conf.length){var ico=document.createElement("span");ico.className="cico";ico.title="Déjà sur: "+conf.join(", ");ico.textContent="🔴";top.appendChild(ico);}
   else if(isDup){var ico=document.createElement("span");ico.className="cico";ico.title="Doublon";ico.textContent="⚠️";top.appendChild(ico);}
-  if(isBday){var bico=document.createElement("span");bico.className="cico";bico.title="Joyeux anniversaire "+sal.prenom+" !";bico.textContent="🎂";top.appendChild(bico);}
+  // Badge anniversaire — chip distinct et visible
+  if(sal.ddn){
+    var bdDt=wd(CW)[di];
+    var bdParts=sal.ddn.split("-");
+    if(bdParts.length===3&&parseInt(bdParts[1])===bdDt.getMonth()+1&&parseInt(bdParts[2])===bdDt.getDate()){
+      var age=parseInt(bdParts[0])>1900?(bdDt.getFullYear()-parseInt(bdParts[0]))+" ans":"";
+      var bdChip=document.createElement("div");
+      bdChip.style.cssText="margin-top:3px;display:flex;align-items:center;gap:4px;background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;color:#92400e";
+      bdChip.innerHTML="🎂 Anniversaire !"+( age?" "+age:"");
+      wrap.parentNode&&wrap.parentNode.appendChild?null:null;
+      // On ajoute le chip anniversaire sous le chip principal dans la cellule
+      wrap.dataset.bday="1";
+      wrap.title=(wrap.title?wrap.title+"\n":"")+"🎂 Anniversaire !"+( age?" ("+age+")":"");
+      wrap.style.border="2px solid #fde047";
+      wrap.style.background="#fef9c3";
+    }
+  }
+  if(sal.type&&sal.type!=="salarie"){
+    var typeBadge=document.createElement("span");
+    typeBadge.style.cssText="font-size:8px;font-weight:800;border-radius:3px;padding:1px 4px;margin-left:3px;flex-shrink:0";
+    if(sal.type==="apprenti"){typeBadge.textContent="APP";typeBadge.style.cssText+="background:#bbf7d0;color:#15803d";}
+    else if(sal.type==="stagiaire"){typeBadge.textContent="STG";typeBadge.style.cssText+="background:#fef08a;color:#92400e";}
+    else if(sal.type==="interimaire"){typeBadge.textContent="INT";typeBadge.style.cssText+="background:#fed7aa;color:#9a3412";}
+    top.appendChild(typeBadge);
+  }
   // Visite médicale programmée ce jour
   if(sal.visitePrev){var vpDate=new Date(sal.visitePrev);var cellD=wd(CW)[di];if(vpDate.getDate()===cellD.getDate()&&vpDate.getMonth()===cellD.getMonth()&&vpDate.getFullYear()===cellD.getFullYear()){var vico=document.createElement("span");vico.className="cico";vico.title="Visite médicale programmée !";vico.textContent="RDV";vico.style.cssText="font-size:8px;font-weight:800;color:#db2777;background:#fce7f3;border:1px solid #db2777;border-radius:3px;padding:1px 3px;margin-left:2px";top.appendChild(vico);wrap.style.border="2px solid #db2777";wrap.style.background="#fce7f3";}}
   if(isLiv){var lico=document.createElement("span");lico.className="cico";lico.title="Aussi en livraison ce jour !";lico.textContent="🚚";top.appendChild(lico);}
