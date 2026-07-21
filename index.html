@@ -3583,6 +3583,8 @@ function RGANTT(){
   var gWrap=document.getElementById("gantt-wrap");
   var legend=document.getElementById("gantt-legend");
   if(!gWrap)return;
+  gWrap.innerHTML="";
+  if(legend)legend.innerHTML="";
 
   var dsEl=document.getElementById("gantt-date-start");
   var deEl=document.getElementById("gantt-date-end");
