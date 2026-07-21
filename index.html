@@ -2567,6 +2567,14 @@ function showProfileModal() {
   var saved = localStorage.getItem("current_profile");
   if(saved && PROFILES[saved]){
     applyProfile(saved);
+    // Recharger depuis GitHub au démarrage pour avoir les données fraîches
+    loadFromCloud(function(){
+      RP();RC();RS();RA();RV();
+      renderPtValidationsList();
+      updateAbsDemandesDot();
+      updatePointageDot();
+      updateMsgDot();
+    });
   } else {
     setTimeout(showProfileModal, 300);
   }
