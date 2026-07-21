@@ -3955,25 +3955,30 @@ function RGANTT(){
     tdN.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+nomTxt;
     tr.appendChild(tdN);
 
-    // Dates cell
+    // Dates cell — inputs inline
     var tdD=document.createElement("td");
-    tdD.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;min-width:"+DW+"px";
-    var fmt2=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"2-digit"}):"?";};
-    var hh="";
-    if(ch.dateDebutPrev&&ch.dateFinPrev){
-      hh+="<div style='color:#7c3aed'>&#9633; "+fmt2(ch.dateDebutPrev)+" &#8594; "+fmt2(ch.dateFinPrev)+"</div>";
-    } else if(ch.dateDebutPrev){
-      hh+="<div style='color:#7c3aed'>&#9633; D&#233;but pr&#233;v: "+fmt2(ch.dateDebutPrev)+"</div>";
-    }
+    tdD.style.cssText="border:1px solid #e2e8f0;padding:4px 6px;font-size:10px;min-width:"+DW+"px;vertical-align:top";
+    var lblDeb=document.createElement("div");lblDeb.style.cssText="font-size:9px;color:#7c3aed;font-weight:600;margin-bottom:2px";lblDeb.textContent="Début prév.";
+    var inpDeb=document.createElement("input");inpDeb.type="date";inpDeb.value=ch.dateDebutPrev||"";
+    inpDeb.style.cssText="width:100%;height:24px;border:1px solid #c4b5fd;border-radius:4px;padding:0 4px;font-size:10px;outline:none;box-sizing:border-box";
+    inpDeb.addEventListener("change",(function(cid){return function(){
+      var c2=D.chantiers.find(function(x){return x.id===cid;});
+      if(c2){c2.dateDebutPrev=this.value||null;save();RC();RGANTT();showToast("✅ Date début mise à jour !");}
+    };})(ch.id));
+    var lblFin=document.createElement("div");lblFin.style.cssText="font-size:9px;color:#7c3aed;font-weight:600;margin-bottom:2px;margin-top:4px";lblFin.textContent="Fin prév.";
+    var inpFin=document.createElement("input");inpFin.type="date";inpFin.value=ch.dateFinPrev||"";
+    inpFin.style.cssText="width:100%;height:24px;border:1px solid #c4b5fd;border-radius:4px;padding:0 4px;font-size:10px;outline:none;box-sizing:border-box";
+    inpFin.addEventListener("change",(function(cid){return function(){
+      var c2=D.chantiers.find(function(x){return x.id===cid;});
+      if(c2){c2.dateFinPrev=this.value||null;save();RC();RGANTT();showToast("✅ Date fin mise à jour !");}
+    };})(ch.id));
+    tdD.appendChild(lblDeb);tdD.appendChild(inpDeb);
+    tdD.appendChild(lblFin);tdD.appendChild(inpFin);
     if(ch.dateDebut){
-      hh+="<div style='color:"+ch.color+";font-weight:600'>&#9632; Début réel: "+fmt2(ch.dateDebut)+" <small>(issu des pointages)</small></div>";
+      var lblReal=document.createElement("div");lblReal.style.cssText="font-size:9px;color:"+ch.color+";font-weight:600;margin-top:4px";
+      lblReal.textContent="▪ Réel: "+new Date(ch.dateDebut).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
+      tdD.appendChild(lblReal);
     }
-    if(!hh)hh="<span style='color:#94a3b8;font-style:italic;font-size:10px'>Cliquer &#9998; pour saisir</span>";
-    tdD.innerHTML=hh;
-    // Edit button
-    var eb3=document.createElement("button");eb3.className="btn";eb3.style.cssText="font-size:10px;padding:1px 5px;margin-top:3px;display:block";eb3.textContent="✏️";
-    eb3.onclick=(function(cid){return function(){editGanttDates(cid);};})(ch.id);
-    tdD.appendChild(eb3);
     tr.appendChild(tdD);
 
     // Cellule effectif nécessaire (inline)
@@ -4036,19 +4041,46 @@ function RGANTT(){
   // Chantiers sans dates → lignes grisées dans le même tableau
   var chNoDates=chantiers.filter(function(c){return !c.dateDebutPrev||!c.dateFinPrev;});
   chNoDates.forEach(function(ch){
-    var tr2=document.createElement("tr");tr2.style.opacity="0.5";
+    var tr2=document.createElement("tr");tr2.style.opacity="0.7";
+    // Nom
     var tdN2=document.createElement("td");
     tdN2.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:#f3f6f6;z-index:1;min-width:"+LW+"px;color:#6b7c79";
-    tdN2.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+(ch.ref?ch.ref+" — ":"")+ch.nom+"<button onclick='openChantierEdit(\""+ch.id+"\")' style='margin-left:8px;height:18px;padding:0 6px;background:#0d9488;color:#fff;border:none;border-radius:3px;font-size:9px;cursor:pointer;opacity:1'>+ dates</button>";
+    tdN2.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+(ch.ref?ch.ref+" — ":"")+ch.nom;
     tr2.appendChild(tdN2);
-    // Cellule dates vide
+    // Cellule dates — inputs éditables
     var tdD2=document.createElement("td");
-    tdD2.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;color:#6b7c79;min-width:"+DW+"px";
-    tdD2.textContent="Dates prévisionnelles non définies";
+    tdD2.style.cssText="border:1px solid #e2e8f0;padding:4px 6px;font-size:10px;min-width:"+DW+"px;vertical-align:top";
+    var lD=document.createElement("div");lD.style.cssText="font-size:9px;color:#7c3aed;font-weight:600;margin-bottom:2px";lD.textContent="Début prév.";
+    var iD=document.createElement("input");iD.type="date";iD.value=ch.dateDebutPrev||"";
+    iD.style.cssText="width:100%;height:22px;border:1px solid #c4b5fd;border-radius:4px;padding:0 4px;font-size:10px;outline:none;box-sizing:border-box";
+    iD.addEventListener("change",(function(cid){return function(){
+      var c2=D.chantiers.find(function(x){return x.id===cid;});
+      if(c2){c2.dateDebutPrev=this.value||null;save();RC();RGANTT();showToast("✅ Date début ajoutée !");}
+    };})(ch.id));
+    var lF=document.createElement("div");lF.style.cssText="font-size:9px;color:#7c3aed;font-weight:600;margin-bottom:2px;margin-top:3px";lF.textContent="Fin prév.";
+    var iF=document.createElement("input");iF.type="date";iF.value=ch.dateFinPrev||"";
+    iF.style.cssText="width:100%;height:22px;border:1px solid #c4b5fd;border-radius:4px;padding:0 4px;font-size:10px;outline:none;box-sizing:border-box";
+    iF.addEventListener("change",(function(cid){return function(){
+      var c2=D.chantiers.find(function(x){return x.id===cid;});
+      if(c2){c2.dateFinPrev=this.value||null;save();RC();RGANTT();showToast("✅ Date fin ajoutée !");}
+    };})(ch.id));
+    tdD2.appendChild(lD);tdD2.appendChild(iD);tdD2.appendChild(lF);tdD2.appendChild(iF);
     tr2.appendChild(tdD2);
-    // Cellule effectif
+    // Cellule effectif — input éditable
     var tdE2=document.createElement("td");tdE2.style.cssText="border:1px solid #e2e8f0;padding:4px;text-align:center;width:36px";
-    tdE2.textContent=ch.effectifNecessaire||"—";
+    var effInpND=document.createElement("input");
+    effInpND.type="number";effInpND.min="0";effInpND.max="20";
+    effInpND.value=ch.effectifNecessaire||"";effInpND.placeholder="?";
+    effInpND.style.cssText="width:32px;height:22px;border:1px solid #5eead4;border-radius:4px;font-size:11px;font-weight:700;text-align:center;padding:0;color:#0d9488;background:#f0fdfa;outline:none";
+    effInpND.addEventListener("wheel",function(e){e.stopPropagation();},{passive:false});
+    effInpND.addEventListener("keydown",function(e){if(e.key==="ArrowUp"||e.key==="ArrowDown")e.stopPropagation();if(e.key==="Enter")this.blur();});
+    effInpND.addEventListener("blur",(function(cid,inp){return function(){
+      var v=parseInt(inp.value)||null;
+      var c2=D.chantiers.find(function(x){return x.id===cid;});
+      if(c2&&c2.effectifNecessaire!==v){c2.effectifNecessaire=v;save();showToast("✅ Effectif sauvegardé");}
+    };})(ch.id,effInpND));
+    effInpND.addEventListener("click",function(e){e.stopPropagation();this.select();});
+    tdE2.appendChild(effInpND);
     tr2.appendChild(tdE2);
     // Cellules semaines vides
     weeks.forEach(function(){var td2=document.createElement("td");td2.style.cssText="border:1px solid #e2e8f0;background:#f3f6f6;width:"+WW+"px;min-width:"+WW+"px";tr2.appendChild(td2);});
@@ -4159,7 +4191,7 @@ function updateMsgDot(){
   var myId=msgGetMyId();
   var unread=D.messages.filter(function(m){
     if(m.from===myId)return false;
-    return !m.read&&(m.to===myId||m.to==="all"||(m.to==="bureau"&&["bureau","bureau_alexis","bureau_valerie"].indexOf(_currentProfile)>=0));
+    return !m.read&&(m.to===myId||m.to==="all"||m.to==="everyone"||(m.to==="bureau"&&["bureau","bureau_alexis","bureau_valerie"].indexOf(_currentProfile)>=0));
   }).length;
   dot.style.display=unread>0?"block":"none";
   if(unread>0)dot.title=unread+" message(s) non lu(s)";
@@ -4221,10 +4253,12 @@ function RMESSAGES(){
       toOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
     });
   } else {
-    // Bureau admin
+    // Bureau admin — tous les destinataires possibles
     toOptions="<option value='alexis'>👤 Alexis</option>"+
               "<option value='valerie'>👤 Valérie</option>"+
-              "<option value='all'>📢 Tous les salariés</option>";
+              "<option value='bureau'>👥 Alexis &amp; Valérie</option>"+
+              "<option value='all'>📢 Tous les salariés</option>"+
+              "<option value='everyone'>📢 Tous (Alexis + Valérie + Salariés)</option>";
     (D.salaries||[]).filter(function(s){return s.prenom&&!s.isBureau;}).forEach(function(s){
       toOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
     });
@@ -4241,6 +4275,7 @@ function RMESSAGES(){
     if(m.from===myId)return true;
     if(m.to===myId)return true;
     if(m.to==="all")return true;
+    if(m.to==="everyone")return true;
     if(m.to==="bureau"&&isBureauAny)return true;
     if(m.to==="alexis"&&(prof==="bureau_alexis"||prof==="bureau"))return true;
     if(m.to==="valerie"&&(prof==="bureau_valerie"||prof==="bureau"))return true;
@@ -4258,7 +4293,7 @@ function RMESSAGES(){
       var border=isFromMe?"#5eead4":(isUnread?"#fde047":"#e2e8f0");
       var d=new Date(m.ts);
       var ds2=d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
-      var toName={all:"Tous les salariés",bureau:"Alexis & Valérie",alexis:"Alexis",valerie:"Valérie"};
+      var toName={all:"Tous les salariés",bureau:"Alexis & Valérie",alexis:"Alexis",valerie:"Valérie",everyone:"Tous"};
       var dest=toName[m.to]||(D.salaries||[]).reduce(function(acc,s){return s.id===m.to?(s.prenom+" "+(s.nom||"")).trim():acc;},"?");
       html+="<div style='margin-bottom:10px;display:flex;flex-direction:column;align-items:"+(isFromMe?"flex-end":"flex-start")+"'>";
       html+="<div style='font-size:10px;color:#6b7c79;margin-bottom:3px'>"+(isUnread?"🔵 ":"")+"<b>"+m.fromName+"</b> → "+dest+" · "+ds2+"</div>";
@@ -4945,6 +4980,19 @@ var _salLockedId=null; // The locked salarié ID for "salarie" profile, set once
 // Supprime définitivement heures chantier, panier, et RTT acquis pour les jours où le salarié
 // a une absence pleine journée (maladie, RTT, intempéries). S'exécute une fois par mois affiché.
 var _cleanedAbsenceMonths={};
+var PT_DAYS=["L","M","M","J","V"];
+var PT_ROWS=[
+  {id:"panier",    label:"Panier repas",         type:"check",  unit:""},
+  {id:"trajet",    label:"Trajet (zone)",         type:"zone_dd", unit:""},
+  {id:"transport", label:"Transport (zone)",      type:"zone_dd", unit:""},
+  {id:"cp",        label:"Congés payés (h)",      type:"number", unit:"h"},
+  {id:"css",       label:"Congés sans solde (h)", type:"number", unit:"h"},
+  {id:"hs",        label:"Heures supplémentaires",type:"number", unit:"h"},
+  {id:"formation", label:"École / Formation",     type:"number", unit:"h"},
+  {id:"maladie",   label:"Arrêt maladie (h)",     type:"number", unit:"h"},
+  {id:"intemperies",label:"Intempéries (h)",      type:"number", unit:"h"},
+  {id:"autre",     label:"Autre absence (h)",     type:"number", unit:"h"}
+];
 // Nettoie heures chantier / panier / RTT acquis pour un salarié à une date précise (mois/annee/wk/di).
 // Retourne true si quelque chose a été modifié.
 function cleanPointageForDaySalarie(salId,mois,annee,wk,di){
