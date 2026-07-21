@@ -3711,14 +3711,21 @@ function RGANTT(){
     var effInp0=document.createElement("input");
     effInp0.type="number";effInp0.min="0";effInp0.max="20";
     effInp0.value=ch.effectifNecessaire||"";effInp0.placeholder="?";
-    effInp0.title="Effectif nécessaire";
+    effInp0.title="Effectif nécessaire — appuyez sur Entrée pour valider";
     effInp0.style.cssText="width:32px;height:22px;border:1px solid #5eead4;border-radius:4px;font-size:11px;font-weight:700;text-align:center;padding:0;color:#0d9488;background:#f0fdfa;outline:none";
-    effInp0.addEventListener("change",(function(cid){return function(){
-      var v=parseInt(this.value)||null;
-      var c2=D.chantiers.find(function(x){return x.id===cid;});
-      if(c2){c2.effectifNecessaire=v;save();RGANTT();}
-    };})(ch.id));
+    // Empêcher le scroll de la page quand on utilise les flèches
+    effInp0.addEventListener("wheel",function(e){e.stopPropagation();},{passive:false});
+    effInp0.addEventListener("keydown",function(e){
+      if(e.key==="ArrowUp"||e.key==="ArrowDown"){e.stopPropagation();}
+      if(e.key==="Enter"){this.blur();}
+    });
     effInp0.addEventListener("click",function(e){e.stopPropagation();this.select();});
+    // Sauvegarder au blur (quitter le champ) sans rechargement complet
+    effInp0.addEventListener("blur",(function(cid,inp){return function(){
+      var v=parseInt(inp.value)||null;
+      var c2=D.chantiers.find(function(x){return x.id===cid;});
+      if(c2&&c2.effectifNecessaire!==v){c2.effectifNecessaire=v;save();showToast("✅ Effectif sauvegardé");}
+    };})(ch.id,effInp0));
     tdEff0.appendChild(effInp0);
     tr.appendChild(tdEff0);
 
@@ -3814,7 +3821,7 @@ function RGANTT(){
 
     // Besoin total des chantiers actifs cette semaine
     var besoin=0;
-    chantiers.forEach(function(ch){
+    chantiers.filter(function(c){return c.dateDebutPrev&&c.dateFinPrev;}).forEach(function(ch){
       var chS2=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
       var chE2=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
       if(chS2&&chE2&&w<chE2&&wE>chS2&&ch.effectifNecessaire){besoin+=ch.effectifNecessaire;}
@@ -3844,7 +3851,14 @@ function RGANTT(){
 
   wrap.appendChild(tbl);gWrap.appendChild(wrap);
 
-  if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Pr&#233;visionnel (hachuré)</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> R&#233;el (plein)</span><span style='color:#dc2626'>| Aujourd&#39;hui</span>";
+  if(legend)legend.innerHTML=
+    "<span style='margin-right:14px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Période prévisionnelle</span>"+
+    "<span style='margin-right:14px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> Période réelle démarrée</span>"+
+    "<span style='margin-right:14px;color:#dc2626;font-weight:600'>| Semaine en cours</span>"+
+    "<span style='margin-right:14px'><b>👷 Affectés/Total</b> : salariés du planning cette semaine</span>"+
+    "<span style='margin-right:14px;color:#dc2626'><b>⚠️ -X</b> : manque X personnes</span>"+
+    "<span style='margin-right:14px;color:#16a34a'><b>✅</b> : effectif couvert</span>"+
+    "<span style='color:#0d9488'><b>➕ X</b> : X personnes de disponibles en plus</span>";
 }
 
 
