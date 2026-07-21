@@ -909,6 +909,7 @@ function TAB(n){
   }
   if(n==="planning")RP();if(n==="chantiers")RC();if(n==="salaries")RS();if(n==="absences"){RA();RABSDEMANDES();}if(n==="vehicules")RV();
   if(n==="pointage")RPOINTAGE();
+  if(n==="messages")setTimeout(RMESSAGES,30);
   // Auto-sync when opening RDV tab
   if(n==="rdv"){loadFromCloud(function(){RRDV();});}
   if(n==="gantt"){RGANTT();}
@@ -3979,9 +3980,101 @@ function RGANTT(){
 
 
 function openChantierEdit(id){
-  // Ouvre la modale d'édition du chantier depuis n'importe quel onglet
-  // Utilise editChAnalyse qui a tous les champs (dates prévisionnelles incluses)
   editChAnalyse(id);
+}
+
+// ── MESSAGES ──
+function msgGetMyId(){
+  if(_currentProfile==="salarie")return _salLockedId;
+  return "bureau";
+}
+function msgGetMyName(){
+  if(_currentProfile==="salarie"){
+    var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
+    return sal?(sal.prenom+" "+(sal.nom||"")).trim():"Salarié";
+  }
+  return "Bureau (Alexis/Valérie)";
+}
+function updateMsgDot(){
+  var dot=document.getElementById("msg-dot");
+  if(!dot||!D.messages)return;
+  var myId=msgGetMyId();
+  var unread=D.messages.filter(function(m){
+    if(m.from===myId)return false;
+    if(_currentProfile==="bureau")return !m.read&&(m.to==="bureau"||m.to==="all");
+    return !m.read&&(m.to===myId||m.to==="all");
+  }).length;
+  dot.style.display=unread>0?"block":"none";
+}
+function sendMsg(){
+  var text=document.getElementById("msg-text");
+  if(!text||!text.value.trim())return;
+  var toEl=document.getElementById("msg-to");
+  var to=toEl?toEl.value:"bureau";
+  if(!D.messages)D.messages=[];
+  D.messages.push({id:"msg_"+Date.now(),from:msgGetMyId(),fromName:msgGetMyName(),to:to,text:text.value.trim(),ts:Date.now(),read:false});
+  save();text.value="";RMESSAGES();showToast("✅ Message envoyé !");
+}
+function delMsg(id){
+  if(!confirm("Supprimer ce message ?"))return;
+  D.messages=D.messages.filter(function(m){return m.id!==id;});
+  save();RMESSAGES();
+}
+function RMESSAGES(){
+  var wrap=document.getElementById("msg-wrap");
+  if(!wrap)return;
+  if(!D.messages)D.messages=[];
+  var myId=msgGetMyId();
+  var isBureau=(_currentProfile==="bureau");
+  // Marquer comme lus
+  var changed=false;
+  D.messages.forEach(function(m){
+    if(!m.read&&(m.to===myId||m.to==="all"||(isBureau&&m.to==="bureau"))){m.read=true;changed=true;}
+  });
+  if(changed){save();updateMsgDot();}
+  var html="";
+  // Formulaire envoi
+  if(isBureau){
+    var salOptions="<option value='all'>📢 Tous les salariés</option>";
+    (D.salaries||[]).filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).forEach(function(s){
+      salOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
+    });
+    html+="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
+    html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px'>✉️ Envoyer un message</div>";
+    html+="<div style='margin-bottom:8px'><select id='msg-to' style='width:100%;height:34px;border:1px solid var(--brd2);border-radius:6px;padding:0 10px;font-size:12px;outline:none'>"+salOptions+"</select></div>";
+    html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
+    html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div></div>";
+  } else {
+    html+="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
+    html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px'>✉️ Message à Alexis / Valérie</div>";
+    html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
+    html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div></div>";
+  }
+  // Liste messages
+  var msgs=D.messages.filter(function(m){
+    if(isBureau)return true;
+    return m.to===myId||m.to==="all"||m.from===myId;
+  }).sort(function(a,b){return b.ts-a.ts;});
+  if(!msgs.length){
+    html+="<div style='text-align:center;color:#6b7c79;padding:30px;font-size:13px'>Aucun message</div>";
+  } else {
+    msgs.forEach(function(m){
+      var isFromMe=(m.from===myId);
+      var bg=isFromMe?"#f0fdfa":"#fff";
+      var border=isFromMe?"#5eead4":"#e2e8f0";
+      var d=new Date(m.ts);
+      var ds2=d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
+      var toName=m.to==="all"?"Tous":m.to==="bureau"?"Bureau":
+        (D.salaries||[]).reduce(function(acc,s){return s.id===m.to?(s.prenom+" "+(s.nom||"")).trim():acc;},"?");
+      html+="<div style='margin-bottom:10px;display:flex;flex-direction:column;align-items:"+(isFromMe?"flex-end":"flex-start")+"'>";
+      html+="<div style='font-size:10px;color:#6b7c79;margin-bottom:3px'><b>"+m.fromName+"</b> → "+toName+" · "+ds2+"</div>";
+      html+="<div style='max-width:85%;background:"+bg+";border:1px solid "+border+";border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5'>"+m.text.replace(/\n/g,"<br>")+"</div>";
+      if(isBureau)html+="<button onclick='delMsg(\""+m.id+"\")' style='margin-top:2px;font-size:10px;background:none;border:none;color:#6b7c79;cursor:pointer'>🗑</button>";
+      html+="</div>";
+    });
+  }
+  wrap.innerHTML=html;
+  updateMsgDot();
 }
 
 function editChAnalyse(id){
@@ -6669,150 +6762,5 @@ setTimeout(_fixColWidth,100);
   <h2 class="stitle">💬 Messages</h2>
   <div id="msg-wrap"></div>
 </div>
-
-<script>
-(function(){
-
-function ds2(ts){
-  var d=new Date(ts);
-  return d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
-}
-
-function getMyId(){
-  if(_currentProfile==="salarie")return _salLockedId;
-  return "bureau";
-}
-
-function getMyName(){
-  if(_currentProfile==="salarie"){
-    var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
-    return sal?(sal.prenom+" "+(sal.nom||"")).trim():"Salarié";
-  }
-  return "Bureau (Alexis/Valérie)";
-}
-
-function RMESSAGES(){
-  var wrap=document.getElementById("msg-wrap");
-  if(!wrap)return;
-  if(!D.messages)D.messages=[];
-  var myId=getMyId();
-  var isBureau=(_currentProfile==="bureau");
-
-  // Marquer les messages reçus comme lus
-  var changed=false;
-  D.messages.forEach(function(m){
-    if(!m.read&&(m.to===myId||(isBureau&&m.to==="bureau")||(!isBureau&&m.to===myId))){
-      m.read=true;changed=true;
-    }
-  });
-  if(changed){save();updateMsgDot();}
-
-  var html="";
-
-  // ── FORMULAIRE D'ENVOI ──
-  if(isBureau){
-    // Bureau : choisir le destinataire
-    var salOptions="<option value='all'>📢 Tous les salariés</option>";
-    (D.salaries||[]).filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).forEach(function(s){
-      salOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
-    });
-    html+="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
-    html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px;color:#13201e'>✉️ Envoyer un message</div>";
-    html+="<div style='margin-bottom:8px'><select id='msg-to' style='width:100%;height:34px;border:1px solid var(--brd2);border-radius:6px;padding:0 10px;font-size:12px;outline:none'>"+salOptions+"</select></div>";
-    html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
-    html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div>";
-    html+="</div>";
-  } else {
-    // Salarié : envoie au bureau
-    html+="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
-    html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px;color:#13201e'>✉️ Envoyer un message à Alexis/Valérie</div>";
-    html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
-    html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div>";
-    html+="</div>";
-  }
-
-  // ── LISTE DES MESSAGES ──
-  var msgs=D.messages.filter(function(m){
-    if(isBureau)return true; // Bureau voit tout
-    return m.to===myId||m.to==="all"||(m.from===myId);
-  }).sort(function(a,b){return b.ts-a.ts;});
-
-  if(!msgs.length){
-    html+="<div style='text-align:center;color:#6b7c79;padding:30px;font-size:13px'>Aucun message</div>";
-  } else {
-    msgs.forEach(function(m){
-      var isFromMe=(m.from===myId)||(isBureau&&m.from==="bureau");
-      var align=isFromMe?"right":"left";
-      var bg=isFromMe?"#f0fdfa":"#fff";
-      var border=isFromMe?"#5eead4":"#e2e8f0";
-      var toName=m.to==="all"?"Tous":m.to==="bureau"?"Bureau":
-        (D.salaries||[]).reduce(function(acc,s){return s.id===m.to?(s.prenom+" "+(s.nom||"")).trim():acc;},"?");
-      html+="<div style='margin-bottom:10px;display:flex;flex-direction:column;align-items:"+(isFromMe?"flex-end":"flex-start")+"'>";
-      html+="<div style='font-size:10px;color:#6b7c79;margin-bottom:3px'><b>"+m.fromName+"</b> → "+toName+" · "+ds2(m.ts)+(m.read&&!isFromMe?" · Lu ✓":"")+"</div>";
-      html+="<div style='max-width:85%;background:"+bg+";border:1px solid "+border+";border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5'>";
-      html+=m.text.replace(/\n/g,"<br>");
-      html+="</div>";
-      if(isBureau){
-        html+="<button onclick='delMsg(\""+m.id+"\")' style='margin-top:3px;font-size:10px;background:none;border:none;color:#6b7c79;cursor:pointer'>🗑</button>";
-      }
-      html+="</div>";
-    });
-  }
-
-  wrap.innerHTML=html;
-  updateMsgDot();
-}
-
-function sendMsg(){
-  var text=document.getElementById("msg-text");
-  if(!text||!text.value.trim())return;
-  var toEl=document.getElementById("msg-to");
-  var to=toEl?toEl.value:"bureau";
-  var msg={
-    id:"msg_"+Date.now(),
-    from:getMyId(),
-    fromName:getMyName(),
-    to:to,
-    text:text.value.trim(),
-    ts:Date.now(),
-    read:false
-  };
-  if(!D.messages)D.messages=[];
-  D.messages.push(msg);
-  save();
-  text.value="";
-  RMESSAGES();
-  showToast("✅ Message envoyé !");
-}
-
-function delMsg(id){
-  if(!confirm("Supprimer ce message ?"))return;
-  D.messages=D.messages.filter(function(m){return m.id!==id;});
-  save();RMESSAGES();
-}
-
-function updateMsgDot(){
-  var dot=document.getElementById("msg-dot");
-  if(!dot)return;
-  if(!D.messages)return;
-  var myId=getMyId();
-  var unread=D.messages.filter(function(m){
-    if(m.from===myId)return false;
-    if(_currentProfile==="bureau")return !m.read&&m.to==="bureau";
-    return !m.read&&(m.to===myId||m.to==="all");
-  }).length;
-  dot.style.display=unread>0?"block":"none";
-  if(unread>0)dot.title=unread+" message(s) non lu(s)";
-}
-
-// Hook dans TAB
-var _origTAB2=window.TAB;
-window.TAB=function(n){_origTAB2(n);if(n==="messages")setTimeout(RMESSAGES,30);};
-
-// Mettre à jour le dot à chaque auto-refresh
-var _origAutoRefresh=window._autoRefreshCb;
-
-})();
-</script>
 </body>
 </html>
