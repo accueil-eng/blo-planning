@@ -1238,7 +1238,6 @@ function RP(){
   addSpecRow(tbody,"🏖 Absences","abs-l","abs",mkAbsCell);
   addSpecRow(tbody,"🏢 Bureau","bureau-l","bureau",mkBureauCell);
   addSpecRow(tbody,"🏠 Dépôt","depot-l","depot",mkDepotCell);
-  addSpecRow(tbody,"🔧 Indisponibles","ind-l","ind",mkIndCell);
   tbl.appendChild(tbody);
 }
 function addSpecRow(tbody,label,lcls,scls,cellFn){
@@ -1334,7 +1333,7 @@ function mkIndCell(d){
     if(k.indexOf(CW+"|"+d+"|")!==0)return;
     var vId=k.split("|")[2];var veh=D.vehicules.find(function(v){return v.id===vId;});if(!veh)return;
     var vn=(veh.num?"N°"+veh.num:veh.immat||veh.model||"Veh");
-    var info=D.vehIndispo[k];var ric=info.reason==="garage"?"🔧":info.reason==="panne"?"⚡":"❌";
+    var info=D.vehIndispo[k];var ric=info.reason==="garage"?"🔧":info.reason==="panne"?"⚡":info.reason==="absence"?"🚫":"❌";
     var chip=document.createElement("div");chip.className="ind-chip";
     chip.innerHTML=ric+" <b>"+vn+"</b>"+(info.note?" : "+info.note:"");
     var rm=document.createElement("span");rm.className="crm";rm.textContent="×";rm.style.marginLeft="auto";
@@ -1672,7 +1671,10 @@ function confirmInd(){
 
 // ── CHANTIERS ──
 var scC=COLORS[0];
-function addCh(){var nom=document.getElementById("cn").value.trim();if(!nom)return;D.chantiers.push({id:"ch_"+Date.now(),ref:document.getElementById("cr").value.trim(),nom:nom,adresse:document.getElementById("ca").value.trim(),cp:document.getElementById("ccp").value.trim(),ville:document.getElementById("cville").value.trim(),dateDebut:document.getElementById("cdeb").value,color:scC});saveNow();document.getElementById("cn").value="";document.getElementById("cr").value="";delete document.getElementById("cr").dataset.userEdited;document.getElementById("ca").value="";document.getElementById("ccp").value="";document.getElementById("cville").value="";document.getElementById("cdeb").value="";scC=COLORS[D.chantiers.length%COLORS.length];buildCP("chcp",function(c){scC=c;},scC);RC();}
+function addCh(){
+  // Utiliser la même modale unifiée que le Gantt pour garder la cohérence des codes
+  addChantierFromGantt();
+}
 function delCh(id){if(!confirm("Supprimer ?"))return;D.chantiers=D.chantiers.filter(function(c){return c.id!==id;});Object.keys(D.rowChantiers).forEach(function(k){if(D.rowChantiers[k]===id)delete D.rowChantiers[k];});save();RC();}
 function togDone(id){var ch=D.chantiers.find(function(c){return c.id===id;});if(!ch)return;ch.done=!ch.done;save();RC();}
 function editCh(id){
@@ -2003,8 +2005,8 @@ function confirmGroupAbs(){
   RA();
 }
 
-function addAbs(){var salId=document.getElementById("absal").value,debut=document.getElementById("abd").value,fin=document.getElementById("abf").value,type=document.getElementById("abt").value;var heureDebut=document.getElementById("abhd").value,heureFin=document.getElementById("abhf").value;if(!salId||!debut||!fin){alert("Remplir tous les champs.");return;}if(debut>fin){alert("Date fin après début.");return;}var entry={id:"abs_"+Date.now(),salId:salId,debut:debut,fin:fin,type:type};if(heureDebut)entry.heureDebut=heureDebut;if(heureFin)entry.heureFin=heureFin;D.absences.push(entry);if(typeof _cleanedAbsenceMonths!=="undefined")_cleanedAbsenceMonths={};save();document.getElementById("absal").value="";document.getElementById("abd").value="";document.getElementById("abf").value="";document.getElementById("abhd").value="";document.getElementById("abhf").value="";RA();}
-function delAbs(id){D.absences=D.absences.filter(function(a){return a.id!==id;});save();RA();}
+function addAbs(){var salId=document.getElementById("absal").value,debut=document.getElementById("abd").value,fin=document.getElementById("abf").value,type=document.getElementById("abt").value;var heureDebut=document.getElementById("abhd").value,heureFin=document.getElementById("abhf").value;if(!salId||!debut||!fin){alert("Remplir tous les champs.");return;}if(debut>fin){alert("Date fin après début.");return;}var entry={id:"abs_"+Date.now(),salId:salId,debut:debut,fin:fin,type:type};if(heureDebut)entry.heureDebut=heureDebut;if(heureFin)entry.heureFin=heureFin;D.absences.push(entry);if(typeof _cleanedAbsenceMonths!=="undefined")_cleanedAbsenceMonths={};syncRdv();document.getElementById("absal").value="";document.getElementById("abd").value="";document.getElementById("abf").value="";document.getElementById("abhd").value="";document.getElementById("abhf").value="";RA();}
+function delAbs(id){D.absences=D.absences.filter(function(a){return a.id!==id;});syncRdv();save();RA();}
 function RA(){
   rafSel();var el=document.getElementById("abslist");
   if(!D.absences.length){el.innerHTML="<div class='empty'><div class='empty-icon'>📅</div><p>Aucune absence.</p></div>";return;}
@@ -2030,7 +2032,44 @@ function addVeh(){var immat=document.getElementById("vimm").value.trim(),model=d
 function delVeh(id){if(!confirm("Supprimer ?"))return;D.vehicules=D.vehicules.filter(function(v){return v.id!==id;});Object.keys(D.vehAssign).forEach(function(k){if(D.vehAssign[k]===id)delete D.vehAssign[k];});save();RV();}
 function nD(last,mo){if(!last)return "";var d=new Date(last);d.setMonth(d.getMonth()+mo);return ds(d);}
 function vStat(next){if(!next)return{cls:"none",b:"—",tip:"—"};var diff=Math.round((pd(next)-new Date())/86400000);if(diff<0)return{cls:"late",b:"Dépassé",tip:"Dépassé de "+(-diff)+" j"};if(diff<=60)return{cls:"soon",b:"Dans "+diff+"j",tip:diff+" j"};return{cls:"ok",b:"OK",tip:"OK"};}
-function syncRdv(){Object.keys(D.vehIndispo).forEach(function(k){if(D.vehIndispo[k].fromRdv)delete D.vehIndispo[k];});D.vehicules.forEach(function(v){(v.rdvs||[]).forEach(function(rdv){var d=pd(rdv.date),dw=d.getDay();if(dw===0||dw===6)return;var ms=ds(getMon(d)),di=dw-1;D.vehIndispo[ms+"|"+di+"|"+v.id]={reason:"garage",note:rdv.type==="vidange"?"Vidange":rdv.type==="ct"?"CT":rdv.type==="antipol"?"Anti-pol.":"Rdv garage",fromRdv:true};});});save();}
+function syncRdv(){
+  // 1. Nettoyer les indispos automatiques (RDV + absence salarié)
+  Object.keys(D.vehIndispo).forEach(function(k){
+    if(D.vehIndispo[k].fromRdv||D.vehIndispo[k].fromAbsence)delete D.vehIndispo[k];
+  });
+  // 2. RDV entretien programmé → véhicule au dépôt
+  D.vehicules.forEach(function(v){
+    (v.rdvs||[]).forEach(function(rdv){
+      var d=pd(rdv.date),dw=d.getDay();
+      if(dw===0||dw===6)return;
+      var ms=ds(getMon(d)),di=dw-1;
+      D.vehIndispo[ms+"|"+di+"|"+v.id]={reason:"garage",note:rdv.type==="vidange"?"Vidange":rdv.type==="ct"?"CT":rdv.type==="antipol"?"Anti-pol.":"Rdv garage",fromRdv:true};
+    });
+    // 3. Salarié affecté absent → véhicule au dépôt
+    if(v.salAffecte){
+      var sal=D.salaries.find(function(s){return s.id===v.salAffecte;});
+      if(sal&&D.absences){
+        D.absences.forEach(function(a){
+          if(a.salId!==sal.id)return;
+          var dStart=pd(a.debut),dEnd=pd(a.fin);
+          var d2=new Date(dStart);
+          while(d2<=dEnd){
+            var dw2=d2.getDay();
+            if(dw2>=1&&dw2<=5){
+              var ms2=ds(getMon(d2)),di2=dw2-1;
+              var k2=ms2+"|"+di2+"|"+v.id;
+              if(!D.vehIndispo[k2]){
+                D.vehIndispo[k2]={reason:"absence",note:sal.prenom+" absent(e)",fromAbsence:true};
+              }
+            }
+            d2.setDate(d2.getDate()+1);
+          }
+        });
+      }
+    }
+  });
+  save();
+}
 function addRdv(vId,type,date,note){var v=D.vehicules.find(function(x){return x.id===vId;});if(!v)return;if(!v.rdvs)v.rdvs=[];v.rdvs.push({id:"rdv_"+Date.now(),type:type,date:date,note:note});syncRdv();RV();}
 function delRdv(vId,rId){var v=D.vehicules.find(function(x){return x.id===vId;});if(!v)return;v.rdvs=(v.rdvs||[]).filter(function(r){return r.id!==rId;});syncRdv();RV();}
 function upVeh(id,f,val){var veh=D.vehicules.find(function(x){return x.id===id;});if(!veh)return;veh[f]=val;save();RV();}
@@ -2060,7 +2099,7 @@ function RV(){
   var wrap=document.createElement("div");wrap.style.overflowX="auto";
   var table=document.createElement("table");table.className="veh-table";
   var thead=table.createTHead();var hr=thead.insertRow();
-  ["N°","Immat.","Modèle","Dern. vidange","État","Ctrl tech.","État","Anti-pol.","État","📅 RDV",""].forEach(function(h,i){var th=document.createElement("th");th.textContent=h;if(i===9)th.style.minWidth="160px";hr.appendChild(th);});
+  ["N°","👷 Salarié","Immat.","Modèle","Dern. vidange","État","Ctrl tech.","État","Anti-pol.","État","📅 RDV",""].forEach(function(h,i){var th=document.createElement("th");th.textContent=h;if(i===10)th.style.minWidth="160px";hr.appendChild(th);});
   var tbody=table.createTBody();
   D.vehicules.forEach(function(v){
     if(!v.rdvs)v.rdvs=[];
@@ -2069,6 +2108,21 @@ function RV(){
     var fmt=function(n){return n?pd(n).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"2-digit"}):"—";};
     var row=tbody.insertRow();
     var td0=row.insertCell();td0.innerHTML="<b>"+(v.num||"—")+"</b>";
+    // Salarié affecté
+    var tdSal=row.insertCell();
+    var selSal=document.createElement("select");
+    selSal.style.cssText="height:26px;border:1px solid var(--brd);border-radius:3px;padding:0 5px;font-size:11px;width:140px;background:var(--bg);color:var(--txt);outline:none";
+    var optNone=document.createElement("option");optNone.value="";optNone.textContent="— Non affecté —";selSal.appendChild(optNone);
+    D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).forEach(function(s){
+      var opt=document.createElement("option");opt.value=s.id;opt.textContent=s.prenom+" "+(s.nom||"");
+      if(v.salAffecte===s.id)opt.selected=true;
+      selSal.appendChild(opt);
+    });
+    selSal.addEventListener("change",(function(vid){return function(){
+      var vv=D.vehicules.find(function(x){return x.id===vid;});
+      if(vv){vv.salAffecte=this.value||null;save();showToast("Véhicule affecté !");}
+    };})(v.id));
+    tdSal.appendChild(selSal);
     var td1=row.insertCell();td1.style.cssText="font-weight:600;color:var(--acc)";td1.textContent=v.immat||"—";
     var td2=row.insertCell();td2.textContent=v.model||"—";
     function mkDateCell(field,lastVal,stat,nextVal){
@@ -3468,8 +3522,8 @@ function addChantierFromGantt(){
     };
     D.chantiers.push(newCh);
     save();modal.remove();
-    RC();RGANTT();
-    showToast("✅ Chantier "+newCh.ref+" créé !");
+    RC();if(typeof RGANTT==="function")RGANTT();
+    showToast("✅ Chantier "+newCh.ref+" créé — visible dans Chantiers et Prévisionnel !");
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
@@ -3625,28 +3679,7 @@ function RGANTT(){
     var tdN=document.createElement("td");
     tdN.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:"+bg+";z-index:1;min-width:"+LW+"px";
     var nomTxt=(ch.ref?ch.ref+" - ":"")+ch.nom+(ch.ville?" ("+ch.ville+")":"");
-    var nomSpan=document.createElement("span");
-    nomSpan.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+nomTxt;
-    tdN.appendChild(nomSpan);
-
-    // Input effectif inline
-    var effWrap=document.createElement("span");
-    effWrap.style.cssText="display:inline-flex;align-items:center;gap:3px;margin-left:6px;vertical-align:middle";
-    effWrap.innerHTML="<span style='font-size:10px;color:#6b7c79'>👷</span>";
-    var effInp=document.createElement("input");
-    effInp.type="number";effInp.min="0";effInp.max="20";
-    effInp.value=ch.effectifNecessaire||"";
-    effInp.placeholder="?";
-    effInp.title="Effectif nécessaire pour ce chantier";
-    effInp.style.cssText="width:36px;height:20px;border:1px solid #5eead4;border-radius:4px;font-size:11px;font-weight:700;text-align:center;padding:0;color:#0d9488;background:#f0fdfa;outline:none";
-    effInp.addEventListener("change",(function(cid){return function(){
-      var v=parseInt(this.value)||null;
-      var c2=D.chantiers.find(function(x){return x.id===cid;});
-      if(c2){c2.effectifNecessaire=v;save();RGANTT();}
-    };})(ch.id));
-    effInp.addEventListener("click",function(e){e.stopPropagation();this.select();});
-    effWrap.appendChild(effInp);
-    tdN.appendChild(effWrap);
+    tdN.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+nomTxt;
     tr.appendChild(tdN);
 
     // Dates cell
@@ -3719,6 +3752,28 @@ function RGANTT(){
     });
     tbody.appendChild(tr);
   });
+
+  // Chantiers sans dates → lignes grisées dans le même tableau
+  var chNoDates=chantiers.filter(function(c){return !c.dateDebutPrev||!c.dateFinPrev;});
+  chNoDates.forEach(function(ch){
+    var tr2=document.createElement("tr");tr2.style.opacity="0.5";
+    var tdN2=document.createElement("td");
+    tdN2.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:#f3f6f6;z-index:1;min-width:"+LW+"px;color:#6b7c79";
+    tdN2.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+(ch.ref?ch.ref+" — ":"")+ch.nom+"<button onclick='openChantierEdit(\""+ch.id+"\")' style='margin-left:8px;height:18px;padding:0 6px;background:#0d9488;color:#fff;border:none;border-radius:3px;font-size:9px;cursor:pointer;opacity:1'>+ dates</button>";
+    tr2.appendChild(tdN2);
+    // Cellule dates vide
+    var tdD2=document.createElement("td");
+    tdD2.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;color:#6b7c79;min-width:"+DW+"px";
+    tdD2.textContent="Dates prévisionnelles non définies";
+    tr2.appendChild(tdD2);
+    // Cellule effectif
+    var tdE2=document.createElement("td");tdE2.style.cssText="border:1px solid #e2e8f0;padding:4px;text-align:center;width:36px";
+    tdE2.textContent=ch.effectifNecessaire||"—";
+    tr2.appendChild(tdE2);
+    // Cellules semaines vides
+    weeks.forEach(function(){var td2=document.createElement("td");td2.style.cssText="border:1px solid #e2e8f0;background:#f3f6f6;width:"+WW+"px;min-width:"+WW+"px";tr2.appendChild(td2);});
+    tbody.appendChild(tr2);
+  });
   tbl.appendChild(tbody);
 
   // ── LIGNE EFFECTIF DISPONIBLE PAR SEMAINE ──
@@ -3786,9 +3841,16 @@ function RGANTT(){
   tbl.appendChild(tfootEff);
 
   wrap.appendChild(tbl);gWrap.appendChild(wrap);
+
   if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Pr&#233;visionnel (hachuré)</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> R&#233;el (plein)</span><span style='color:#dc2626'>| Aujourd&#39;hui</span>";
 }
 
+
+function openChantierEdit(id){
+  // Ouvre la modale d'édition du chantier depuis n'importe quel onglet
+  // Utilise editChAnalyse qui a tous les champs (dates prévisionnelles incluses)
+  editChAnalyse(id);
+}
 
 function editChAnalyse(id){
   var ch=D.chantiers.find(function(c){return c.id===id;});if(!ch)return;
