@@ -114,7 +114,7 @@ body.profile-salarie #sal-week-nav{display:flex!important}
 .crm{font-size:13px;color:var(--dim);cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;background:none;border:none;font-family:inherit}
 .crm:hover{color:var(--red)}
 /* VEH BUTTON inline at end of chip */
-.chip-veh{display:inline-flex;align-items:center;gap:1px;padding:1px 4px;font-size:10px;font-weight:600;cursor:pointer;background:#e0f2fe;border:none;border-radius:4px;font-family:"DM Sans",sans-serif;color:#0369a1;flex-shrink:0;margin-left:auto;height:auto;transition:background .1s;white-space:nowrap}
+.chip-veh{display:none!important}
 .chip-veh:hover{background:rgba(0,0,0,.06)}
 .chip-veh.has-veh{color:var(--txt)}
 .chip-veh .vdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
@@ -203,6 +203,7 @@ body.profile-salarie #sal-week-nav{display:flex!important}
     <button class="tb" onclick="TAB('absdemande')">🏖 Demande d'absence</button>
     <button class="tb" onclick="TAB('pointage')">Pointage</button>
     <button class="tb" onclick="TAB('indemnites')">Indemnités</button>
+    <button class="tb" onclick="TAB('messages')" style="position:relative">💬 Messages<span id="msg-dot" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#dc2626"></span></button>
 
     <button class="tb" onclick="TAB('chantiers')">Chantiers</button>
     <button class="tb" onclick="TAB('salaries')">Salariés</button>
@@ -217,6 +218,7 @@ body.profile-salarie #sal-week-nav{display:flex!important}
     <option value="absdemande">🏖 Demande d'absence</option>
     <option value="pointage">🕐 Pointage</option>
     <option value="urgence">🆘 Urgence</option>
+    <option value="messages">💬 Messages</option>
   </select>
   <span class="sind" id="sind">✓ Sauvegardé</span>
   <span id="ver-display" style="font-size:10px;color:var(--muted);padding:0 8px;flex-shrink:0;white-space:nowrap"></span>
@@ -595,7 +597,7 @@ if(!D.grille)D.grille={
   transport:{Z1A:0,Z1B:0,Z2:0,Z3:0,Z4:0,Z5:0,Z6:0,Z7:0,Z8:0,Z9:0,Z10:0}
 };
 ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
-if(!D.absDemandes)D.absDemandes=[];
+if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
 
 // Auto-reload every 60s
 setInterval(function(){
@@ -604,8 +606,9 @@ setInterval(function(){
   if(_lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 10000) return;
   loadFromCloud(function(){
     RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
-    if(_currentProfile==="bureau"){renderPtValidationsList();autoArchiveOldAbsDemandesSilent();}
+    if(_currentProfile==="bureau"){renderPtValidationsList();updatePointageDot();autoArchiveOldAbsDemandesSilent();}
     if(_currentProfile==="salarie"){renderMesDemandes();}
+    if(typeof updateMsgDot==="function")updateMsgDot();
     var ptPg=document.getElementById("pg-pointage");
     if(ptPg&&ptPg.classList.contains("on"))RPOINTAGE();
   });
@@ -626,7 +629,7 @@ function loadFromCloud(cb){
     if(D.readonlyToken) GH_TOKEN_READONLY=D.readonlyToken;
     ["chantiers","salaries","absences","vehicules","formations","rdvs"].forEach(function(k){if(!D[k])D[k]=[];});
     ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
-    if(!D.absDemandes)D.absDemandes=[];
+    if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
     if(!D.pointages)D.pointages={};
     if(!D.grille)D.grille={trajet:{},transport:{}};
     localStorage.setItem(SK,JSON.stringify(D));
@@ -887,7 +890,7 @@ function importJSON(ev){
       D=data;
       ["chantiers","salaries","absences","vehicules"].forEach(function(k){if(!D[k])D[k]=[];});
       ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
-if(!D.absDemandes)D.absDemandes=[];
+if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
       save();RP();RC();RS();RA();RV();RF();RRDV();RANALYSE();RGANTT();RPOINTAGE();RINDEM();
     }catch(err){alert("Fichier invalide: "+err.message);}
   };
@@ -2080,6 +2083,51 @@ function syncRdv(){
 }
 function addRdv(vId,type,date,note){var v=D.vehicules.find(function(x){return x.id===vId;});if(!v)return;if(!v.rdvs)v.rdvs=[];v.rdvs.push({id:"rdv_"+Date.now(),type:type,date:date,note:note});syncRdv();RV();}
 function delRdv(vId,rId){var v=D.vehicules.find(function(x){return x.id===vId;});if(!v)return;v.rdvs=(v.rdvs||[]).filter(function(r){return r.id!==rId;});syncRdv();RV();}
+function editVeh(vid){
+  var v=D.vehicules.find(function(x){return x.id===vid;});
+  if(!v)return;
+  var existing=document.getElementById("veh-edit-modal");if(existing)existing.remove();
+  var modal=document.createElement("div");modal.id="veh-edit-modal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:400px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:'DM Sans',sans-serif";
+  var dstyle="width:100%;height:32px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none;box-sizing:border-box";
+  function mkRow2(label,input){
+    var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:10px";
+    var lbl=document.createElement("label");lbl.style.cssText="font-size:12px;font-weight:500;width:120px;flex-shrink:0;color:#475569";lbl.textContent=label;
+    row.appendChild(lbl);row.appendChild(input);box.appendChild(row);return input;
+  }
+  var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:16px;color:#13201e";title.textContent="✏️ Modifier le véhicule";box.appendChild(title);
+  var fNum=mkRow2("N°",Object.assign(document.createElement("input"),{value:v.num||"",placeholder:"ex: 1",style:dstyle}));
+  var fImmat=mkRow2("Immatriculation",Object.assign(document.createElement("input"),{value:v.immat||"",placeholder:"ex: EG-019-ZY",style:dstyle}));
+  var fModel=mkRow2("Modèle",Object.assign(document.createElement("input"),{value:v.model||"",placeholder:"ex: FIAT DUCATO",style:dstyle}));
+  var fVid=mkRow2("Dernière vidange",Object.assign(document.createElement("input"),{type:"date",value:v.vidange||"",style:dstyle}));
+  var fCt=mkRow2("Contrôle technique",Object.assign(document.createElement("input"),{type:"date",value:v.ct||"",style:dstyle}));
+  var fAp=mkRow2("Anti-pollution",Object.assign(document.createElement("input"),{type:"date",value:v.antipol||"",style:dstyle}));
+  var selSal=document.createElement("select");selSal.style.cssText=dstyle;
+  var optNone=document.createElement("option");optNone.value="";optNone.textContent="— Non affecté —";selSal.appendChild(optNone);
+  D.salaries.filter(function(s){return s.prenom&&s.prenom.trim();}).forEach(function(s){
+    var opt=document.createElement("option");opt.value=s.id;
+    opt.textContent=s.prenom+" "+(s.nom||"")+(s.isBureau?" (Bureau)":"");
+    if(v.salAffecte===s.id)opt.selected=true;
+    selSal.appendChild(opt);
+  });
+  mkRow2("👷 Salarié affecté",selSal);
+  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:14px";
+  var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
+  okBtn.onclick=function(){
+    v.num=fNum.value.trim();v.immat=fImmat.value.trim();v.model=fModel.value.trim();
+    v.vidange=fVid.value||null;v.ct=fCt.value||null;v.antipol=fAp.value||null;
+    v.salAffecte=selSal.value||null;
+    saveNow();modal.remove();syncRdv();RV();showToast("✅ Véhicule mis à jour !");
+  };
+  var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid var(--brd2);border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
+  cancelBtn.onclick=function(){modal.remove();};
+  btnRow.appendChild(okBtn);btnRow.appendChild(cancelBtn);box.appendChild(btnRow);
+  modal.appendChild(box);document.body.appendChild(modal);
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+}
+
 function upVeh(id,f,val){var veh=D.vehicules.find(function(x){return x.id===id;});if(!veh)return;veh[f]=val;save();RV();}
 function RV(){
   var el=document.getElementById("vehlist");
@@ -2121,7 +2169,7 @@ function RV(){
     var selSal=document.createElement("select");
     selSal.style.cssText="height:26px;border:1px solid var(--brd);border-radius:3px;padding:0 5px;font-size:11px;width:140px;background:var(--bg);color:var(--txt);outline:none";
     var optNone=document.createElement("option");optNone.value="";optNone.textContent="— Non affecté —";selSal.appendChild(optNone);
-    D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).forEach(function(s){
+    D.salaries.filter(function(s){return s.prenom&&s.prenom.trim();}).forEach(function(s){
       var opt=document.createElement("option");opt.value=s.id;opt.textContent=s.prenom+" "+(s.nom||"");
       if(v.salAffecte===s.id)opt.selected=true;
       selSal.appendChild(opt);
@@ -2166,7 +2214,11 @@ function RV(){
     var addRdvBtn=document.createElement("button");addRdvBtn.className="rdv-add-btn";addRdvBtn.textContent="+ RDV";
     addRdvBtn.onclick=function(){rdvForm.style.display="flex";};
     rdvWrap.appendChild(rdvForm);rdvWrap.appendChild(addRdvBtn);tdRdv.appendChild(rdvWrap);
-    var tdDel=row.insertCell();var delBtn=document.createElement("button");delBtn.className="bico";delBtn.textContent="×";
+    var tdDel=row.insertCell();
+    var editBtn=document.createElement("button");editBtn.className="bico";editBtn.title="Modifier";editBtn.textContent="✏️";
+    editBtn.onclick=(function(vid){return function(){editVeh(vid);};})(v.id);
+    tdDel.appendChild(editBtn);
+    var delBtn=document.createElement("button");delBtn.className="bico";delBtn.textContent="×";delBtn.style.marginLeft="4px";
     delBtn.onclick=(function(vid){return function(){delVeh(vid);};})(v.id);
     tdDel.appendChild(delBtn);
   });
@@ -2199,9 +2251,9 @@ function XCSV(){
 
 // ── PROFILS ──
 var PROFILES = {
-  bureau: { name: "Bureau", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites"], readOnly: false },
+  bureau: { name: "Bureau", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites","messages"], readOnly: false },
   analyse: { name: "Analyse", pin: "@@@@", color: "#0891b2", tabs: ["gantt","bilan"], readOnly: false },
-  salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnly: true },
+  salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence","messages"], readOnly: true },
   planningpublic: { name: "Planning (lecture seule)", pin: null, color: "#0891b2", tabs: ["planning"], readOnly: true }
 };
 var _currentProfile = null;
@@ -2433,7 +2485,20 @@ function showProfileModal() {
   // sans aucun autre onglet, quel que soit le profil précédemment utilisé sur cet appareil.
   if(urlParams.get("view")==="planning"){
     applyProfile("planningpublic");
-    setTimeout(function(){TAB("planning");},150);
+    // Charger la semaine spécifiée si présente dans l'URL
+    var weekParam=urlParams.get("week");
+    if(weekParam){
+      CW=weekParam;
+      var wdEl=document.getElementById("wdate");
+      if(wdEl)wdEl.value=CW;
+      var wlblEl=document.getElementById("wlbl");
+      if(wlblEl)wlblEl.textContent=fmw(CW);
+      var slEl=document.getElementById("sal-wlbl");
+      if(slEl)slEl.textContent=fmw(CW);
+    }
+    loadFromCloud(function(){
+      setTimeout(function(){TAB("planning");},150);
+    });
     return;
   }
   // QR code direct link: ?sal=ID forces Salarié profile + Mon pointage
@@ -2641,10 +2706,79 @@ function showODSetupModal(){
 
 // ── WHATSAPP ──
 function showWhatsAppModal(){
-  var existing = document.getElementById("wa-modal");
-  if(existing) existing.remove();
-  // Capture current week at this exact moment
-  var currentCW = CW;
+  var existing=document.getElementById("wa-modal");
+  if(existing)existing.remove();
+  var modal=document.createElement("div");
+  modal.id="wa-modal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
+
+  var baseUrl="https://accueil-eng.github.io/blo-planning/";
+
+  // Générer les 6 prochaines semaines pour le choix
+  function getMon(d){var dt=new Date(d);var day=dt.getDay()||7;dt.setDate(dt.getDate()-(day-1));dt.setHours(0,0,0,0);return dt;}
+  function fmtSem(cw){var d=pd(cw);var d5=new Date(d.getTime()+4*86400000);var fmt=function(x){return x.toLocaleDateString("fr-FR",{day:"numeric",month:"short"});};return "Sem. du "+fmt(d)+" au "+fmt(d5);}
+  var semaines=[];
+  var cur=getMon(new Date());
+  for(var i=0;i<8;i++){
+    var cw=cur.getFullYear()+"-"+("0"+(cur.getMonth()+1)).slice(-2)+"-"+("0"+cur.getDate()).slice(-2);
+    semaines.push({cw:cw,label:fmtSem(cw)});
+    cur=new Date(cur.getTime()+7*86400000);
+  }
+
+  var selOpts=semaines.map(function(s,i){return "<option value='"+s.cw+"'"+(i===0?" selected":"")+">"+s.label+"</option>";}).join("");
+
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:480px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:'DM Sans',sans-serif";
+  box.innerHTML=
+    "<div style='font-family:Syne,sans-serif;font-weight:800;font-size:17px;margin-bottom:14px'>📱 Envoyer le planning</div>"+
+    "<div style='font-size:12px;font-weight:600;color:#475569;margin-bottom:6px'>Choisir la semaine :</div>"+
+    "<select id='wa-sem-sel' style='width:100%;height:38px;border:1px solid var(--brd2);border-radius:8px;padding:0 12px;font-size:13px;margin-bottom:14px;outline:none'>"+selOpts+"</select>"+
+    "<div id='wa-link-preview' style='background:#f0fdfa;border:1px solid #5eead4;border-radius:8px;padding:10px 14px;font-size:12px;word-break:break-all;margin-bottom:12px;color:#0d9488'></div>"+
+    "<div id='wa-msg-preview' style='background:#f8f7f4;border:1px solid #dde5e4;border-radius:8px;padding:12px 14px;font-size:12px;white-space:pre-wrap;margin-bottom:14px;font-family:monospace;color:#475569'></div>"+
+    "<button id='wa-copy-btn' style='width:100%;height:42px;background:#25d366;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px'>📋 Copier le message</button>"+
+    "<button id='wa-open-btn' style='width:100%;height:42px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px'>📲 Ouvrir WhatsApp</button>"+
+    "<button onclick='document.getElementById(\"wa-modal\").remove()' style='width:100%;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer'>Fermer</button>";
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+
+  function buildLink(){
+    var sel=document.getElementById("wa-sem-sel");
+    if(!sel)return;
+    var cw=sel.value;
+    var link=baseUrl+"?view=planning&week="+cw;
+    var d=pd(cw);
+    var d5=new Date(d.getTime()+4*86400000);
+    var fmt=function(x){return x.toLocaleDateString("fr-FR",{day:"numeric",month:"long"});};
+    var msg="📅 Planning BLO — semaine du "+fmt(d)+" au "+fmt(d5)+"\n🔗 "+link+"\n\n(Consultation uniquement — lecture seule)";
+    var prev=document.getElementById("wa-link-preview");
+    if(prev)prev.textContent=link;
+    var msgPrev=document.getElementById("wa-msg-preview");
+    if(msgPrev)msgPrev.textContent=msg;
+    var copyBtn=document.getElementById("wa-copy-btn");
+    if(copyBtn)copyBtn.onclick=function(){
+      navigator.clipboard.writeText(msg).then(function(){
+        copyBtn.textContent="✅ Copié ! Collez dans WhatsApp";
+        setTimeout(function(){copyBtn.textContent="📋 Copier le message";},2500);
+      }).catch(function(){
+        var ta=document.createElement("textarea");ta.value=msg;document.body.appendChild(ta);ta.select();
+        try{document.execCommand("copy");copyBtn.textContent="✅ Copié !";}catch(e){}
+        document.body.removeChild(ta);
+      });
+      if(!D.planningNotifSent)D.planningNotifSent={};
+      D.planningNotifSent[cw]=true;save();
+    };
+    var openBtn=document.getElementById("wa-open-btn");
+    if(openBtn)openBtn.onclick=function(){
+      window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank");
+    };
+  }
+
+  var sel=document.getElementById("wa-sem-sel");
+  if(sel)sel.onchange=buildLink;
+  buildLink();
+}
   var dates = wd(currentCW);
   var modal = document.createElement("div");
   modal.id = "wa-modal";
@@ -2658,41 +2792,7 @@ function showWhatsAppModal(){
   var fmt = function(d){ return d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); };
   html += "<div style='font-size:12px;color:#6b7c79;margin-bottom:16px'>Semaine du "+fmt(d1)+" au "+fmt(d5)+"</div>";
 
-  // Simple announcement message (ready vs modified) — no schedule detail, no link
-  if(!D.planningNotifSent)D.planningNotifSent={};
-  var alreadyNotified=!!D.planningNotifSent[currentCW];
-  var groupMsg = alreadyNotified
-    ? "📅 Le planning de la semaine du "+fmt(d1)+" au "+fmt(d5)+" a été modifié.\nMerci de consulter votre espace personnel."
-    : "📅 Le planning de la semaine du "+fmt(d1)+" au "+fmt(d5)+" est prêt.\nMerci de consulter votre espace personnel.";
 
-  html += "<div style='background:#f8f7f4;border:1px solid #dde5e4;border-radius:8px;padding:12px 14px;font-size:12px;color:#475569;white-space:pre-wrap;margin-bottom:14px;font-family:monospace'>"+groupMsg.replace(/</g,"&lt;")+"</div>";
-
-  html += "<button id='copy-group-msg-btn' style='width:100%;height:42px;background:#25d366;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:8px'>📋 Copier ce message</button>";
-  html += "<div style='font-size:11px;color:#9ca3af;margin-bottom:16px;text-align:center'>Collez-le ensuite dans votre groupe WhatsApp</div>";
-
-  var closeBtn = document.createElement("button"); closeBtn.textContent="Fermer"; closeBtn.style.cssText="width:100%;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer"; closeBtn.onclick=function(){document.getElementById("wa-modal").remove();}; html += closeBtn.outerHTML;
-  html += "</div>";
-
-  modal.innerHTML = html;
-  document.body.appendChild(modal);
-  modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
-  var copyBtn=document.getElementById("copy-group-msg-btn");
-  if(copyBtn){
-    copyBtn.onclick=function(){
-      navigator.clipboard.writeText(groupMsg).then(function(){
-        copyBtn.textContent="✅ Copié ! Collez-le dans WhatsApp";
-        setTimeout(function(){copyBtn.textContent="📋 Copier ce message";},2500);
-      }).catch(function(){
-        // Fallback for browsers without clipboard API
-        var ta=document.createElement("textarea");ta.value=groupMsg;document.body.appendChild(ta);ta.select();
-        try{document.execCommand("copy");copyBtn.textContent="✅ Copié !";}catch(e){alert("Copie impossible, copiez manuellement.");}
-        document.body.removeChild(ta);
-      });
-      D.planningNotifSent[currentCW]=true;
-      save();
-    };
-  }
-}
 
 // ── RDV ──
 function addRDV(){
@@ -2773,7 +2873,7 @@ function renderMesDemandes(){
   var sel=document.getElementById("ad-sal");
   var salId=(_currentProfile==="salarie")?_salLockedId:(sel?sel.value:"");
   if(!salId){wrap.innerHTML="";return;}
-  if(!D.absDemandes)D.absDemandes=[];
+  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
   var mine=D.absDemandes.filter(function(d){return d.salId===salId;}).sort(function(a,b){return b.createdAt-a.createdAt;});
   if(!mine.length){wrap.innerHTML="";return;}
   var html="<div style='font-size:13px;font-weight:700;color:#475569;margin-bottom:10px'>📋 Statut de vos demandes :</div>";
@@ -2801,7 +2901,7 @@ function sendAbsDemande(){
   if(!salId){alert("Veuillez sélectionner votre nom");return;}
   if(!debut){alert("Veuillez indiquer une date de début");return;}
   var sal=D.salaries.find(function(s){return s.id===salId;});
-  if(!D.absDemandes)D.absDemandes=[];
+  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
   var demande={id:"adem_"+Date.now(),salId:salId,type:type,debut:debut,fin:fin,motif:motif,status:"pending",createdAt:Date.now()};
   if(heureDebut)demande.heureDebut=heureDebut;
   if(heureFin)demande.heureFin=heureFin;
@@ -2849,7 +2949,7 @@ function showAbsDemandeNotifModal(msg){
 
 function updateAbsDemandesDot(){
   var dot=document.getElementById("absdemandes-dot");
-  if(!D.absDemandes)D.absDemandes=[];
+  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
   var pendingCount=D.absDemandes.filter(function(d){return d.status==="pending";}).length;
   if(dot)dot.style.display=pendingCount?"block":"none";
 
@@ -2869,7 +2969,7 @@ function RABSDEMANDES(){
   var wrap=document.getElementById("absdemandes-wrap");
   if(!wrap)return;
   updateAbsDemandesDot();
-  if(!D.absDemandes)D.absDemandes=[];
+  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
   var pending=D.absDemandes.filter(function(d){return d.status==="pending";}).sort(function(a,b){return a.createdAt-b.createdAt;});
   var done=D.absDemandes.filter(function(d){return d.status!=="pending"&&!d.archived;}).sort(function(a,b){return b.createdAt-a.createdAt;}).slice(0,10);
   var archived=D.absDemandes.filter(function(d){return d.archived;}).sort(function(a,b){return b.createdAt-a.createdAt;});
@@ -3711,7 +3811,7 @@ function RGANTT(){
       hh+="<div style='color:#7c3aed'>&#9633; D&#233;but pr&#233;v: "+fmt2(ch.dateDebutPrev)+"</div>";
     }
     if(ch.dateDebut){
-      hh+="<div style='color:"+ch.color+";font-weight:600'>&#9632; D&#233;but r&#233;el: "+fmt2(ch.dateDebut)+"</div>";
+      hh+="<div style='color:"+ch.color+";font-weight:600'>&#9632; Début réel: "+fmt2(ch.dateDebut)+" <small>(issu des pointages)</small></div>";
     }
     if(!hh)hh="<span style='color:#94a3b8;font-style:italic;font-size:10px'>Cliquer &#9998; pour saisir</span>";
     tdD.innerHTML=hh;
@@ -3965,10 +4065,46 @@ function ptWasStored(mois,annee,section,salId,semaine,col){
   var k=ptKey(mois,annee,section,salId,semaine,col);
   return D.pointages[k]!==undefined;
 }
+function syncChantierRealDates(){
+  if(!D.pointages||!D.chantiers)return;
+  var changed=false;
+  D.chantiers.forEach(function(ch){
+    var earliest=null;
+    var latest=null;
+    // Chercher dans tous les pointages les entrées pour ce chantier
+    Object.keys(D.pointages).forEach(function(k){
+      // Format clé: mois|annee|ch_ID|salId|semaine|col
+      if(k.indexOf("ch_"+ch.id)===(-1))return;
+      var val=D.pointages[k];
+      var h=parseFloat(val)||0;
+      if(h<=0)return;
+      // Extraire mois et annee de la clé
+      var parts=k.split("|");
+      if(parts.length<5)return;
+      var mo=parseInt(parts[0]),an=parseInt(parts[1]),sem=parseInt(parts[4]);
+      if(!mo||!an||!sem)return;
+      // Trouver la date du lundi de cette semaine
+      var jan4=new Date(an,0,4);
+      var dow=jan4.getDay()||7;
+      var wMon=new Date(jan4.getTime()-(dow-1)*86400000+(sem-1)*7*86400000);
+      var ds=wMon.getFullYear()+"-"+("0"+(wMon.getMonth()+1)).slice(-2)+"-"+("0"+wMon.getDate()).slice(-2);
+      if(!earliest||ds<earliest)earliest=ds;
+      if(!latest||ds>latest)latest=ds;
+    });
+    if(earliest&&ch.dateDebut!==earliest){
+      ch.dateDebut=earliest;
+      changed=true;
+    }
+  });
+  if(changed)save();
+}
+
 function ptSet(mois,annee,section,salId,semaine,col,val){
   if(!D.pointages)D.pointages={};
   D.pointages[ptKey(mois,annee,section,salId,semaine,col)]=val;
   save();
+  // Mettre à jour les dates réelles des chantiers si heures saisies
+  if(section&&section.indexOf("ch_")===0)syncChantierRealDates();
 }
 
 function getISOWeek(d){
@@ -4009,7 +4145,20 @@ function getChantierHoursPerDay(salId, date){
     if((D.cells[ck]||[]).indexOf(salId)>=0){
       var chId=D.rowChantiers[cwMon+"|"+r];
       var ch=chId?D.chantiers.find(function(c){return c.id===chId;}):null;
-      result.push({chId:chId||"inconnu",chNom:ch?ch.nom:"+ chantier",hours:date.getDay()===5?6:7.25});
+      result.push({chId:chId||"inconnu",chNom:ch?ch.nom:"+ chantier",hours:0});
+    }
+  }
+  if(result.length>0){
+    // Total journée : 7h15 lun-jeu, 6h vendredi
+    var totalH=date.getDay()===5?6:7.25;
+    if(result.length===1){
+      // Un seul chantier → heures complètes
+      result[0].hours=totalH;
+    } else {
+      // Plusieurs chantiers → répartition équitable arrondie au quart d'heure
+      var base=Math.floor((totalH/result.length)*4)/4; // arrondi inférieur au 0.25
+      var reste=Math.round((totalH-base*result.length)*4)/4;
+      result.forEach(function(r,i){r.hours=base+(i===0?reste:0);});
     }
   }
   return result;
@@ -5103,7 +5252,7 @@ function archiveOldAbsences(){
 // Elles ne sont PAS supprimées, juste marquées "archived" pour disparaître de la liste normale
 // et n'être consultables que dans la section Archives.
 function autoArchiveOldAbsDemandesSilent(){
-  if(!D.absDemandes)D.absDemandes=[];
+  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
   var now=new Date();
   var cutoffMonthStart=new Date(now.getFullYear(),now.getMonth(),1); // 1er du mois en cours
   var cutoffTs=cutoffMonthStart.getTime();
@@ -5118,7 +5267,7 @@ function autoArchiveOldAbsDemandesSilent(){
 }
 
 function archiveOldAbsDemandes(){
-  if(!D.absDemandes)D.absDemandes=[];
+  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
   var cutoff=Date.now()-365*24*60*60*1000;
   var before=D.absDemandes.length;
   // Only archive demandes already treated (accepted/refused), keep pending ones regardless of age
@@ -5276,8 +5425,21 @@ function validateMyWeek(salId,semaine,annee){
   };
   save();
   showToast("✅ Semaine validée et envoyée au Bureau !");
+  if(typeof updatePointageDot==="function")updatePointageDot();
   var mois=parseInt(document.getElementById("pt-mois").value);
   renderValidateWeekButton(mois,annee,salId);
+}
+
+function updatePointageDot(){
+  var dot=document.getElementById("pointage-dot");
+  if(!dot)return;
+  if(!D.ptWeekValidations)return;
+  // Compter les semaines validées par salariés mais pas encore par Alexis (bureauWeekValidations)
+  var pending=Object.keys(D.ptWeekValidations).filter(function(k){
+    return !(D.bureauWeekValidations&&D.bureauWeekValidations[k]);
+  }).length;
+  dot.style.display=pending>0?"block":"none";
+  if(pending>0)dot.title=pending+" pointage(s) en attente de validation Alexis";
 }
 
 function renderPtValidationsList(){
@@ -5286,7 +5448,6 @@ function renderPtValidationsList(){
   if(_currentProfile!=="bureau"){wrap.innerHTML="";return;}
   if(!D.ptWeekValidations)D.ptWeekValidations={};
   if(!D.bureauWeekValidations)D.bureauWeekValidations={};
-  if(!D.ptTraite)D.ptTraite={};
 
   var pending=[], validated=[];
   Object.keys(D.ptWeekValidations).forEach(function(k){
@@ -5297,16 +5458,18 @@ function renderPtValidationsList(){
 
   var html="";
 
-  // ── SECTION ALEXIS ──
-  html+="<div style='background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
-  html+="<div style='font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px'>📋 Alexis — Pointages à valider"+(pending.length?" ("+pending.length+")":"")+"</div>";
+  // ── BANNIÈRE ALEXIS ──
+  html+="<div style='background:"+(pending.length?"#fffbeb":"#f0fdf4")+";border:1px solid "+(pending.length?"#fcd34d":"#bbf7d0")+";border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
+  html+="<div style='font-size:13px;font-weight:700;color:"+(pending.length?"#92400e":"#166534")+";margin-bottom:"+(pending.length?"10px":"0")+"'>📋 Alexis — Pointages à valider"+(pending.length?" ("+pending.length+")":"")+"</div>";
   if(!pending.length){
-    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucun pointage en attente ✓</div>";
+    html+="<div style='font-size:12px;color:#166534'>✅ Aucun pointage en attente</div>";
   } else {
     pending.forEach(function(item){
       var e=item.e; var k=item.key;
+      var d=new Date(e.ts);
+      var dateStr=d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
       html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap'>";
-      html+="<div style='font-size:12px'>📋 Sem. <b>"+e.semaine+"</b> — <b>"+e.nom+"</b></div>";
+      html+="<div><div style='font-size:12px;font-weight:700'>"+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Sem. "+e.semaine+" · Validé le "+dateStr+"</div></div>";
       html+="<div style='display:flex;gap:6px'>";
       html+="<button onclick='ptVoirSalarie("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#f0fdfa;color:#0d9488;border:1px solid #5eead4;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>👁 Voir</button>";
       html+="<button onclick='alexisValider("+JSON.stringify(k)+")' style='height:28px;padding:0 10px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>✅ Valider</button>";
@@ -5315,34 +5478,34 @@ function renderPtValidationsList(){
   }
   html+="</div>";
 
-  // ── SECTION VALÉRIE ──
-  html+="<div style='background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
-  html+="<div style='font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px'>📬 Valérie — À traiter pour les salaires"+(validated.length?" ("+validated.length+")":"")+"</div>";
+  // ── BANNIÈRE VALÉRIE ──
+  html+="<div style='background:"+(validated.length?"#f5f3ff":"#f0fdf4")+";border:1px solid "+(validated.length?"#c4b5fd":"#bbf7d0")+";border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
+  html+="<div style='font-size:13px;font-weight:700;color:"+(validated.length?"#7c3aed":"#166534")+";margin-bottom:"+(validated.length?"10px":"0")+"'>📬 Valérie — À traiter pour les salaires"+(validated.length?" ("+validated.length+")":"")+"</div>";
   if(!validated.length){
-    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucun pointage validé en attente ✓</div>";
+    html+="<div style='font-size:12px;color:#166534'>✅ Aucun pointage à traiter</div>";
   } else {
     validated.forEach(function(item){
       var e=item.e; var k=item.key;
       var d=new Date(item.v.ts);
       var dateStr=d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
       html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #ede9fe;border-radius:8px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap'>";
-      html+="<div><div style='font-size:12px;font-weight:600'>Sem. "+e.semaine+" — "+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Validé par Alexis le "+dateStr+"</div></div>";
+      html+="<div><div style='font-size:12px;font-weight:700'>"+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Sem. "+e.semaine+" · Validé Alexis le "+dateStr+"</div></div>";
       html+="<div style='display:flex;gap:6px;flex-wrap:wrap'>";
       html+="<button onclick='ptVoirSalarie("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>👁 Voir</button>";
       html+="<button onclick='ptExportSalSemaine("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>📥 Excel</button>";
       html+="<button onclick='marquerTransmisValerie("+JSON.stringify(k)+")' style='height:28px;padding:0 10px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>Traité ✓</button>";
       html+="</div></div>";
     });
+    html+="<div style='margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'>";
+    html+="<button onclick='ptPrintAllPDF()' style='height:32px;padding:0 14px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📄 PDF tous les salariés</button>";
+    html+="<button onclick='window.print()' style='height:32px;padding:0 14px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
+    html+="</div>";
   }
-  // Bouton PDF global
-  html+="<div style='margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'>";
-  html+="<button onclick='ptPrintAllPDF()' style='height:32px;padding:0 14px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📄 PDF tous les salariés</button>";
-  html+="<button onclick='window.print()' style='height:32px;padding:0 14px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
-  html+="</div>";
   html+="</div>";
 
   wrap.innerHTML=html;
 }
+
 
 function ptVoirSalarie(salId,semaine,annee){
   // Filtrer le pointage sur ce salarié
@@ -6508,6 +6671,155 @@ setTimeout(_fixColWidth,100);
 
   var _origTAB=window.TAB;
   window.TAB=function(n){_origTAB(n);if(n==="urgence")setTimeout(initUrgence,30);};
+})();
+</script>
+<div class="pg" id="pg-messages" style="max-width:680px;margin:0 auto;padding-bottom:40px">
+  <h2 class="stitle">💬 Messages</h2>
+  <div id="msg-wrap"></div>
+</div>
+
+<script>
+(function(){
+
+function ds2(ts){
+  var d=new Date(ts);
+  return d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
+}
+
+function getMyId(){
+  if(_currentProfile==="salarie")return _salLockedId;
+  return "bureau";
+}
+
+function getMyName(){
+  if(_currentProfile==="salarie"){
+    var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
+    return sal?(sal.prenom+" "+(sal.nom||"")).trim():"Salarié";
+  }
+  return "Bureau (Alexis/Valérie)";
+}
+
+function RMESSAGES(){
+  var wrap=document.getElementById("msg-wrap");
+  if(!wrap)return;
+  if(!D.messages)D.messages=[];
+  var myId=getMyId();
+  var isBureau=(_currentProfile==="bureau");
+
+  // Marquer les messages reçus comme lus
+  var changed=false;
+  D.messages.forEach(function(m){
+    if(!m.read&&(m.to===myId||(isBureau&&m.to==="bureau")||(!isBureau&&m.to===myId))){
+      m.read=true;changed=true;
+    }
+  });
+  if(changed){save();updateMsgDot();}
+
+  var html="";
+
+  // ── FORMULAIRE D'ENVOI ──
+  if(isBureau){
+    // Bureau : choisir le destinataire
+    var salOptions="<option value='all'>📢 Tous les salariés</option>";
+    (D.salaries||[]).filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).forEach(function(s){
+      salOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
+    });
+    html+="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
+    html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px;color:#13201e'>✉️ Envoyer un message</div>";
+    html+="<div style='margin-bottom:8px'><select id='msg-to' style='width:100%;height:34px;border:1px solid var(--brd2);border-radius:6px;padding:0 10px;font-size:12px;outline:none'>"+salOptions+"</select></div>";
+    html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
+    html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div>";
+    html+="</div>";
+  } else {
+    // Salarié : envoie au bureau
+    html+="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
+    html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px;color:#13201e'>✉️ Envoyer un message à Alexis/Valérie</div>";
+    html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
+    html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div>";
+    html+="</div>";
+  }
+
+  // ── LISTE DES MESSAGES ──
+  var msgs=D.messages.filter(function(m){
+    if(isBureau)return true; // Bureau voit tout
+    return m.to===myId||m.to==="all"||(m.from===myId);
+  }).sort(function(a,b){return b.ts-a.ts;});
+
+  if(!msgs.length){
+    html+="<div style='text-align:center;color:#6b7c79;padding:30px;font-size:13px'>Aucun message</div>";
+  } else {
+    msgs.forEach(function(m){
+      var isFromMe=(m.from===myId)||(isBureau&&m.from==="bureau");
+      var align=isFromMe?"right":"left";
+      var bg=isFromMe?"#f0fdfa":"#fff";
+      var border=isFromMe?"#5eead4":"#e2e8f0";
+      var toName=m.to==="all"?"Tous":m.to==="bureau"?"Bureau":
+        (D.salaries||[]).reduce(function(acc,s){return s.id===m.to?(s.prenom+" "+(s.nom||"")).trim():acc;},"?");
+      html+="<div style='margin-bottom:10px;display:flex;flex-direction:column;align-items:"+(isFromMe?"flex-end":"flex-start")+"'>";
+      html+="<div style='font-size:10px;color:#6b7c79;margin-bottom:3px'><b>"+m.fromName+"</b> → "+toName+" · "+ds2(m.ts)+(m.read&&!isFromMe?" · Lu ✓":"")+"</div>";
+      html+="<div style='max-width:85%;background:"+bg+";border:1px solid "+border+";border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5'>";
+      html+=m.text.replace(/\n/g,"<br>");
+      html+="</div>";
+      if(isBureau){
+        html+="<button onclick='delMsg(\""+m.id+"\")' style='margin-top:3px;font-size:10px;background:none;border:none;color:#6b7c79;cursor:pointer'>🗑</button>";
+      }
+      html+="</div>";
+    });
+  }
+
+  wrap.innerHTML=html;
+  updateMsgDot();
+}
+
+function sendMsg(){
+  var text=document.getElementById("msg-text");
+  if(!text||!text.value.trim())return;
+  var toEl=document.getElementById("msg-to");
+  var to=toEl?toEl.value:"bureau";
+  var msg={
+    id:"msg_"+Date.now(),
+    from:getMyId(),
+    fromName:getMyName(),
+    to:to,
+    text:text.value.trim(),
+    ts:Date.now(),
+    read:false
+  };
+  if(!D.messages)D.messages=[];
+  D.messages.push(msg);
+  save();
+  text.value="";
+  RMESSAGES();
+  showToast("✅ Message envoyé !");
+}
+
+function delMsg(id){
+  if(!confirm("Supprimer ce message ?"))return;
+  D.messages=D.messages.filter(function(m){return m.id!==id;});
+  save();RMESSAGES();
+}
+
+function updateMsgDot(){
+  var dot=document.getElementById("msg-dot");
+  if(!dot)return;
+  if(!D.messages)return;
+  var myId=getMyId();
+  var unread=D.messages.filter(function(m){
+    if(m.from===myId)return false;
+    if(_currentProfile==="bureau")return !m.read&&m.to==="bureau";
+    return !m.read&&(m.to===myId||m.to==="all");
+  }).length;
+  dot.style.display=unread>0?"block":"none";
+  if(unread>0)dot.title=unread+" message(s) non lu(s)";
+}
+
+// Hook dans TAB
+var _origTAB2=window.TAB;
+window.TAB=function(n){_origTAB2(n);if(n==="messages")setTimeout(RMESSAGES,30);};
+
+// Mettre à jour le dot à chaque auto-refresh
+var _origAutoRefresh=window._autoRefreshCb;
+
 })();
 </script>
 </body>
