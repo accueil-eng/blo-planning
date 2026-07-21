@@ -285,6 +285,12 @@ body.profile-salarie #sal-week-nav{display:flex!important}
       <option value="stagiaire">Stagiaire</option>
       <option value="interimaire">Intérimaire</option>
     </select>
+    <select id="scontrat" style="max-width:80px;height:32px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 8px;font-size:12px;background:var(--bg);color:var(--txt);outline:none">
+      <option value="CDI">CDI</option>
+      <option value="CDD">CDD</option>
+    </select>
+    <input type="date" id="scontrat-debut" title="Début contrat (CDD)" style="max-width:140px;display:none">
+    <input type="date" id="scontrat-fin" title="Fin contrat (CDD)" style="max-width:140px;display:none">
     <div class="cpick" id="salcp"></div>
     <button class="btn btn-p" onclick="addSal()">+ Ajouter</button>
   </div>
@@ -911,12 +917,27 @@ function isAbs(sId,di){
 function allAbsDay(di){var d=wd(CW)[di];var seen={};var r=[];D.absences.forEach(function(a){if(pd(a.debut)<=d&&d<=pd(a.fin)){var s=D.salaries.find(function(x){return x.id===a.salId;});if(s&&!seen[s.id]){seen[s.id]=1;r.push(Object.assign({},s,{absType:a.type,absHeureDebut:a.heureDebut,absHeureFin:a.heureFin}));}}});(D.formations||[]).forEach(function(f){if(f.nextdeb&&f.nextfin&&pd(f.nextdeb)<=d&&d<=pd(f.nextfin)){var s=D.salaries.find(function(x){return x.id===f.salId;});if(s&&!seen[s.id]){seen[s.id]=1;r.push(Object.assign({},s,{absType:"formation"}));}}});return r;}
 function isAssDay(sId,di){var n=getNR();for(var r=0;r<n;r++)if((D.cells[CW+"|"+r+"|"+di]||[]).indexOf(sId)>=0)return true;return false;}
 function getConf(sId,di,excKey){var n=getNR();var r=[];for(var i=0;i<n;i++){var ck=CW+"|"+i+"|"+di;if(ck!==excKey&&(D.cells[ck]||[]).indexOf(sId)>=0){var ch=GRC(CW+"|"+i);r.push(ch?ch.nom:"Ch."+(i+1));}}return r;}
+function salActif(sal,dt){
+  // Un salarié CDD n'est visible dans le planning qu'à partir de sa date de début de contrat
+  if(sal.contrat==="CDD"&&sal.contratDebut){
+    var debut=new Date(sal.contratDebut);debut.setHours(0,0,0,0);
+    if(dt<debut)return false;
+  }
+  if(sal.contrat==="CDD"&&sal.contratFin){
+    var fin=new Date(sal.contratFin);fin.setHours(23,59,59,999);
+    if(dt>fin)return false;
+  }
+  return true;
+}
+
 function unasgDay(di){
   var ab={};allAbsDay(di).forEach(function(s){ab[s.id]=1;});
+  var dt=wd(CW)[di];
   return D.salaries.filter(function(s){
     if(ab[s.id]||isAssDay(s.id,di))return false;
-    // Hide Bureau-assigned salariés (e.g. Valérie) — they appear in the Bureau row instead
     if(s.isBureau)return false;
+    // Ne pas afficher les CDD avant leur date de début ou après leur fin
+    if(!salActif(s,dt))return false;
     return true;
   });
 }
@@ -1811,7 +1832,43 @@ function RC(){
 
 // ── SALARIÉS ──
 var scS=COLORS[1];
-function addSal(){var prenom=document.getElementById("sp").value.trim();if(!prenom)return;D.salaries.push({id:"sal_"+Date.now(),prenom:prenom,nom:document.getElementById("sn").value.trim(),poste:document.getElementById("sto").value.trim(),whatsapp:document.getElementById("swa").value.trim().replace(/[^0-9]/g,""),ddn:document.getElementById("sddn").value,visite:document.getElementById("svm").value,type:document.getElementById("stype").value,taux:document.getElementById("staux").value?parseFloat(document.getElementById("staux").value):null,color:scS});saveNow();document.getElementById("sp").value="";document.getElementById("sn").value="";document.getElementById("sto").value="";document.getElementById("swa").value="";document.getElementById("sddn").value="";document.getElementById("svm").value="";document.getElementById("stype").value="salarie";document.getElementById("staux").value="";scS=COLORS[D.salaries.length%COLORS.length];buildCP("salcp",function(c){scS=c;},scS);RS();}
+function addSal(){
+  var prenom=document.getElementById("sp").value.trim();
+  if(!prenom)return;
+  var contrat=document.getElementById("scontrat").value||"CDI";
+  D.salaries.push({
+    id:"sal_"+Date.now(),
+    prenom:prenom,
+    nom:document.getElementById("sn").value.trim(),
+    poste:document.getElementById("sto").value.trim(),
+    whatsapp:document.getElementById("swa").value.trim().replace(/[^0-9]/g,""),
+    ddn:document.getElementById("sddn").value,
+    visite:document.getElementById("svm").value,
+    type:document.getElementById("stype").value,
+    contrat:contrat,
+    contratDebut:contrat==="CDD"?document.getElementById("scontrat-debut").value:null,
+    contratFin:contrat==="CDD"?document.getElementById("scontrat-fin").value:null,
+    taux:document.getElementById("staux").value?parseFloat(document.getElementById("staux").value):null,
+    color:scS
+  });
+  saveNow();
+  ["sp","sn","sto","swa","sddn","svm","staux"].forEach(function(id){document.getElementById(id).value="";});
+  document.getElementById("stype").value="salarie";
+  document.getElementById("scontrat").value="CDI";
+  document.getElementById("scontrat-debut").value="";document.getElementById("scontrat-debut").style.display="none";
+  document.getElementById("scontrat-fin").value="";document.getElementById("scontrat-fin").style.display="none";
+  scS=COLORS[D.salaries.length%COLORS.length];buildCP("salcp",function(c){scS=c;},scS);RS();
+}
+
+// Afficher/masquer les dates selon type de contrat
+document.addEventListener("DOMContentLoaded",function(){
+  var sel=document.getElementById("scontrat");
+  if(sel)sel.onchange=function(){
+    var isCdd=this.value==="CDD";
+    document.getElementById("scontrat-debut").style.display=isCdd?"":"none";
+    document.getElementById("scontrat-fin").style.display=isCdd?"":"none";
+  };
+});
 function editSal(id){
   var sal=D.salaries.find(function(s){return s.id===id;});
   if(!sal)return;
@@ -1841,8 +1898,21 @@ function editSal(id){
 
   var fTaux=mkRow("💶 Taux horaire €/h",Object.assign(document.createElement("input"),{type:"number",value:sal.taux||"",min:0,step:"0.01",placeholder:"ex: 18.50",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fType=mkRow("Type",Object.assign(document.createElement("select"),{style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fBureau=mkRow("\uD83C\uDFE2 Affect\u00e9 Bureau (9200)",Object.assign(document.createElement("input"),{type:"checkbox",checked:!!sal.isBureau,style:"width:18px;height:18px;accent-color:#db2777;cursor:pointer"}));
   [["salarie","Salarié"],["apprenti","Apprenti"],["stagiaire","Stagiaire"],["interimaire","Intérimaire"]].forEach(function(o){var opt=document.createElement("option");opt.value=o[0];opt.textContent=o[1];if(sal.type===o[0])opt.selected=true;fType.appendChild(opt);});
+  // Contrat
+  var fContrat=mkRow("📄 Contrat",Object.assign(document.createElement("select"),{style:"width:80px;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  [["CDI","CDI"],["CDD","CDD"]].forEach(function(o){var opt=document.createElement("option");opt.value=o[0];opt.textContent=o[1];if((sal.contrat||"CDI")===o[0])opt.selected=true;fContrat.appendChild(opt);});
+  var fContratDebut=mkRow("📅 Début contrat",Object.assign(document.createElement("input"),{type:"date",value:sal.contratDebut||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fContratFin=mkRow("📅 Fin contrat",Object.assign(document.createElement("input"),{type:"date",value:sal.contratFin||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  // Masquer/afficher les dates selon le contrat
+  function toggleContratDates(){
+    var isCdd=fContrat.value==="CDD";
+    fContratDebut.parentNode.style.display=isCdd?"flex":"none";
+    fContratFin.parentNode.style.display=isCdd?"flex":"none";
+  }
+  fContrat.onchange=toggleContratDates;
+  toggleContratDates();
+  var fBureau=mkRow("\uD83C\uDFE2 Affecté Bureau (9200)",Object.assign(document.createElement("input"),{type:"checkbox",checked:!!sal.isBureau,style:"width:18px;height:18px;accent-color:#db2777;cursor:pointer"}));
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:6px";
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
@@ -1852,6 +1922,9 @@ function editSal(id){
     sal.telType=fTelType.value;
     sal.ddn=fDdn.value;sal.visite=fVm.value;sal.visitePrev=fVmPrev.value;sal.type=fType.value;sal.isBureau=fBureau.checked;
     sal.taux=fTaux.value?parseFloat(fTaux.value):null;
+    sal.contrat=fContrat.value;
+    sal.contratDebut=fContrat.value==="CDD"?fContratDebut.value:null;
+    sal.contratFin=fContrat.value==="CDD"?fContratFin.value:null;
     saveNow();modal.remove();RS();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
@@ -1872,7 +1945,7 @@ function RS(){
   var table=document.createElement("table");
   table.style.cssText="width:100%;border-collapse:collapse;font-size:12px";
   var thead=table.createTHead();var hr=thead.insertRow();
-  ["","Nom","💶 Taux €/h","📱 Téléphone","🎂 Anniversaire","🏥 Visite médicale",""].forEach(function(h){
+  ["","Nom","📄 Contrat","💶 Taux €/h","📱 Téléphone","🎂 Anniversaire","🏥 Visite médicale",""].forEach(function(h){
     var th=document.createElement("th");th.textContent=h;
     th.style.cssText="padding:8px 10px;text-align:left;background:#e2e8f0;border:1px solid var(--brd);font-size:11px;font-weight:600;white-space:nowrap";
     hr.appendChild(th);
@@ -1890,7 +1963,22 @@ function RS(){
     var tdNm=tr.insertCell();tdNm.style.cssText="padding:8px 10px;border:1px solid var(--brd);font-weight:500";
     tdNm.textContent=sal.prenom+(sal.nom?" "+sal.nom:"");
     if(sal.type==="apprenti"){var badge=document.createElement("span");badge.style.cssText="margin-left:6px;font-size:9px;background:#ede9fe;color:#7c3aed;border-radius:4px;padding:1px 5px;font-weight:600";badge.textContent="Apprenti";tdNm.appendChild(badge);}
-    // Taux horaire
+    // Contrat
+    var tdContrat=tr.insertCell();tdContrat.style.cssText="padding:8px 10px;border:1px solid var(--brd);text-align:center";
+    var contrat=sal.contrat||"CDI";
+    var today=new Date();today.setHours(0,0,0,0);
+    if(contrat==="CDD"){
+      var debut=sal.contratDebut?new Date(sal.contratDebut):null;
+      var fin=sal.contratFin?new Date(sal.contratFin):null;
+      var notStarted=debut&&today<debut;
+      var ended=fin&&today>fin;
+      var color=ended?"#dc2626":notStarted?"#d97706":"#16a34a";
+      var label=ended?"CDD terminé":notStarted?"CDD (dès "+debut.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+")":"CDD en cours";
+      tdContrat.innerHTML="<span style='font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:"+(ended?"#fef2f2":notStarted?"#fffbeb":"#f0fdf4")+";color:"+color+"'>"+label+"</span>";
+      if(fin)tdContrat.innerHTML+="<div style='font-size:9px;color:#6b7c79;margin-top:2px'>→ "+fin.toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})+"</div>";
+    } else {
+      tdContrat.innerHTML="<span style='font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:#f0fdf4;color:#16a34a'>CDI</span>";
+    }
     var tdTaux=tr.insertCell();tdTaux.style.cssText="padding:8px 10px;border:1px solid var(--brd);font-weight:500;text-align:right";
     tdTaux.textContent=sal.taux!=null?sal.taux.toFixed(2)+" €/h":"—";
     // Téléphone
@@ -2281,6 +2369,8 @@ function XCSV(){
 // ── PROFILS ──
 var PROFILES = {
   bureau: { name: "Bureau", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites","messages"], readOnly: false },
+  bureau_alexis: { name: "Alexis", pin: "@@@@", color: "#0d9488", tabs: ["planning","absences","pointage","messages","vehicules","chantiers"], readOnly: false },
+  bureau_valerie: { name: "Valérie", pin: "@@@@", color: "#7c3aed", tabs: ["pointage","messages","indemnites"], readOnly: false },
   analyse: { name: "Analyse", pin: "@@@@", color: "#0891b2", tabs: ["gantt","bilan"], readOnly: false },
   salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence","messages"], readOnly: true },
   planningpublic: { name: "Planning (lecture seule)", pin: null, color: "#0891b2", tabs: ["planning"], readOnly: true }
@@ -2371,6 +2461,10 @@ function showGHTokenModal(){
   var inp2label=document.createElement("div");inp2label.style.cssText="font-size:11px;font-weight:600;color:#6b7c79;margin-bottom:4px;margin-top:10px";inp2label.textContent="Token lecture seule (salariés via QR code)";
   var inp2=document.createElement("input");inp2.id="gh-token-readonly-input";inp2.type="password";inp2.value=D.readonlyToken||"";inp2.placeholder="github_pat_... (lecture seule)";inp2.style.cssText="width:100%;height:34px;border:1px solid #c0cccb;border-radius:6px;padding:0 10px;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px";
   var inp2hint=document.createElement("div");inp2hint.style.cssText="font-size:10px;color:#6b7c79;margin-bottom:10px";inp2hint.textContent="Créez un token Fine-grained avec Contents:Read-only sur blo-planning.";
+
+  var waLabel=document.createElement("div");waLabel.style.cssText="font-size:11px;font-weight:600;color:#6b7c79;margin-bottom:4px;margin-top:10px";waLabel.textContent="📱 N° WhatsApp Alexis (notifications demandes)";
+  var waInp=document.createElement("input");waInp.type="tel";waInp.value=localStorage.getItem("alexis_wa")||"33762853767";waInp.placeholder="ex: 33612345678 (sans + ni espaces)";waInp.style.cssText="width:100%;height:34px;border:1px solid #c0cccb;border-radius:6px;padding:0 10px;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:4px";
+  var waHint=document.createElement("div");waHint.style.cssText="font-size:10px;color:#6b7c79;margin-bottom:10px";waHint.textContent="Format international sans + : 33612345678 pour 06 12 34 56 78";
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px";
   var okB=document.createElement("button");okB.style.cssText="flex:1;height:34px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okB.textContent="Enregistrer";
   okB.onclick=function(){
@@ -2379,13 +2473,15 @@ function showGHTokenModal(){
     GH_TOKEN=t;
     var t2=inp2.value.trim();
     if(t2){D.readonlyToken=t2;GH_TOKEN_READONLY=t2;save();}
+    var wa=waInp.value.trim();
+    if(wa)localStorage.setItem("alexis_wa",wa);
     modal.remove();
     showToast("✅ Tokens sauvegardés !");
   };
   var cancelB=document.createElement("button");cancelB.style.cssText="height:34px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelB.textContent="Annuler";
   cancelB.onclick=function(){modal.remove();};
   btnRow.appendChild(okB);btnRow.appendChild(cancelB);
-  box.appendChild(title);box.appendChild(desc);box.appendChild(inp);box.appendChild(inp2label);box.appendChild(inp2);box.appendChild(inp2hint);box.appendChild(btnRow);
+  box.appendChild(title);box.appendChild(desc);box.appendChild(inp);box.appendChild(inp2label);box.appendChild(inp2);box.appendChild(inp2hint);box.appendChild(waLabel);box.appendChild(waInp);box.appendChild(waHint);box.appendChild(btnRow);
   modal.appendChild(box);document.body.appendChild(modal);
   modal.onclick=function(e){if(e.target===modal)modal.remove();};
 }
@@ -2480,7 +2576,7 @@ function showProfileModal() {
     info.appendChild(nm);
     var ds = document.createElement("div");
     ds.style.cssText = "font-size:11px;color:#6b7c79;margin-top:2px";
-    ds.textContent = key === "bureau" ? "Accès complet · Tout modifiable" : key === "salarie" ? "Planning · Pointage · Absences" : key === "analyse" ? "Prévisionnel · Bilans" : "";
+    ds.textContent = key === "bureau" ? "Accès complet · Admin" : key === "bureau_alexis" ? "Planning · Pointage · Messages" : key === "bureau_valerie" ? "Salaires · Pointage · Messages" : key === "salarie" ? "Planning · Pointage · Absences" : key === "analyse" ? "Prévisionnel · Bilans" : "";
     info.appendChild(ds);
     if(key==="valerie"){
       if(vCount>0){
@@ -2834,26 +2930,22 @@ function addRDV(){
     appele:false
   });
   save();
-  // Send WhatsApp notification
-  var rdvNom=document.getElementById("rdv-nom").value;
-  var rdvDate=document.getElementById("rdv-date").value;
-  var rdvTel=document.getElementById("rdv-tel").value;
-  var rdvTrav=document.getElementById("rdv-travaux").value;
-  var notifMsg="🔔 Nouvelle demande de RDV%0A"
-    +"👤 "+encodeURIComponent(rdvNom)+"%0A"
-    +(rdvDate?"📅 "+encodeURIComponent(new Date(rdvDate).toLocaleDateString("fr-FR"))+"%0A":"")
-    +(rdvTel?"📱 "+encodeURIComponent(rdvTel)+"%0A":"")
-    +(rdvTrav?"🔧 "+encodeURIComponent(rdvTrav)+"%0A":"")
-    +"%0AVoir : https://accueil-eng.github.io/planning/";
-  var notifUrl="https://wa.me/33627991855?text="+notifMsg;
-  window.open(notifUrl,"_blank");
+  // Notification WhatsApp Alexis
+  var rdv=D.rdvs[D.rdvs.length-1];
+  var notifMsg="📋 Nouvelle demande de RDV\n"+
+    "👤 "+rdv.nom+"\n"+
+    (rdv.adresse?"📍 "+rdv.adresse+"\n":"")+
+    (rdv.tel?"📞 "+rdv.tel+"\n":"")+
+    (rdv.travaux?"🔨 "+rdv.travaux+"\n":"")+
+    (rdv.date?"📅 "+new Date(rdv.date).toLocaleDateString("fr-FR")+"\n":"");
+  window.open("https://wa.me/33762853767?text="+encodeURIComponent(notifMsg),"_blank");
   ["rdv-date","rdv-nom","rdv-adresse","rdv-tel","rdv-mail","rdv-travaux","rdv-obs"].forEach(function(id){document.getElementById(id).value="";});
   RRDV();
 }
 
 
 // ── DEMANDES D'ABSENCE (compte Salarié <-> Bureau) ──
-var ABSDEM_NOTIF_PHONES = ["33627991855","33626610036"]; // Quentin et Valérie
+var ABSDEM_NOTIF_PHONES = ["33762853767","33626610036"]; // Alexis et Valérie
 
 function RABSDEMANDE(){
   var sel=document.getElementById("ad-sal");
@@ -2948,7 +3040,13 @@ function sendAbsDemande(){
   document.getElementById("ad-motif").value="";
   showToast("✅ Demande envoyée !");
   renderMesDemandes();
-  showAbsDemandeNotifModal(msg);
+  // Notifier Alexis ET Valérie automatiquement
+  setTimeout(function(){
+    window.open("https://wa.me/33762853767?text="+msg,"_blank");
+    setTimeout(function(){
+      window.open("https://wa.me/33626610036?text="+msg,"_blank");
+    },1000);
+  },500);
 }
 
 function showAbsDemandeNotifModal(msg){
@@ -3057,6 +3155,27 @@ function toggleAbsArchive(){
   if(arrow)arrow.textContent=isOpen?"▾":"▴";
 }
 
+function sendRdvWa(){
+  var nom=(document.getElementById("rdvwa-nom")||{}).value||"";
+  var prenom=(document.getElementById("rdvwa-prenom")||{}).value||"";
+  var adresse=(document.getElementById("rdvwa-adresse")||{}).value||"";
+  var tel=(document.getElementById("rdvwa-tel")||{}).value||"";
+  var travaux=(document.getElementById("rdvwa-travaux")||{}).value||"";
+  if(!nom&&!prenom){showToast("⚠️ Indiquez au moins le nom du client");return;}
+  var msg=encodeURIComponent(
+    "📋 Nouvelle demande de RDV\n"+
+    "👤 "+prenom+" "+nom+"\n"+
+    (adresse?"📍 "+adresse+"\n":"")+
+    (tel?"📞 "+tel+"\n":"")+
+    (travaux?"🔨 "+travaux+"\n":"")
+  );
+  window.open("https://wa.me/33762853767?text="+msg,"_blank");
+  ["rdvwa-nom","rdvwa-prenom","rdvwa-adresse","rdvwa-tel","rdvwa-travaux"].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value="";
+  });
+  showToast("📱 WhatsApp ouvert pour Alexis !");
+}
+
 function decideAbsDemande(id,status){
   var d=D.absDemandes.find(function(x){return x.id===id;});
   if(!d)return;
@@ -3079,11 +3198,22 @@ function decideAbsDemande(id,status){
       +"%0A"+encodeURIComponent(ABLBLS[d.type])+" du "+encodeURIComponent(new Date(d.debut).toLocaleDateString("fr-FR"))+" au "+encodeURIComponent(new Date(d.fin).toLocaleDateString("fr-FR"));
     window.open("https://wa.me/33"+sal.whatsapp.replace(/^0/,"")+"?text="+msg,"_blank");
   }
-  showToast(status==="accepted"?"✅ Demande acceptée":"❌ Demande refusée");
+
+  // Notifier Valérie de la réponse d'Alexis
+  var nomSal=sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?";
+  var msgVal=encodeURIComponent((status==="accepted"?"✅ Alexis a ACCEPTÉ":"❌ Alexis a REFUSÉ")+" la demande d'absence de "+nomSal
+    +"\n"+ABLBLS[d.type]+" du "+new Date(d.debut).toLocaleDateString("fr-FR")+" au "+new Date(d.fin).toLocaleDateString("fr-FR"));
+  setTimeout(function(){
+    window.open("https://wa.me/33626610036?text="+msgVal,"_blank");
+  },500);
+
+  showToast(status==="accepted"?"✅ Demande acceptée — Valérie notifiée":"❌ Demande refusée — Valérie notifiée");
 }
 
 function RRDV(){
   var el=document.getElementById("rdvlist");if(!el)return;
+
+
   if(!D.rdvs||!D.rdvs.length){
     el.innerHTML="<div class='empty'><div class='empty-icon'>📅</div><p>Aucune demande de RDV.</p></div>";return;
   }
@@ -4008,6 +4138,8 @@ function openChantierEdit(id){
 // ── MESSAGES ──
 function msgGetMyId(){
   if(_currentProfile==="salarie")return _salLockedId;
+  if(_currentProfile==="bureau_alexis")return "alexis";
+  if(_currentProfile==="bureau_valerie")return "valerie";
   return "bureau";
 }
 function msgGetMyName(){
@@ -4015,7 +4147,9 @@ function msgGetMyName(){
     var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
     return sal?(sal.prenom+" "+(sal.nom||"")).trim():"Salarié";
   }
-  return "Bureau (Alexis/Valérie)";
+  if(_currentProfile==="bureau_alexis")return "Alexis";
+  if(_currentProfile==="bureau_valerie")return "Valérie";
+  return "Bureau";
 }
 function updateMsgDot(){
   var dot=document.getElementById("msg-dot");
@@ -4023,11 +4157,12 @@ function updateMsgDot(){
   var myId=msgGetMyId();
   var unread=D.messages.filter(function(m){
     if(m.from===myId)return false;
-    if(_currentProfile==="bureau")return !m.read&&(m.to==="bureau"||m.to==="all");
-    return !m.read&&(m.to===myId||m.to==="all");
+    return !m.read&&(m.to===myId||m.to==="all"||(m.to==="bureau"&&["bureau","bureau_alexis","bureau_valerie"].indexOf(_currentProfile)>=0));
   }).length;
   dot.style.display=unread>0?"block":"none";
+  if(unread>0)dot.title=unread+" message(s) non lu(s)";
 }
+
 function sendMsg(){
   var text=document.getElementById("msg-text");
   if(!text||!text.value.trim())return;
@@ -4037,149 +4172,128 @@ function sendMsg(){
   D.messages.push({id:"msg_"+Date.now(),from:msgGetMyId(),fromName:msgGetMyName(),to:to,text:text.value.trim(),ts:Date.now(),read:false});
   save();text.value="";RMESSAGES();showToast("✅ Message envoyé !");
 }
+
 function delMsg(id){
   if(!confirm("Supprimer ce message ?"))return;
   D.messages=D.messages.filter(function(m){return m.id!==id;});
   save();RMESSAGES();
 }
+
+function markMsgRead(id){
+  var m=D.messages&&D.messages.find(function(x){return x.id===id;});
+  if(m){m.read=true;save();RMESSAGES();}
+}
+
 function RMESSAGES(){
   var wrap=document.getElementById("msg-wrap");
   if(!wrap)return;
   if(!D.messages)D.messages=[];
   var myId=msgGetMyId();
-  var isBureau=(_currentProfile==="bureau");
-  // Marquer comme lus
+  var prof=_currentProfile;
+  var isBureauAny=(prof==="bureau"||prof==="bureau_alexis"||prof==="bureau_valerie");
+
+  // Marquer comme lus les messages reçus
   var changed=false;
   D.messages.forEach(function(m){
-    if(!m.read&&(m.to===myId||m.to==="all"||(isBureau&&m.to==="bureau"))){m.read=true;changed=true;}
+    if(m.from===myId)return;
+    if(!m.read&&(m.to===myId||m.to==="all"||(m.to==="bureau"&&isBureauAny))){m.read=true;changed=true;}
   });
   if(changed){save();updateMsgDot();}
-  var html="";
-  // Formulaire envoi
-  if(isBureau){
-    var salOptions="<option value='all'>📢 Tous les salariés</option>";
-    (D.salaries||[]).filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).forEach(function(s){
-      salOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
+
+  // Options destinataires selon profil
+  var toOptions="";
+  if(prof==="salarie"){
+    toOptions="<option value='alexis'>👤 Alexis</option>"+
+              "<option value='valerie'>👤 Valérie</option>"+
+              "<option value='bureau'>👥 Alexis & Valérie</option>";
+  } else if(prof==="bureau_alexis"){
+    toOptions="<option value='valerie'>👤 Valérie</option>"+
+              "<option value='all'>📢 Tous les salariés</option>";
+    (D.salaries||[]).filter(function(s){return s.prenom&&!s.isBureau;}).forEach(function(s){
+      toOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
     });
-    html+="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
-    html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px'>✉️ Envoyer un message</div>";
-    html+="<div style='margin-bottom:8px'><select id='msg-to' style='width:100%;height:34px;border:1px solid var(--brd2);border-radius:6px;padding:0 10px;font-size:12px;outline:none'>"+salOptions+"</select></div>";
-    html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
-    html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div></div>";
+  } else if(prof==="bureau_valerie"){
+    toOptions="<option value='alexis'>👤 Alexis</option>"+
+              "<option value='all'>📢 Tous les salariés</option>";
+    (D.salaries||[]).filter(function(s){return s.prenom&&!s.isBureau;}).forEach(function(s){
+      toOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
+    });
   } else {
-    html+="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
-    html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px'>✉️ Message à Alexis / Valérie</div>";
-    html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
-    html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div></div>";
+    // Bureau admin
+    toOptions="<option value='alexis'>👤 Alexis</option>"+
+              "<option value='valerie'>👤 Valérie</option>"+
+              "<option value='all'>📢 Tous les salariés</option>";
+    (D.salaries||[]).filter(function(s){return s.prenom&&!s.isBureau;}).forEach(function(s){
+      toOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
+    });
   }
-  // Liste messages
+
+  var html="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
+  html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px'>✉️ Envoyer un message</div>";
+  html+="<div style='margin-bottom:8px'><select id='msg-to' style='width:100%;height:34px;border:1px solid var(--brd2);border-radius:6px;padding:0 10px;font-size:12px;outline:none'>"+toOptions+"</select></div>";
+  html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
+  html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div></div>";
+
+  // Messages visibles pour ce profil
   var msgs=D.messages.filter(function(m){
-    if(isBureau)return true;
-    return m.to===myId||m.to==="all"||m.from===myId;
+    if(m.from===myId)return true;
+    if(m.to===myId)return true;
+    if(m.to==="all")return true;
+    if(m.to==="bureau"&&isBureauAny)return true;
+    if(m.to==="alexis"&&(prof==="bureau_alexis"||prof==="bureau"))return true;
+    if(m.to==="valerie"&&(prof==="bureau_valerie"||prof==="bureau"))return true;
+    if(prof==="bureau")return true; // Bureau admin voit tout
+    return false;
   }).sort(function(a,b){return b.ts-a.ts;});
+
   if(!msgs.length){
     html+="<div style='text-align:center;color:#6b7c79;padding:30px;font-size:13px'>Aucun message</div>";
   } else {
     msgs.forEach(function(m){
       var isFromMe=(m.from===myId);
-      var bg=isFromMe?"#f0fdfa":"#fff";
-      var border=isFromMe?"#5eead4":"#e2e8f0";
+      var isUnread=!m.read&&!isFromMe;
+      var bg=isFromMe?"#f0fdfa":(isUnread?"#fef9c3":"#fff");
+      var border=isFromMe?"#5eead4":(isUnread?"#fde047":"#e2e8f0");
       var d=new Date(m.ts);
       var ds2=d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
-      var toName=m.to==="all"?"Tous":m.to==="bureau"?"Bureau":
-        (D.salaries||[]).reduce(function(acc,s){return s.id===m.to?(s.prenom+" "+(s.nom||"")).trim():acc;},"?");
+      var toName={all:"Tous les salariés",bureau:"Alexis & Valérie",alexis:"Alexis",valerie:"Valérie"};
+      var dest=toName[m.to]||(D.salaries||[]).reduce(function(acc,s){return s.id===m.to?(s.prenom+" "+(s.nom||"")).trim():acc;},"?");
       html+="<div style='margin-bottom:10px;display:flex;flex-direction:column;align-items:"+(isFromMe?"flex-end":"flex-start")+"'>";
-      html+="<div style='font-size:10px;color:#6b7c79;margin-bottom:3px'><b>"+m.fromName+"</b> → "+toName+" · "+ds2+"</div>";
-      html+="<div style='max-width:85%;background:"+bg+";border:1px solid "+border+";border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5'>"+m.text.replace(/\n/g,"<br>")+"</div>";
-      if(isBureau)html+="<button onclick='delMsg(\""+m.id+"\")' style='margin-top:2px;font-size:10px;background:none;border:none;color:#6b7c79;cursor:pointer'>🗑</button>";
-      html+="</div>";
+      html+="<div style='font-size:10px;color:#6b7c79;margin-bottom:3px'>"+(isUnread?"🔵 ":"")+"<b>"+m.fromName+"</b> → "+dest+" · "+ds2+"</div>";
+      html+="<div style='max-width:85%;background:"+bg+";border:1px solid "+border+";border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5'>"+m.text.split("\n").join("<br>")+"</div>";
+      html+="<div style='display:flex;gap:6px;margin-top:3px'>";
+      // Actions: Lu + Supprimer (DOM instead of HTML strings to avoid quote issues)
+      html+="<div id=\"msgact_"+m.id+"\" style=\"display:flex;gap:6px;margin-top:3px\"></div>";
+      html+="</div></div>";
     });
   }
   wrap.innerHTML=html;
+  // Ajouter les boutons Lu/Supprimer via DOM pour éviter les conflits de guillemets
+  msgs.forEach(function(m){
+    var actDiv=document.getElementById("msgact_"+m.id);
+    if(!actDiv)return;
+    var isFromMe2=(m.from===msgGetMyId());
+    var isUnread2=!m.read&&!isFromMe2;
+    if(isUnread2){
+      var luBtn=document.createElement("button");
+      luBtn.style.cssText="font-size:10px;background:none;border:1px solid #fde047;border-radius:4px;padding:1px 6px;cursor:pointer;color:#92400e";
+      luBtn.textContent="Lu ✓";
+      luBtn.onclick=(function(mid){return function(){markMsgRead(mid);};})(m.id);
+      actDiv.appendChild(luBtn);
+    }
+    var prof2=_currentProfile;
+    if(isFromMe2||prof2==="bureau"){
+      var delBtn2=document.createElement("button");
+      delBtn2.style.cssText="font-size:10px;background:none;border:none;color:#6b7c79;cursor:pointer";
+      delBtn2.textContent="🗑 Supprimer";
+      delBtn2.onclick=(function(mid){return function(){delMsg(mid);};})(m.id);
+      actDiv.appendChild(delBtn2);
+    }
+  });
   updateMsgDot();
 }
 
-function editChAnalyse(id){
-  var ch=D.chantiers.find(function(c){return c.id===id;});if(!ch)return;
-  var existing=document.getElementById("edit-ch-analyse-modal");if(existing)existing.remove();
-  var modal=document.createElement("div");modal.id="edit-ch-analyse-modal";
-  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
-  var box=document.createElement("div");
-  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:420px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif";
-  var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:16px;margin-bottom:4px;color:#13201e";
-  title.textContent="📊 Analyse — "+(ch.ref?ch.ref+" ":"")+ch.nom;
-  var sub=document.createElement("div");sub.style.cssText="font-size:11px;color:#6b7c79;margin-bottom:16px";
-  sub.textContent=ch.adresse||"";
-  box.appendChild(title);box.appendChild(sub);
-  function mkRow(label,input){
-    var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:10px";
-    var lbl=document.createElement("label");lbl.style.cssText="font-size:12px;font-weight:500;width:150px;flex-shrink:0;color:#475569";lbl.textContent=label;
-    row.appendChild(lbl);row.appendChild(input);box.appendChild(row);return input;
-  }
-  var fDeb=mkRow("📅 Début réel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebut||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fDebPrev=mkRow("📅 Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebutPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fFinPrev=mkRow("📅 Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateFinPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fHEst=mkRow("⏱ Heures estimées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresEst||"",min:0,placeholder:"ex: 120",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fHReal=mkRow("⏱ Heures réalisées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresReal||"",min:0,placeholder:"ex: 98",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  // Separator
-  var sep=document.createElement("div");sep.style.cssText="border-top:1px solid #dde5e4;margin:12px 0 12px;font-size:11px;font-weight:700;color:#475569";sep.textContent="💰 Données financières";box.appendChild(sep);
-  var fDevis=mkRow("Montant devis €",Object.assign(document.createElement("input"),{type:"number",value:ch.devis||"",min:0,step:"0.01",placeholder:"ex: 25000",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fFacture=mkRow("Montant facturé €",Object.assign(document.createElement("input"),{type:"number",value:ch.facture||"",min:0,step:"0.01",placeholder:"ex: 24500",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fEncaisse=mkRow("Montant encaissé €",Object.assign(document.createElement("input"),{type:"number",value:ch.encaisse||"",min:0,step:"0.01",placeholder:"ex: 20000",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fMat=mkRow("Coût matériaux €",Object.assign(document.createElement("input"),{type:"number",value:ch.coutMat||"",min:0,step:"0.01",placeholder:"ex: 8000",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fST=mkRow("Sous-traitance €",Object.assign(document.createElement("input"),{type:"number",value:ch.coutST||"",min:0,step:"0.01",placeholder:"ex: 3000",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fFrais=mkRow("Autres frais €",Object.assign(document.createElement("input"),{type:"number",value:ch.coutFrais||"",min:0,step:"0.01",placeholder:"ex: 500",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:6px";
-  var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
-  okBtn.onclick=function(){
-    ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;
-    ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;
-    ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;
-    ch.devis=fDevis.value?parseFloat(fDevis.value):null;
-    ch.facture=fFacture.value?parseFloat(fFacture.value):null;
-    ch.encaisse=fEncaisse.value?parseFloat(fEncaisse.value):null;
-    ch.coutMat=fMat.value?parseFloat(fMat.value):null;
-    ch.coutST=fST.value?parseFloat(fST.value):null;
-    ch.coutFrais=fFrais.value?parseFloat(fFrais.value):null;
-    save();modal.remove();RANALYSE();
-  };
-  var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
-  cancelBtn.onclick=function(){modal.remove();};
-  btnRow.appendChild(okBtn);btnRow.appendChild(cancelBtn);box.appendChild(btnRow);
-  modal.appendChild(box);document.body.appendChild(modal);
-  modal.onclick=function(e){if(e.target===modal)modal.remove();};
-}
 
-
-// ── POINTAGE ──
-var PT_ROWS = [
-  {id:"panier",    label:"Panier repas",         type:"check",  unit:""},
-  {id:"trajet",    label:"Trajet (zone)",         type:"zone_dd", unit:""},
-  {id:"transport", label:"Transport (zone)",      type:"zone_dd", unit:""},
-  {id:"cp",        label:"Congés payés",          type:"number", unit:"h"},
-  {id:"css",       label:"Congés sans solde",     type:"number", unit:"h"},
-  {id:"hs",        label:"Heures supplémentaires",type:"number", unit:"h"},
-  {id:"formation", label:"École / Formation",     type:"number", unit:"h"},
-  {id:"maladie",   label:"Arrêt maladie",         type:"number", unit:"h"},
-  {id:"intemp",    label:"Intempéries",           type:"number", unit:"h"}
-];
-var PT_ZONES = ["Z1A","Z1B","Z2","Z3","Z4","Z5","Z6","Z7","Z8","Z9","Z10"];
-var PT_DAYS  = ["L","M","M","J","V"];
-
-function ptKey(mois,annee,section,salId,semaine,col){
-  return annee+"-"+("0"+mois).slice(-2)+"|"+section+"|"+salId+"|S"+semaine+"|"+col;
-}
-function ptGet(mois,annee,section,salId,semaine,col){
-  if(!D.pointages)D.pointages={};
-  var k=ptKey(mois,annee,section,salId,semaine,col);
-  return D.pointages[k]!==undefined?D.pointages[k]:"";
-}
-// Returns true only if a value was explicitly ever stored (even if empty), false if truly never touched.
-function ptWasStored(mois,annee,section,salId,semaine,col){
-  if(!D.pointages)D.pointages={};
-  var k=ptKey(mois,annee,section,salId,semaine,col);
-  return D.pointages[k]!==undefined;
-}
 function syncChantierRealDates(){
   if(!D.pointages||!D.chantiers)return;
   var changed=false;
