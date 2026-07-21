@@ -1746,7 +1746,15 @@ function RC(){
     if(!rb)return -1;
     return ra.localeCompare(rb,undefined,{numeric:true});
   });
-  sorted.forEach(function(ch){
+  // Déduplication par ref
+  var _seenRc={};
+  var dedupSorted=sorted.filter(function(c){
+    var k=(c.ref||c.id||"").trim().toLowerCase();
+    if(_seenRc[k])return false;
+    _seenRc[k]=true;
+    return true;
+  });
+  dedupSorted.forEach(function(ch){
     var card=document.createElement("div");card.className="icard";if(ch.done)card.style.opacity=".5";
     var dot=document.createElement("div");dot.className="icard-dot";dot.style.background=ch.color;card.appendChild(dot);
     var info=document.createElement("div");info.className="icard-info";
@@ -3616,6 +3624,14 @@ function RGANTT(){
     if(!rb)return -1;
     return ra.localeCompare(rb,undefined,{numeric:true});
   });
+  // Déduplication : une seule ligne par code chantier
+  var _seenRef={};
+  chantiers=chantiers.filter(function(c){
+    var k=(c.ref||c.id||"").trim().toLowerCase();
+    if(_seenRef[k])return false;
+    _seenRef[k]=true;
+    return true;
+  });
 
   function getMon(d){var dt=new Date(d);var day=dt.getDay()||7;dt.setDate(dt.getDate()-(day-1));dt.setHours(0,0,0,0);return dt;}
 
@@ -3673,7 +3689,7 @@ function RGANTT(){
   tbl.appendChild(thead);
 
   var tbody=document.createElement("tbody");
-  chantiers.forEach(function(ch,ri){
+  chantiers.filter(function(c){return c.dateDebutPrev&&c.dateFinPrev;}).forEach(function(ch,ri){
     var tr=document.createElement("tr");
     var bg=ri%2===0?"#fff":"#f8f7f4";
 
