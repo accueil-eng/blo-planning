@@ -6065,13 +6065,6 @@ function clearPtReview(mois,annee,section,salId,wk,di){
   RPOINTAGE();
 }
 
-function updatePointageDot(){
-  var dot=document.getElementById("pointage-dot");
-  if(!dot)return;
-  if(!D.ptReview)D.ptReview={};
-  dot.style.display=Object.keys(D.ptReview).length?"block":"none";
-}
-
 function exportPointageXLSX(){
   var mois=parseInt(document.getElementById("pt-mois").value);
   var annee=parseInt(document.getElementById("pt-annee").value);
