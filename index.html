@@ -380,8 +380,9 @@ body.profile-salarie #sal-week-nav{display:flex!important}
       <option value="">Tous les chantiers</option>
     </select>
   </div>
-  <div style="margin-bottom:8px">
+  <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center">
     <button class="btn btn-p" onclick="addChantierFromGantt()" style="font-size:12px">+ Nouveau chantier</button>
+    <button onclick="showGanttPrintModal()" style="height:34px;padding:0 14px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">🖨️ Imprimer</button>
   </div>
   <div id="gantt-legend" style="display:flex;gap:16px;margin-bottom:8px;font-size:11px;color:#475569;align-items:center;flex-wrap:wrap"></div>
   <div id="gantt-wrap" style="overflow-x:auto"></div>
@@ -4005,9 +4006,11 @@ function RGANTT(){
     tdEff0.appendChild(effInp0);
     tr.appendChild(tdEff0);
 
-    var chS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
-    var chE=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
-    var chR=ch.dateDebut?new Date(ch.dateDebut):null;
+    // Parser les dates en heure locale pour éviter les décalages UTC
+    function parseLocalDate(s){if(!s)return null;var p=s.split("-");return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
+    var chS=parseLocalDate(ch.dateDebutPrev);
+    var chE=ch.dateFinPrev?new Date(parseLocalDate(ch.dateFinPrev).getTime()+24*60*60*1000):null; // +1 jour pour inclure la journée de fin
+    var chR=parseLocalDate(ch.dateDebut);
 
     weeks.forEach(function(w){
       var wE=new Date(w.getTime()+7*24*60*60*1000);
@@ -4164,6 +4167,177 @@ function RGANTT(){
     "<span style='color:#0d9488'><b>➕ X</b> : X personnes de disponibles en plus</span>";
 }
 
+
+function showGanttPrintModal(){
+  var existing=document.getElementById("gantt-print-modal");if(existing)existing.remove();
+  var modal=document.createElement("div");modal.id="gantt-print-modal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:440px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:'DM Sans',sans-serif";
+
+  var title=document.createElement("div");
+  title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:16px;margin-bottom:16px;color:#13201e";
+  title.textContent="🖨️ Imprimer le planning annuel";
+  box.appendChild(title);
+
+  var today=new Date();
+  var curYear=today.getFullYear();
+  var MOIS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+  // Sélection de l'année
+  var yearRow=document.createElement("div");yearRow.style.cssText="margin-bottom:14px;display:flex;align-items:center;gap:10px";
+  var yearLbl=document.createElement("label");yearLbl.style.cssText="font-size:12px;font-weight:600;color:#475569;width:50px";yearLbl.textContent="Année";
+  var yearSel=document.createElement("select");yearSel.style.cssText="flex:1;height:32px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none";
+  [curYear-1,curYear,curYear+1].forEach(function(y){var o=document.createElement("option");o.value=y;o.textContent=y;if(y===curYear)o.selected=true;yearSel.appendChild(o);});
+  yearRow.appendChild(yearLbl);yearRow.appendChild(yearSel);box.appendChild(yearRow);
+
+  // Choix mois
+  var moisTitle=document.createElement("div");moisTitle.style.cssText="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px";moisTitle.textContent="Mois à imprimer :";
+  box.appendChild(moisTitle);
+
+  // Bouton Tout/Rien
+  var allRow=document.createElement("div");allRow.style.cssText="display:flex;gap:8px;margin-bottom:8px";
+  var btnAll=document.createElement("button");btnAll.textContent="Tout cocher";btnAll.style.cssText="height:26px;padding:0 10px;background:#f0fdfa;border:1px solid #5eead4;border-radius:6px;font-size:11px;cursor:pointer;color:#0d9488;font-weight:600";
+  var btnNone=document.createElement("button");btnNone.textContent="Tout décocher";btnNone.style.cssText="height:26px;padding:0 10px;background:#f3f6f6;border:1px solid var(--brd2);border-radius:6px;font-size:11px;cursor:pointer;color:#6b7c79";
+  allRow.appendChild(btnAll);allRow.appendChild(btnNone);box.appendChild(allRow);
+
+  // Grille des mois
+  var grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px";
+  var checkboxes=[];
+  MOIS.forEach(function(m,i){
+    var wrap=document.createElement("label");wrap.style.cssText="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 6px;border:1px solid var(--brd2);border-radius:6px;background:var(--bg)";
+    var cb=document.createElement("input");cb.type="checkbox";cb.value=i;cb.checked=true;
+    cb.style.cssText="accent-color:#0d9488";
+    checkboxes.push(cb);
+    wrap.appendChild(cb);wrap.appendChild(document.createTextNode(m.substring(0,3)));
+    grid.appendChild(wrap);
+  });
+  box.appendChild(grid);
+
+  btnAll.onclick=function(){checkboxes.forEach(function(c){c.checked=true;});};
+  btnNone.onclick=function(){checkboxes.forEach(function(c){c.checked=false;});};
+
+  // Boutons action
+  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px";
+  var printBtn=document.createElement("button");printBtn.style.cssText="flex:1;height:38px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer";printBtn.textContent="🖨️ Imprimer";
+  var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:38px;padding:0 14px;background:none;border:1px solid var(--brd2);border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
+
+  printBtn.onclick=function(){
+    var year=parseInt(yearSel.value);
+    var selectedMonths=checkboxes.filter(function(c){return c.checked;}).map(function(c){return parseInt(c.value);});
+    if(!selectedMonths.length){showToast("⚠️ Sélectionnez au moins un mois");return;}
+    modal.remove();
+    printGantt(year,selectedMonths);
+  };
+  cancelBtn.onclick=function(){modal.remove();};
+  btnRow.appendChild(printBtn);btnRow.appendChild(cancelBtn);box.appendChild(btnRow);
+  modal.appendChild(box);document.body.appendChild(modal);
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+}
+
+function printGantt(year,selectedMonths){
+  var win=window.open("","_blank","width=1200,height=800");
+  if(!win){showToast("Autorisez les pop-ups");return;}
+
+  var MOIS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var moisLabels=selectedMonths.map(function(m){return MOIS[m];}).join(", ");
+
+  // Calculer les semaines pour les mois sélectionnés
+  var weeks=[];
+  var seen={};
+  selectedMonths.forEach(function(mo){
+    var d=new Date(year,mo,1);
+    while(d.getMonth()===mo){
+      var dow=d.getDay()||7;
+      var mon=new Date(d);mon.setDate(d.getDate()-(dow-1));mon.setHours(0,0,0,0);
+      var key=mon.getFullYear()+"-"+mon.getMonth()+"-"+mon.getDate();
+      if(!seen[key]){seen[key]=true;weeks.push(new Date(mon));}
+      d.setDate(d.getDate()+1);
+    }
+  });
+  weeks.sort(function(a,b){return a-b;});
+
+  var chantiers=D.chantiers.filter(function(c){return !c.done;}).sort(function(a,b){
+    var ra=(a.ref||"").trim(),rb=(b.ref||"").trim();
+    if(!ra)return 1;if(!rb)return -1;
+    return ra.localeCompare(rb,undefined,{numeric:true});
+  });
+
+  function parseLD(s){if(!s)return null;var p=s.split("-");return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
+
+  var WW=24;
+  var html="<!DOCTYPE html><html><head><meta charset='utf-8'><title>Planning BLO — "+year+"</title><style>";
+  html+="body{font-family:Arial,sans-serif;font-size:9px;margin:10mm;} @media print{body{margin:5mm}}";
+  html+=".logo{max-height:40px} .header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1e3a5f;padding-bottom:8px;margin-bottom:10px}";
+  html+="table{border-collapse:collapse;font-size:8px;width:100%} th,td{border:1px solid #e2e8f0;padding:2px 3px}";
+  html+=".ch-name{min-width:140px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:sticky;left:0;background:#fff}";
+  html+=".wk-cell{width:"+WW+"px;min-width:"+WW+"px;height:22px;position:relative;padding:0}";
+  html+=".bar-prev{position:absolute;top:3px;height:7px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px)}";
+  html+=".bar-real{position:absolute;top:12px;height:7px}";
+  html+=".hdr-mo{background:#1e3a5f;color:#fff;font-weight:700;text-align:center;font-size:8px}";
+  html+=".hdr-wk{background:#e9eeee;text-align:center;font-size:7px}";
+  html+="</style></head><body>";
+
+  // Header
+  html+="<div class='header'>";
+  html+="<img src='"+LOGO_BLO+"' class='logo'>";
+  html+="<div style='text-align:right'><div style='font-size:13px;font-weight:700;color:#1e3a5f'>Planning Prévisionnel "+year+"</div>";
+  html+="<div style='font-size:9px;color:#6b7c79'>"+moisLabels+"</div>";
+  html+="<div style='font-size:9px;color:#6b7c79'>95 quai Émile Cormerais — 44800 Saint-Herblain</div></div></div>";
+
+  html+="<table><thead>";
+  // Ligne mois
+  html+="<tr><th class='ch-name' rowspan='2'>Chantier</th>";
+  // Regrouper par mois
+  var moGroups={};
+  weeks.forEach(function(w){var mo=w.getMonth();if(!moGroups[mo])moGroups[mo]=0;moGroups[mo]++;});
+  Object.keys(moGroups).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(mo){
+    html+="<th colspan='"+moGroups[mo]+"' class='hdr-mo'>"+MOIS[parseInt(mo)]+"</th>";
+  });
+  html+="</tr>";
+  // Ligne semaines
+  html+="<tr>";
+  weeks.forEach(function(w){html+="<th class='hdr-wk'>S"+getISOWeek(w)+"<br>"+w.getDate()+"/"+(w.getMonth()+1)+"</th>";});
+  html+="</tr></thead><tbody>";
+
+  // Lignes chantiers
+  chantiers.forEach(function(ch){
+    var chS=parseLD(ch.dateDebutPrev);
+    var chE=ch.dateFinPrev?new Date(parseLD(ch.dateFinPrev).getTime()+86400000):null;
+    var chR=parseLD(ch.dateDebut);
+    var hasSomething=chS||chR;
+    if(!hasSomething)return;
+    html+="<tr><td class='ch-name' title='"+(ch.ref?ch.ref+" — ":"")+ch.nom+"'>";
+    html+="<span style='display:inline-block;width:6px;height:6px;border-radius:50%;background:"+ch.color+";margin-right:4px;vertical-align:middle'></span>";
+    html+=(ch.ref?ch.ref+" — ":"")+ch.nom+"</td>";
+    weeks.forEach(function(w){
+      var wE=new Date(w.getTime()+7*86400000);
+      html+="<td class='wk-cell'>";
+      if(chS&&chE&&w<chE&&wE>chS){
+        var isFst=w<=chS&&wE>chS;var isLst=w<chE&&wE>=chE;
+        var left=isFst?"2px":"0";var right=isLst?"2px":"0";
+        html+="<div class='bar-prev' style='left:"+left+";right:"+right+";background:repeating-linear-gradient(45deg,"+ch.color+","+ch.color+" 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px);border:1px solid "+ch.color+";border-radius:"+(isFst?"3px 0 0 3px":"")+(isLst?" 0 3px 3px 0":"")+"'></div>";
+      }
+      if(chR&&wE>chR&&w<(chE||new Date(9e12))){
+        var isFstR=w<=chR&&wE>chR;
+        html+="<div class='bar-real' style='left:"+(isFstR?"2px":"0")+";right:2px;background:"+ch.color+";border-radius:"+(isFstR?"3px 0 0 3px":"0")+"'></div>";
+      }
+      html+="</td>";
+    });
+    html+="</tr>";
+  });
+
+  html+="</tbody></table>";
+  // Légende
+  html+="<div style='margin-top:12px;font-size:8px;color:#475569;display:flex;gap:16px'>";
+  html+="<span><span style='display:inline-block;width:16px;height:6px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px);vertical-align:middle;margin-right:4px'></span>Période prévisionnelle</span>";
+  html+="<span><span style='display:inline-block;width:16px;height:6px;background:#0d9488;vertical-align:middle;margin-right:4px'></span>Période réelle</span>";
+  html+="</div>";
+  html+="</body></html>";
+
+  win.document.write(html);win.document.close();
+  win.onload=function(){win.print();};
+}
 
 function openChantierEdit(id){
   editChAnalyse(id);
