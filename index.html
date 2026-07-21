@@ -4717,6 +4717,7 @@ var _cleanedAbsenceMonths={};
 // Nettoie heures chantier / panier / RTT acquis pour un salarié à une date précise (mois/annee/wk/di).
 // Retourne true si quelque chose a été modifié.
 function cleanPointageForDaySalarie(salId,mois,annee,wk,di){
+  if(!D.pointages)D.pointages={};
   var changed=false;
   var dt=getDatesOfWeek(wk,annee)[di];
   var plannedChIds={};
@@ -4725,7 +4726,6 @@ function cleanPointageForDaySalarie(salId,mois,annee,wk,di){
     var k=ptKey(mois,annee,"ch_"+ch.id,salId,wk,di);
     var hasManual=D.pointages[k]!==undefined&&D.pointages[k]!=="";
     var isPlanned=!!plannedChIds[ch.id];
-    // Ne touche que les chantiers qui avaient déjà quelque chose (saisie manuelle ou suggestion du planning) ce jour-là
     if(!hasManual&&!isPlanned)return;
     if(D.pointages[k]!=="0"){D.pointages[k]="0";changed=true;}
     var rkey=mois+"|"+annee+"|ch_"+ch.id+"|"+salId+"|"+wk+"|"+di;
@@ -4736,14 +4736,13 @@ function cleanPointageForDaySalarie(salId,mois,annee,wk,di){
   var panierWasSet=D.pointages[kPanier]!==undefined;
   var panierAutoSuggested=dt?shouldAutoPanier(salId,dt):false;
   if((panierWasSet||panierAutoSuggested)&&D.pointages[kPanier]!=="0"){D.pointages[kPanier]="0";changed=true;}
-  // RTT acquis a un défaut de 0.5h/jour (L-J) même sans saisie : on force toujours "0" explicite
-  var kRttAcq=ptKey(mois,annee,"rtt_acq",salId,wk,di);
-  if(D.pointages[kRttAcq]!=="0"){D.pointages[kRttAcq]="0";changed=true;}
   if(changed)save();
   return changed;
 }
 
 function cleanPointageForFullDayAbsences(mois,annee){
+  if(!_cleanedAbsenceMonths)_cleanedAbsenceMonths={};
+  if(!D.pointages)D.pointages={};
   var ck=mois+"|"+annee;
   if(_cleanedAbsenceMonths[ck])return; // already cleaned this session for this month
   if(!D.absences||!D.absences.length)return;
