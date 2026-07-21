@@ -618,15 +618,10 @@ var NETLIFY_DATA_URL = "https://accueil-eng.github.io/blo-planning/data.json";
 
 function loadFromCloud(cb){
   function applyRemote(remote){
-    if(!remote)return;
-    // Ne pas écraser si les données locales sont plus récentes (Bureau uniquement)
-    // Sur le téléphone salarié _lastLocalSaveAt est toujours 0 donc on applique toujours
-    if(_lastLocalSaveAt > 0 && remote._savedAt && remote._savedAt < _lastLocalSaveAt){
-      return;
-    }
+    if(!remote||typeof remote!=="object")return;
+    if(_lastLocalSaveAt>0&&remote._savedAt&&remote._savedAt<_lastLocalSaveAt)return;
     D=remote;
-    // Récupérer le token lecture seule embarqué dans les données
-    if(D.readonlyToken) GH_TOKEN_READONLY=D.readonlyToken;
+    if(D.readonlyToken)GH_TOKEN_READONLY=D.readonlyToken;
     ["chantiers","salaries","absences","vehicules","formations","rdvs"].forEach(function(k){if(!D[k])D[k]=[];});
     ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
     if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
@@ -635,64 +630,33 @@ function loadFromCloud(cb){
     localStorage.setItem(SK,JSON.stringify(D));
   }
 
-  // Sans token écriture → lecture directe depuis GitHub raw (dépôt public)
-  if(!GH_TOKEN){
-    var readToken = GH_TOKEN_READONLY;
-    var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?t="+Date.now();
-    // Essayer d'abord sans token (dépôt public), puis avec token si besoin
-    fetch(rawUrl,{cache:"no-store"})
-      .then(function(r){return r.ok?r.json():null;})
-      .then(function(remote){
-        if(remote){applyRemote(remote);if(cb)cb();return;}
-        // Fallback avec token si raw échoue
-        if(readToken){
-          fetch(GH_API,{cache:"no-store",headers:{"Authorization":"token "+readToken,"Accept":"application/vnd.github.v3+json"}})
-            .then(function(r2){return r2.ok?r2.json():null;})
-            .then(function(data){
-              if(data&&data.content){
-                var b64=data.content.split("\n").join("");
-                var json=decodeURIComponent(escape(atob(b64)));
-                applyRemote(JSON.parse(json));
-              }
-              if(cb)cb();
-            })
-            .catch(function(){if(cb)cb();});
-        } else {if(cb)cb();}
-      })
-      .catch(function(){
-        var local=localStorage.getItem(SK);
-        if(local){try{D=JSON.parse(local);}catch(ex){}}
-        if(cb)cb();
-      });
-    return;
-  }
-
-  // Avec token → lecture via GitHub API
-  fetch(GH_API,{headers:{"Authorization":"token "+GH_TOKEN,"Accept":"application/vnd.github.v3+json"}})
-  .then(function(r){
-    if(r.status===404){if(cb)cb();return null;}
-    return r.json();
-  })
-  .then(function(data){
-    if(!data)return;
-    if(data.content){
-      _ghSha=data.sha;
-      var b64=data.content.split("\n").join("");
-      var json=decodeURIComponent(escape(atob(b64)));
-      applyRemote(JSON.parse(json));
+  // Stratégie : raw GitHub (public, pas besoin de token) → toujours à jour
+  var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?nocache="+Date.now();
+  fetch(rawUrl,{cache:"no-store"})
+    .then(function(r){
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      return r.json();
+    })
+    .then(function(remote){
+      applyRemote(remote);
+      // Si token dispo, récupérer aussi le SHA pour les sauvegardes
+      if(GH_TOKEN&&!_ghSha){
+        fetch(GH_API,{headers:{"Authorization":"token "+GH_TOKEN,"Accept":"application/vnd.github.v3+json"}})
+          .then(function(r2){return r2.ok?r2.json():null;})
+          .then(function(d2){if(d2&&d2.sha)_ghSha=d2.sha;});
+      }
       var now=new Date();
-      _savedAt=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
       var v=document.getElementById("ver-display");
-      if(v){v.textContent="☁️ Chargé le "+_savedAt;v.style.color="#0891b2";}
-    }
-    if(cb)cb();
-  })
-  .catch(function(e){
-    console.log("GitHub load error:",e);
-    var local=localStorage.getItem(SK);
-    if(local){try{D=JSON.parse(local);}catch(ex){}}
-    if(cb)cb();
-  });
+      if(v){v.textContent="☁️ Chargé le "+now.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");v.style.color="#0891b2";}
+      if(cb)cb();
+    })
+    .catch(function(e){
+      console.warn("raw fetch failed:",e);
+      // Fallback localStorage
+      var local=localStorage.getItem(SK);
+      if(local){try{var ld=JSON.parse(local);applyRemote(ld);}catch(ex){}}
+      if(cb)cb();
+    });
 }
 
 var _lastPlanningHash=null;
