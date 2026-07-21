@@ -1340,6 +1340,8 @@ function mkDepotCell(d){
     if(v.salAffecte){
       var sal=D.salaries.find(function(s){return s.id===v.salAffecte;});
       if(sal&&sal.isBureau)return false;
+      // Exclure si le salarié est affecté à un chantier ce jour-là
+      if(sal&&isAssDay(sal.id,d))return false;
     }
     return true;
   });
@@ -1474,19 +1476,19 @@ function mkChip(eid,ck,di,idx,all){
   if(iAb){var ico=document.createElement("span");ico.className="cico";ico.title="Absent ce jour";ico.textContent="⚠️";top.appendChild(ico);}
   else if(conf.length){var ico=document.createElement("span");ico.className="cico";ico.title="Déjà sur: "+conf.join(", ");ico.textContent="🔴";top.appendChild(ico);}
   else if(isDup){var ico=document.createElement("span");ico.className="cico";ico.title="Doublon";ico.textContent="⚠️";top.appendChild(ico);}
-  // Badge anniversaire — chip distinct et visible
+  // Badge anniversaire — ajouter 🎂 dans la puce du salarié
   if(sal.ddn){
     var bdDt=wd(CW)[di];
     var bdParts=sal.ddn.split("-");
     if(bdParts.length===3&&parseInt(bdParts[1])===bdDt.getMonth()+1&&parseInt(bdParts[2])===bdDt.getDate()){
       var age=parseInt(bdParts[0])>1900?(bdDt.getFullYear()-parseInt(bdParts[0]))+" ans":"";
-      var bdChip=document.createElement("div");
-      bdChip.style.cssText="margin-top:3px;display:flex;align-items:center;gap:4px;background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;color:#92400e";
-      bdChip.innerHTML="🎂 Anniversaire !"+( age?" "+age:"");
-      wrap.parentNode&&wrap.parentNode.appendChild?null:null;
-      // On ajoute le chip anniversaire sous le chip principal dans la cellule
-      wrap.dataset.bday="1";
-      wrap.title=(wrap.title?wrap.title+"\n":"")+"🎂 Anniversaire !"+( age?" ("+age+")":"");
+      // Ajouter emoji dans le nom du chip
+      var bdIco=document.createElement("span");
+      bdIco.textContent="🎂";
+      bdIco.style.cssText="margin-left:3px;font-size:12px";
+      bdIco.title="Anniversaire !"+(age?" ("+age+")":"");
+      top.appendChild(bdIco);
+      // Mettre en valeur le chip
       wrap.style.border="2px solid #fde047";
       wrap.style.background="#fef9c3";
     }
@@ -2369,8 +2371,8 @@ function XCSV(){
 // ── PROFILS ──
 var PROFILES = {
   bureau: { name: "Bureau", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites","messages"], readOnly: false },
-  bureau_alexis: { name: "Alexis", pin: "@@@@", color: "#0d9488", tabs: ["planning","absences","pointage","messages","vehicules","chantiers"], readOnly: false },
-  bureau_valerie: { name: "Valérie", pin: "@@@@", color: "#7c3aed", tabs: ["pointage","messages","indemnites"], readOnly: false },
+  bureau_alexis: { name: "Alexis", pin: "@@@@", color: "#0d9488", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites","messages"], readOnly: false },
+  bureau_valerie: { name: "Valérie", pin: "@@@@", color: "#7c3aed", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites","messages"], readOnly: false },
   analyse: { name: "Analyse", pin: "@@@@", color: "#0891b2", tabs: ["gantt","bilan"], readOnly: false },
   salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence","messages"], readOnly: true },
   planningpublic: { name: "Planning (lecture seule)", pin: null, color: "#0891b2", tabs: ["planning"], readOnly: true }
@@ -2576,7 +2578,7 @@ function showProfileModal() {
     info.appendChild(nm);
     var ds = document.createElement("div");
     ds.style.cssText = "font-size:11px;color:#6b7c79;margin-top:2px";
-    ds.textContent = key === "bureau" ? "Accès complet · Admin" : key === "bureau_alexis" ? "Planning · Pointage · Messages" : key === "bureau_valerie" ? "Salaires · Pointage · Messages" : key === "salarie" ? "Planning · Pointage · Absences" : key === "analyse" ? "Prévisionnel · Bilans" : "";
+    ds.textContent = key === "bureau" ? "Accès complet · Admin" : key === "bureau_alexis" ? "Accès complet" : key === "bureau_valerie" ? "Accès complet" : key === "salarie" ? "Planning · Pointage · Absences" : key === "analyse" ? "Prévisionnel · Bilans" : "";
     info.appendChild(ds);
     if(key==="valerie"){
       if(vCount>0){
