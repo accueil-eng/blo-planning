@@ -25,8 +25,6 @@ body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--txt);min-
 .logo-txt small{font-weight:600;font-size:12px;color:var(--muted)}
 .tabs{display:flex;gap:0;overflow-x:auto}
 body.profile-salarie .tabs{display:none}
-body.profile-salarie .ptool{display:none}
-body.profile-salarie #sal-week-nav{display:flex!important}
 .tb{background:none;border:none;border-bottom:2px solid transparent;padding:14px 12px 12px;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tb:hover{color:var(--txt)}.tb.on{color:var(--acc);border-bottom-color:var(--acc)}
 .sind{font-size:11px;color:var(--green);padding:0 6px;opacity:0;transition:opacity .4s;flex-shrink:0}
@@ -76,7 +74,7 @@ body.profile-salarie #sal-week-nav{display:flex!important}
 .ch-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 /* SPECIAL ROWS */
 .td-label.liv-l{background:#fefce8}.td-label.ua-l{background:#f0f9ff}
-.td-label.abs-l{background:#fff7ed}.td-label.depot-l{background:var(--green-bg)}.td-label.ind-l{background:#fdf2f8}.td-label.bday-l{background:#fef9c3}
+.td-label.abs-l{background:#fff7ed}.td-label.depot-l{background:var(--green-bg)}.td-label.ind-l{background:#fdf2f8}
 .spec-lbl{font-family:"Syne",sans-serif;font-weight:700;font-size:10px;padding:8px;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:4px}
 .spec-lbl.liv{color:#a16207}.spec-lbl.ua{color:#0369a1}.spec-lbl.abs{color:var(--orange)}.spec-lbl.depot{color:var(--green)}.spec-lbl.ind{color:#be185d}
 /* DATA CELL */
@@ -100,8 +98,6 @@ body.profile-salarie #sal-week-nav{display:flex!important}
 .chip-wrap.picked{opacity:.5}
 .chip-wrap.c-bday{background:linear-gradient(135deg,#fef9c3,#fde68a);border-color:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,.4)}
 .chip-wrap.c-apprenti{background:#dcfce7;border-color:#86efac}
-.chip-wrap.c-stagiaire{background:#fef9c3;border-color:#fde047}
-.chip-wrap.c-interimaire{background:#fff7ed;border-color:#fdba74}
 .chip-wrap.c-liv{background:#fff7ed;border-color:#fb923c;border-width:2px}
 .bday-banner{display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(90deg,#f59e0b,#f97316);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-top:2px;letter-spacing:.03em;animation:bdaypulse 1.5s infinite}
 .chip-handle{display:flex;align-items:center;justify-content:center;width:14px;min-width:14px;cursor:ew-resize;color:#94a3b8;font-size:10px;padding:0 1px;border-left:1px solid #99f6e4;margin-left:2px;user-select:none;flex-shrink:0}
@@ -117,6 +113,7 @@ body.profile-salarie #sal-week-nav{display:flex!important}
 .crm:hover{color:var(--red)}
 /* VEH BUTTON inline at end of chip */
 .chip-veh{display:none!important}
+.chip-veh-disabled-placeholder{display:inline-flex;align-items:center;gap:1px;padding:1px 4px;font-size:10px;font-weight:600;cursor:pointer;background:#e0f2fe;border:none;border-radius:4px;font-family:"DM Sans",sans-serif;color:#0369a1;flex-shrink:0;margin-left:auto;height:auto;transition:background .1s;white-space:nowrap}
 .chip-veh:hover{background:rgba(0,0,0,.06)}
 .chip-veh.has-veh{color:var(--txt)}
 .chip-veh .vdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
@@ -205,12 +202,10 @@ body.profile-salarie #sal-week-nav{display:flex!important}
     <button class="tb" onclick="TAB('absdemande')">🏖 Demande d'absence</button>
     <button class="tb" onclick="TAB('pointage')">Pointage</button>
     <button class="tb" onclick="TAB('indemnites')">Indemnités</button>
-    <button class="tb" onclick="TAB('messages')" style="position:relative">💬 Messages<span id="msg-dot" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#dc2626"></span></button>
 
     <button class="tb" onclick="TAB('chantiers')">Chantiers</button>
     <button class="tb" onclick="TAB('salaries')">Salariés</button>
     <button class="tb" onclick="TAB('absences')" style="position:relative">Absences<span id="absdemandes-dot" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#dc2626"></span></button>
-    <button class="tb" onclick="TAB('vehicules')" style="position:relative">Véhicules<span id="veh-alert-dot" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#f97316"></span></button>
     <button class="tb" onclick="TAB('formation')">Formation</button>
     <button class="tb" onclick="TAB('gantt')">&#128197; Pr&#233;visionnel</button>
     <button class="tb" onclick="TAB('bilan')">&#128202; Bilan heures chantiers</button>
@@ -220,7 +215,6 @@ body.profile-salarie #sal-week-nav{display:flex!important}
     <option value="absdemande">🏖 Demande d'absence</option>
     <option value="pointage">🕐 Pointage</option>
     <option value="urgence">🆘 Urgence</option>
-    <option value="messages">💬 Messages</option>
   </select>
   <span class="sind" id="sind">✓ Sauvegardé</span>
   <span id="ver-display" style="font-size:10px;color:var(--muted);padding:0 8px;flex-shrink:0;white-space:nowrap"></span>
@@ -230,12 +224,6 @@ body.profile-salarie #sal-week-nav{display:flex!important}
 </header>
 
 <div id="absdemandes-banner" onclick="TAB('absences')" style="display:none;cursor:pointer;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:13px;font-weight:600;padding:10px 16px;text-align:center"></div>
-
-<div id="sal-week-nav" style="display:none;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--brd);gap:12px;position:sticky;top:0;z-index:10">
-  <button onclick="prevWeek()" style="flex:0 0 48px;height:48px;border-radius:12px;border:1px solid var(--brd2);background:var(--bg);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">◀</button>
-  <span id="sal-wlbl" style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;text-align:center;flex:1"></span>
-  <button onclick="nextWeek()" style="flex:0 0 48px;height:48px;border-radius:12px;border:1px solid var(--brd2);background:var(--bg);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">▶</button>
-</div>
 
 <div class="pg on" id="pg-planning">
   <div class="ptool">
@@ -285,12 +273,6 @@ body.profile-salarie #sal-week-nav{display:flex!important}
       <option value="stagiaire">Stagiaire</option>
       <option value="interimaire">Intérimaire</option>
     </select>
-    <select id="scontrat" style="max-width:80px;height:32px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 8px;font-size:12px;background:var(--bg);color:var(--txt);outline:none">
-      <option value="CDI">CDI</option>
-      <option value="CDD">CDD</option>
-    </select>
-    <input type="date" id="scontrat-debut" title="Début contrat (CDD)" style="max-width:140px;display:none">
-    <input type="date" id="scontrat-fin" title="Fin contrat (CDD)" style="max-width:140px;display:none">
     <div class="cpick" id="salcp"></div>
     <button class="btn btn-p" onclick="addSal()">+ Ajouter</button>
   </div>
@@ -380,9 +362,8 @@ body.profile-salarie #sal-week-nav{display:flex!important}
       <option value="">Tous les chantiers</option>
     </select>
   </div>
-  <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center">
+  <div style="margin-bottom:8px">
     <button class="btn btn-p" onclick="addChantierFromGantt()" style="font-size:12px">+ Nouveau chantier</button>
-    <button onclick="showGanttPrintModal()" style="height:34px;padding:0 14px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">🖨️ Imprimer</button>
   </div>
   <div id="gantt-legend" style="display:flex;gap:16px;margin-bottom:8px;font-size:11px;color:#475569;align-items:center;flex-wrap:wrap"></div>
   <div id="gantt-wrap" style="overflow-x:auto"></div>
@@ -423,7 +404,7 @@ body.profile-salarie #sal-week-nav{display:flex!important}
   <div class="arow" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <select id="pt-mois" style="height:34px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 10px;font-size:13px;background:var(--bg);color:var(--txt);outline:none" onchange="RPOINTAGE()">
       <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
-      <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+      <option value="4">Avril</option><option value="5">Mai</option><option value="6" selected>Juin</option>
       <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
       <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
     </select>
@@ -606,7 +587,7 @@ if(!D.grille)D.grille={
   transport:{Z1A:0,Z1B:0,Z2:0,Z3:0,Z4:0,Z5:0,Z6:0,Z7:0,Z8:0,Z9:0,Z10:0}
 };
 ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
-if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
+if(!D.absDemandes)D.absDemandes=[];
 
 // Auto-reload every 60s
 setInterval(function(){
@@ -615,9 +596,8 @@ setInterval(function(){
   if(_lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 10000) return;
   loadFromCloud(function(){
     RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
-    if(_currentProfile==="bureau"){renderPtValidationsList();updatePointageDot();autoArchiveOldAbsDemandesSilent();}
+    if(_currentProfile==="bureau"){renderPtValidationsList();autoArchiveOldAbsDemandesSilent();}
     if(_currentProfile==="salarie"){renderMesDemandes();}
-    if(typeof updateMsgDot==="function")updateMsgDot();
     var ptPg=document.getElementById("pg-pointage");
     if(ptPg&&ptPg.classList.contains("on"))RPOINTAGE();
   });
@@ -627,45 +607,89 @@ var NETLIFY_DATA_URL = "https://accueil-eng.github.io/blo-planning/data.json";
 
 function loadFromCloud(cb){
   function applyRemote(remote){
-    if(!remote||typeof remote!=="object")return;
-    if(_lastLocalSaveAt>0&&remote._savedAt&&remote._savedAt<_lastLocalSaveAt)return;
+    if(!remote)return;
+    // Ne pas écraser si les données locales sont plus récentes (Bureau uniquement)
+    // Sur le téléphone salarié _lastLocalSaveAt est toujours 0 donc on applique toujours
+    if(_lastLocalSaveAt > 0 && remote._savedAt && remote._savedAt < _lastLocalSaveAt){
+      return;
+    }
     D=remote;
-    if(D.readonlyToken)GH_TOKEN_READONLY=D.readonlyToken;
+    // Récupérer le token lecture seule embarqué dans les données
+    if(D.readonlyToken) GH_TOKEN_READONLY=D.readonlyToken;
     ["chantiers","salaries","absences","vehicules","formations","rdvs"].forEach(function(k){if(!D[k])D[k]=[];});
     ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
-    if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
+    if(!D.absDemandes)D.absDemandes=[];
     if(!D.pointages)D.pointages={};
     if(!D.grille)D.grille={trajet:{},transport:{}};
     localStorage.setItem(SK,JSON.stringify(D));
   }
 
-  // Stratégie : raw GitHub (public, pas besoin de token) → toujours à jour
-  var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?nocache="+Date.now();
-  fetch(rawUrl,{cache:"no-store"})
-    .then(function(r){
-      if(!r.ok)throw new Error("HTTP "+r.status);
-      return r.json();
-    })
-    .then(function(remote){
-      applyRemote(remote);
-      // Si token dispo, récupérer aussi le SHA pour les sauvegardes
-      if(GH_TOKEN&&!_ghSha){
-        fetch(GH_API,{headers:{"Authorization":"token "+GH_TOKEN,"Accept":"application/vnd.github.v3+json"}})
-          .then(function(r2){return r2.ok?r2.json():null;})
-          .then(function(d2){if(d2&&d2.sha)_ghSha=d2.sha;});
-      }
+  // Sans token écriture → lecture via token lecture seule (salarié via QR code)
+  if(!GH_TOKEN){
+    var readToken = GH_TOKEN_READONLY;
+    if(readToken){
+      fetch(GH_API,{
+        cache:"no-store",
+        headers:{
+          "Authorization":"token "+readToken,
+          "Accept":"application/vnd.github.v3+json"
+        }
+      })
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(data){
+          if(data&&data.content){
+            var b64=data.content.split("\n").join("");
+            var json=decodeURIComponent(escape(atob(b64)));
+            applyRemote(JSON.parse(json));
+          }
+          if(cb)cb();
+        })
+        .catch(function(e){
+          console.log("Readonly fetch error:",e);
+          var local=localStorage.getItem(SK);
+          if(local){try{D=JSON.parse(local);}catch(ex){}}
+          if(cb)cb();
+        });
+    } else {
+      // Fallback Netlify si pas de token lecture seule configuré
+      fetch(NETLIFY_DATA_URL+"?t="+Date.now())
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(remote){applyRemote(remote);if(cb)cb();})
+        .catch(function(){
+          var local=localStorage.getItem(SK);
+          if(local){try{D=JSON.parse(local);}catch(ex){}}
+          if(cb)cb();
+        });
+    }
+    return;
+  }
+
+  // Avec token → lecture via GitHub API
+  fetch(GH_API,{headers:{"Authorization":"token "+GH_TOKEN,"Accept":"application/vnd.github.v3+json"}})
+  .then(function(r){
+    if(r.status===404){if(cb)cb();return null;}
+    return r.json();
+  })
+  .then(function(data){
+    if(!data)return;
+    if(data.content){
+      _ghSha=data.sha;
+      var b64=data.content.split("\n").join("");
+      var json=decodeURIComponent(escape(atob(b64)));
+      applyRemote(JSON.parse(json));
       var now=new Date();
+      _savedAt=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
       var v=document.getElementById("ver-display");
-      if(v){v.textContent="☁️ Chargé le "+now.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");v.style.color="#0891b2";}
-      if(cb)cb();
-    })
-    .catch(function(e){
-      console.warn("raw fetch failed:",e);
-      // Fallback localStorage
-      var local=localStorage.getItem(SK);
-      if(local){try{var ld=JSON.parse(local);applyRemote(ld);}catch(ex){}}
-      if(cb)cb();
-    });
+      if(v){v.textContent="☁️ Chargé le "+_savedAt;v.style.color="#0891b2";}
+    }
+    if(cb)cb();
+  })
+  .catch(function(e){
+    console.log("GitHub load error:",e);
+    var local=localStorage.getItem(SK);
+    if(local){try{D=JSON.parse(local);}catch(ex){}}
+    if(cb)cb();
+  });
 }
 
 var _lastPlanningHash=null;
@@ -863,7 +887,7 @@ function importJSON(ev){
       D=data;
       ["chantiers","salaries","absences","vehicules"].forEach(function(k){if(!D[k])D[k]=[];});
       ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
-if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
+if(!D.absDemandes)D.absDemandes=[];
       save();RP();RC();RS();RA();RV();RF();RRDV();RANALYSE();RGANTT();RPOINTAGE();RINDEM();
     }catch(err){alert("Fichier invalide: "+err.message);}
   };
@@ -882,7 +906,6 @@ function TAB(n){
   }
   if(n==="planning")RP();if(n==="chantiers")RC();if(n==="salaries")RS();if(n==="absences"){RA();RABSDEMANDES();}if(n==="vehicules")RV();
   if(n==="pointage")RPOINTAGE();
-  if(n==="messages")setTimeout(RMESSAGES,30);
   // Auto-sync when opening RDV tab
   if(n==="rdv"){loadFromCloud(function(){RRDV();});}
   if(n==="gantt"){RGANTT();}
@@ -900,8 +923,8 @@ function fmd(d){return d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"
 function fmw(w){var d=wd(w);return "Sem. du "+d[0].toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" au "+d[4].toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});}
 
 var CW="";
-function initW(){CW=ds(getMon(new Date()));document.getElementById("wdate").value=CW;document.getElementById("wlbl").textContent=fmw(CW);var sl=document.getElementById("sal-wlbl");if(sl)sl.textContent=fmw(CW);}
-function sw(w){CW=w;document.getElementById("wdate").value=CW;document.getElementById("wlbl").textContent=fmw(CW);var sl=document.getElementById("sal-wlbl");if(sl)sl.textContent=fmw(CW);RP();}
+function initW(){CW=ds(getMon(new Date()));document.getElementById("wdate").value=CW;document.getElementById("wlbl").textContent=fmw(CW);}
+function sw(w){CW=w;document.getElementById("wdate").value=CW;document.getElementById("wlbl").textContent=fmw(CW);RP();}
 function onWC(){var v=document.getElementById("wdate").value;if(v)sw(ds(getMon(pd(v))));}
 function prevWeek(){var d=pd(CW);d.setDate(d.getDate()-7);sw(ds(d));}
 function nextWeek(){var d=pd(CW);d.setDate(d.getDate()+7);sw(ds(d));}
@@ -918,27 +941,12 @@ function isAbs(sId,di){
 function allAbsDay(di){var d=wd(CW)[di];var seen={};var r=[];D.absences.forEach(function(a){if(pd(a.debut)<=d&&d<=pd(a.fin)){var s=D.salaries.find(function(x){return x.id===a.salId;});if(s&&!seen[s.id]){seen[s.id]=1;r.push(Object.assign({},s,{absType:a.type,absHeureDebut:a.heureDebut,absHeureFin:a.heureFin}));}}});(D.formations||[]).forEach(function(f){if(f.nextdeb&&f.nextfin&&pd(f.nextdeb)<=d&&d<=pd(f.nextfin)){var s=D.salaries.find(function(x){return x.id===f.salId;});if(s&&!seen[s.id]){seen[s.id]=1;r.push(Object.assign({},s,{absType:"formation"}));}}});return r;}
 function isAssDay(sId,di){var n=getNR();for(var r=0;r<n;r++)if((D.cells[CW+"|"+r+"|"+di]||[]).indexOf(sId)>=0)return true;return false;}
 function getConf(sId,di,excKey){var n=getNR();var r=[];for(var i=0;i<n;i++){var ck=CW+"|"+i+"|"+di;if(ck!==excKey&&(D.cells[ck]||[]).indexOf(sId)>=0){var ch=GRC(CW+"|"+i);r.push(ch?ch.nom:"Ch."+(i+1));}}return r;}
-function salActif(sal,dt){
-  // Un salarié CDD n'est visible dans le planning qu'à partir de sa date de début de contrat
-  if(sal.contrat==="CDD"&&sal.contratDebut){
-    var debut=new Date(sal.contratDebut);debut.setHours(0,0,0,0);
-    if(dt<debut)return false;
-  }
-  if(sal.contrat==="CDD"&&sal.contratFin){
-    var fin=new Date(sal.contratFin);fin.setHours(23,59,59,999);
-    if(dt>fin)return false;
-  }
-  return true;
-}
-
 function unasgDay(di){
   var ab={};allAbsDay(di).forEach(function(s){ab[s.id]=1;});
-  var dt=wd(CW)[di];
   return D.salaries.filter(function(s){
     if(ab[s.id]||isAssDay(s.id,di))return false;
+    // Hide Bureau-assigned salariés (e.g. Valérie) — they appear in the Bureau row instead
     if(s.isBureau)return false;
-    // Ne pas afficher les CDD avant leur date de début ou après leur fin
-    if(!salActif(s,dt))return false;
     return true;
   });
 }
@@ -1230,6 +1238,7 @@ function RP(){
   addSpecRow(tbody,"🏖 Absences","abs-l","abs",mkAbsCell);
   addSpecRow(tbody,"🏢 Bureau","bureau-l","bureau",mkBureauCell);
   addSpecRow(tbody,"🏠 Dépôt","depot-l","depot",mkDepotCell);
+  addSpecRow(tbody,"🔧 Indisponibles","ind-l","ind",mkIndCell);
   tbl.appendChild(tbody);
 }
 function addSpecRow(tbody,label,lcls,scls,cellFn){
@@ -1268,36 +1277,6 @@ function mkUACell(d){
   });
   return cc;
 }
-function mkBdayCell(d){
-  var cc=document.createElement("div");cc.className="cell-c";
-  var dt=wd(CW)[d];
-  var month=dt.getMonth()+1;
-  var day=dt.getDate();
-  var bdays=D.salaries.filter(function(s){
-    if(!s.ddn)return false;
-    var parts=s.ddn.split("-");
-    if(parts.length<3)return false;
-    return parseInt(parts[1])===month&&parseInt(parts[2])===day;
-  });
-  if(!bdays.length){
-    var e=document.createElement("div");e.style.cssText="font-size:10px;color:var(--dim);padding:3px 5px";e.textContent="—";cc.appendChild(e);
-    return cc;
-  }
-  bdays.forEach(function(sal){
-    var age="";
-    var parts=sal.ddn.split("-");
-    if(parts.length===3){
-      var birthYear=parseInt(parts[0]);
-      if(birthYear>1900)age=" ("+((wd(CW)[d].getFullYear())-birthYear)+" ans)";
-    }
-    var chip=document.createElement("div");
-    chip.style.cssText="display:inline-flex;align-items:center;gap:4px;background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;color:#92400e;margin:2px";
-    chip.innerHTML="🎂 "+sal.prenom+(sal.nom?" "+sal.nom[0]+".":"")+age;
-    cc.appendChild(chip);
-  });
-  return cc;
-}
-
 function mkAbsCell(d){
   var cc=document.createElement("div");cc.className="cell-c";
   var abs=allAbsDay(d);
@@ -1335,17 +1314,7 @@ function mkDepotCell(d){
   var asgn=asgVehs(d);
   var indIds={};
   Object.keys(D.vehIndispo).forEach(function(k){if(k.indexOf(CW+"|"+d+"|")===0)indIds[k.split("|")[2]]=1;});
-  var dvs=D.vehicules.filter(function(v){
-    if(asgn[v.id]||indIds[v.id])return false;
-    // Exclure les véhicules affectés à un salarié Bureau (toujours présent au bureau)
-    if(v.salAffecte){
-      var sal=D.salaries.find(function(s){return s.id===v.salAffecte;});
-      if(sal&&sal.isBureau)return false;
-      // Exclure si le salarié est affecté à un chantier ce jour-là
-      if(sal&&isAssDay(sal.id,d))return false;
-    }
-    return true;
-  });
+  var dvs=D.vehicules.filter(function(v){return !asgn[v.id]&&!indIds[v.id];});
   if(!dvs.length){var e=document.createElement("div");e.style.cssText="font-size:10px;color:var(--dim);padding:3px 5px";e.textContent="—";cc.appendChild(e);return cc;}
   dvs.forEach(function(veh){
     var vcs=vCS(veh);var vcls=vcs?vcs.worst:"none";
@@ -1365,7 +1334,7 @@ function mkIndCell(d){
     if(k.indexOf(CW+"|"+d+"|")!==0)return;
     var vId=k.split("|")[2];var veh=D.vehicules.find(function(v){return v.id===vId;});if(!veh)return;
     var vn=(veh.num?"N°"+veh.num:veh.immat||veh.model||"Veh");
-    var info=D.vehIndispo[k];var ric=info.reason==="garage"?"🔧":info.reason==="panne"?"⚡":info.reason==="absence"?"🚫":"❌";
+    var info=D.vehIndispo[k];var ric=info.reason==="garage"?"🔧":info.reason==="panne"?"⚡":"❌";
     var chip=document.createElement("div");chip.className="ind-chip";
     chip.innerHTML=ric+" <b>"+vn+"</b>"+(info.note?" : "+info.note:"");
     var rm=document.createElement("span");rm.className="crm";rm.textContent="×";rm.style.marginLeft="auto";
@@ -1466,7 +1435,7 @@ function mkChip(eid,ck,di,idx,all){
 
   // Pas de détection automatique de livraison par nom (spécifique à un ancien salarié) pour BLO
   var isLiv=false;
-  wrap.className="chip-wrap"+(iAb?" c-abs":conf.length?" c-conf":isDup?" c-dup":isBday?" c-bday":"")+(sal.type==="apprenti"?" c-apprenti":sal.type==="stagiaire"?" c-stagiaire":sal.type==="interimaire"?" c-interimaire":"")+(isLiv?" c-liv":"");
+  wrap.className="chip-wrap"+(iAb?" c-abs":conf.length?" c-conf":isDup?" c-dup":isBday?" c-bday":"")+(sal.type==="apprenti"?" c-apprenti":"")+(isLiv?" c-liv":"");
 
   // NAME AREA is the drag zone
   wrap.style.cursor="grab";
@@ -1477,31 +1446,7 @@ function mkChip(eid,ck,di,idx,all){
   if(iAb){var ico=document.createElement("span");ico.className="cico";ico.title="Absent ce jour";ico.textContent="⚠️";top.appendChild(ico);}
   else if(conf.length){var ico=document.createElement("span");ico.className="cico";ico.title="Déjà sur: "+conf.join(", ");ico.textContent="🔴";top.appendChild(ico);}
   else if(isDup){var ico=document.createElement("span");ico.className="cico";ico.title="Doublon";ico.textContent="⚠️";top.appendChild(ico);}
-  // Badge anniversaire — ajouter 🎂 dans la puce du salarié
-  if(sal.ddn){
-    var bdDt=wd(CW)[di];
-    var bdParts=sal.ddn.split("-");
-    if(bdParts.length===3&&parseInt(bdParts[1])===bdDt.getMonth()+1&&parseInt(bdParts[2])===bdDt.getDate()){
-      var age=parseInt(bdParts[0])>1900?(bdDt.getFullYear()-parseInt(bdParts[0]))+" ans":"";
-      // Ajouter emoji dans le nom du chip
-      var bdIco=document.createElement("span");
-      bdIco.textContent="🎂";
-      bdIco.style.cssText="margin-left:3px;font-size:12px";
-      bdIco.title="Anniversaire !"+(age?" ("+age+")":"");
-      top.appendChild(bdIco);
-      // Mettre en valeur le chip
-      wrap.style.border="2px solid #fde047";
-      wrap.style.background="#fef9c3";
-    }
-  }
-  if(sal.type&&sal.type!=="salarie"){
-    var typeBadge=document.createElement("span");
-    typeBadge.style.cssText="font-size:8px;font-weight:800;border-radius:3px;padding:1px 4px;margin-left:3px;flex-shrink:0";
-    if(sal.type==="apprenti"){typeBadge.textContent="APP";typeBadge.style.cssText+="background:#bbf7d0;color:#15803d";}
-    else if(sal.type==="stagiaire"){typeBadge.textContent="STG";typeBadge.style.cssText+="background:#fef08a;color:#92400e";}
-    else if(sal.type==="interimaire"){typeBadge.textContent="INT";typeBadge.style.cssText+="background:#fed7aa;color:#9a3412";}
-    top.appendChild(typeBadge);
-  }
+  if(isBday){var bico=document.createElement("span");bico.className="cico";bico.title="Joyeux anniversaire "+sal.prenom+" !";bico.textContent="🎂";top.appendChild(bico);}
   // Visite médicale programmée ce jour
   if(sal.visitePrev){var vpDate=new Date(sal.visitePrev);var cellD=wd(CW)[di];if(vpDate.getDate()===cellD.getDate()&&vpDate.getMonth()===cellD.getMonth()&&vpDate.getFullYear()===cellD.getFullYear()){var vico=document.createElement("span");vico.className="cico";vico.title="Visite médicale programmée !";vico.textContent="RDV";vico.style.cssText="font-size:8px;font-weight:800;color:#db2777;background:#fce7f3;border:1px solid #db2777;border-radius:3px;padding:1px 3px;margin-left:2px";top.appendChild(vico);wrap.style.border="2px solid #db2777";wrap.style.background="#fce7f3";}}
   if(isLiv){var lico=document.createElement("span");lico.className="cico";lico.title="Aussi en livraison ce jour !";lico.textContent="🚚";top.appendChild(lico);}
@@ -1727,10 +1672,7 @@ function confirmInd(){
 
 // ── CHANTIERS ──
 var scC=COLORS[0];
-function addCh(){
-  // Utiliser la même modale unifiée que le Gantt pour garder la cohérence des codes
-  addChantierFromGantt();
-}
+function addCh(){var nom=document.getElementById("cn").value.trim();if(!nom)return;D.chantiers.push({id:"ch_"+Date.now(),ref:document.getElementById("cr").value.trim(),nom:nom,adresse:document.getElementById("ca").value.trim(),cp:document.getElementById("ccp").value.trim(),ville:document.getElementById("cville").value.trim(),dateDebut:document.getElementById("cdeb").value,color:scC});saveNow();document.getElementById("cn").value="";document.getElementById("cr").value="";delete document.getElementById("cr").dataset.userEdited;document.getElementById("ca").value="";document.getElementById("ccp").value="";document.getElementById("cville").value="";document.getElementById("cdeb").value="";scC=COLORS[D.chantiers.length%COLORS.length];buildCP("chcp",function(c){scC=c;},scC);RC();}
 function delCh(id){if(!confirm("Supprimer ?"))return;D.chantiers=D.chantiers.filter(function(c){return c.id!==id;});Object.keys(D.rowChantiers).forEach(function(k){if(D.rowChantiers[k]===id)delete D.rowChantiers[k];});save();RC();}
 function togDone(id){var ch=D.chantiers.find(function(c){return c.id===id;});if(!ch)return;ch.done=!ch.done;save();RC();}
 function editCh(id){
@@ -1761,10 +1703,6 @@ function editCh(id){
     return sel;
   }
   var fZoneE=mkRow("Zone (indemnités)",mkZoneSelect(ch.zoneEcouflant||""));
-
-  // Effectif nécessaire
-  var fEff=Object.assign(document.createElement("input"),{type:"number",min:"1",max:"20",value:ch.effectifNecessaire||"",placeholder:"ex: 3",style:"flex:1;height:32px;border:1px solid #0d9488;border-radius:6px;padding:0 8px;font-size:12px;outline:none"});
-  mkRow("👷 Effectif nécessaire",fEff);
   var fDeb=mkRow("📅 Date début réelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebut||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fDebPrev=mkRow("📅 Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebutPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fFinPrev=mkRow("📅 Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateFinPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
@@ -1774,7 +1712,7 @@ function editCh(id){
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
     if(!fNom.value.trim()){alert("Nom requis");return;}
-    ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;ch.effectifNecessaire=fEff.value?parseInt(fEff.value):null;
+    ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;
     saveNow();modal.remove();RC();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
@@ -1802,15 +1740,7 @@ function RC(){
     if(!rb)return -1;
     return ra.localeCompare(rb,undefined,{numeric:true});
   });
-  // Déduplication par ref
-  var _seenRc={};
-  var dedupSorted=sorted.filter(function(c){
-    var k=(c.ref||c.id||"").trim().toLowerCase();
-    if(_seenRc[k])return false;
-    _seenRc[k]=true;
-    return true;
-  });
-  dedupSorted.forEach(function(ch){
+  sorted.forEach(function(ch){
     var card=document.createElement("div");card.className="icard";if(ch.done)card.style.opacity=".5";
     var dot=document.createElement("div");dot.className="icard-dot";dot.style.background=ch.color;card.appendChild(dot);
     var info=document.createElement("div");info.className="icard-info";
@@ -1835,43 +1765,7 @@ function RC(){
 
 // ── SALARIÉS ──
 var scS=COLORS[1];
-function addSal(){
-  var prenom=document.getElementById("sp").value.trim();
-  if(!prenom)return;
-  var contrat=document.getElementById("scontrat").value||"CDI";
-  D.salaries.push({
-    id:"sal_"+Date.now(),
-    prenom:prenom,
-    nom:document.getElementById("sn").value.trim(),
-    poste:document.getElementById("sto").value.trim(),
-    whatsapp:document.getElementById("swa").value.trim().replace(/[^0-9]/g,""),
-    ddn:document.getElementById("sddn").value,
-    visite:document.getElementById("svm").value,
-    type:document.getElementById("stype").value,
-    contrat:contrat,
-    contratDebut:contrat==="CDD"?document.getElementById("scontrat-debut").value:null,
-    contratFin:contrat==="CDD"?document.getElementById("scontrat-fin").value:null,
-    taux:document.getElementById("staux").value?parseFloat(document.getElementById("staux").value):null,
-    color:scS
-  });
-  saveNow();
-  ["sp","sn","sto","swa","sddn","svm","staux"].forEach(function(id){document.getElementById(id).value="";});
-  document.getElementById("stype").value="salarie";
-  document.getElementById("scontrat").value="CDI";
-  document.getElementById("scontrat-debut").value="";document.getElementById("scontrat-debut").style.display="none";
-  document.getElementById("scontrat-fin").value="";document.getElementById("scontrat-fin").style.display="none";
-  scS=COLORS[D.salaries.length%COLORS.length];buildCP("salcp",function(c){scS=c;},scS);RS();
-}
-
-// Afficher/masquer les dates selon type de contrat
-document.addEventListener("DOMContentLoaded",function(){
-  var sel=document.getElementById("scontrat");
-  if(sel)sel.onchange=function(){
-    var isCdd=this.value==="CDD";
-    document.getElementById("scontrat-debut").style.display=isCdd?"":"none";
-    document.getElementById("scontrat-fin").style.display=isCdd?"":"none";
-  };
-});
+function addSal(){var prenom=document.getElementById("sp").value.trim();if(!prenom)return;D.salaries.push({id:"sal_"+Date.now(),prenom:prenom,nom:document.getElementById("sn").value.trim(),poste:document.getElementById("sto").value.trim(),whatsapp:document.getElementById("swa").value.trim().replace(/[^0-9]/g,""),ddn:document.getElementById("sddn").value,visite:document.getElementById("svm").value,type:document.getElementById("stype").value,taux:document.getElementById("staux").value?parseFloat(document.getElementById("staux").value):null,color:scS});saveNow();document.getElementById("sp").value="";document.getElementById("sn").value="";document.getElementById("sto").value="";document.getElementById("swa").value="";document.getElementById("sddn").value="";document.getElementById("svm").value="";document.getElementById("stype").value="salarie";document.getElementById("staux").value="";scS=COLORS[D.salaries.length%COLORS.length];buildCP("salcp",function(c){scS=c;},scS);RS();}
 function editSal(id){
   var sal=D.salaries.find(function(s){return s.id===id;});
   if(!sal)return;
@@ -1901,21 +1795,8 @@ function editSal(id){
 
   var fTaux=mkRow("💶 Taux horaire €/h",Object.assign(document.createElement("input"),{type:"number",value:sal.taux||"",min:0,step:"0.01",placeholder:"ex: 18.50",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fType=mkRow("Type",Object.assign(document.createElement("select"),{style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fBureau=mkRow("\uD83C\uDFE2 Affect\u00e9 Bureau (9200)",Object.assign(document.createElement("input"),{type:"checkbox",checked:!!sal.isBureau,style:"width:18px;height:18px;accent-color:#db2777;cursor:pointer"}));
   [["salarie","Salarié"],["apprenti","Apprenti"],["stagiaire","Stagiaire"],["interimaire","Intérimaire"]].forEach(function(o){var opt=document.createElement("option");opt.value=o[0];opt.textContent=o[1];if(sal.type===o[0])opt.selected=true;fType.appendChild(opt);});
-  // Contrat
-  var fContrat=mkRow("📄 Contrat",Object.assign(document.createElement("select"),{style:"width:80px;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  [["CDI","CDI"],["CDD","CDD"]].forEach(function(o){var opt=document.createElement("option");opt.value=o[0];opt.textContent=o[1];if((sal.contrat||"CDI")===o[0])opt.selected=true;fContrat.appendChild(opt);});
-  var fContratDebut=mkRow("📅 Début contrat",Object.assign(document.createElement("input"),{type:"date",value:sal.contratDebut||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fContratFin=mkRow("📅 Fin contrat",Object.assign(document.createElement("input"),{type:"date",value:sal.contratFin||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  // Masquer/afficher les dates selon le contrat
-  function toggleContratDates(){
-    var isCdd=fContrat.value==="CDD";
-    fContratDebut.parentNode.style.display=isCdd?"flex":"none";
-    fContratFin.parentNode.style.display=isCdd?"flex":"none";
-  }
-  fContrat.onchange=toggleContratDates;
-  toggleContratDates();
-  var fBureau=mkRow("\uD83C\uDFE2 Affecté Bureau (9200)",Object.assign(document.createElement("input"),{type:"checkbox",checked:!!sal.isBureau,style:"width:18px;height:18px;accent-color:#db2777;cursor:pointer"}));
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:6px";
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
@@ -1925,9 +1806,6 @@ function editSal(id){
     sal.telType=fTelType.value;
     sal.ddn=fDdn.value;sal.visite=fVm.value;sal.visitePrev=fVmPrev.value;sal.type=fType.value;sal.isBureau=fBureau.checked;
     sal.taux=fTaux.value?parseFloat(fTaux.value):null;
-    sal.contrat=fContrat.value;
-    sal.contratDebut=fContrat.value==="CDD"?fContratDebut.value:null;
-    sal.contratFin=fContrat.value==="CDD"?fContratFin.value:null;
     saveNow();modal.remove();RS();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
@@ -1948,7 +1826,7 @@ function RS(){
   var table=document.createElement("table");
   table.style.cssText="width:100%;border-collapse:collapse;font-size:12px";
   var thead=table.createTHead();var hr=thead.insertRow();
-  ["","Nom","📄 Contrat","💶 Taux €/h","📱 Téléphone","🎂 Anniversaire","🏥 Visite médicale",""].forEach(function(h){
+  ["","Nom","💶 Taux €/h","📱 Téléphone","🎂 Anniversaire","🏥 Visite médicale",""].forEach(function(h){
     var th=document.createElement("th");th.textContent=h;
     th.style.cssText="padding:8px 10px;text-align:left;background:#e2e8f0;border:1px solid var(--brd);font-size:11px;font-weight:600;white-space:nowrap";
     hr.appendChild(th);
@@ -1966,22 +1844,7 @@ function RS(){
     var tdNm=tr.insertCell();tdNm.style.cssText="padding:8px 10px;border:1px solid var(--brd);font-weight:500";
     tdNm.textContent=sal.prenom+(sal.nom?" "+sal.nom:"");
     if(sal.type==="apprenti"){var badge=document.createElement("span");badge.style.cssText="margin-left:6px;font-size:9px;background:#ede9fe;color:#7c3aed;border-radius:4px;padding:1px 5px;font-weight:600";badge.textContent="Apprenti";tdNm.appendChild(badge);}
-    // Contrat
-    var tdContrat=tr.insertCell();tdContrat.style.cssText="padding:8px 10px;border:1px solid var(--brd);text-align:center";
-    var contrat=sal.contrat||"CDI";
-    var today=new Date();today.setHours(0,0,0,0);
-    if(contrat==="CDD"){
-      var debut=sal.contratDebut?new Date(sal.contratDebut):null;
-      var fin=sal.contratFin?new Date(sal.contratFin):null;
-      var notStarted=debut&&today<debut;
-      var ended=fin&&today>fin;
-      var color=ended?"#dc2626":notStarted?"#d97706":"#16a34a";
-      var label=ended?"CDD terminé":notStarted?"CDD (dès "+debut.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+")":"CDD en cours";
-      tdContrat.innerHTML="<span style='font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:"+(ended?"#fef2f2":notStarted?"#fffbeb":"#f0fdf4")+";color:"+color+"'>"+label+"</span>";
-      if(fin)tdContrat.innerHTML+="<div style='font-size:9px;color:#6b7c79;margin-top:2px'>→ "+fin.toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})+"</div>";
-    } else {
-      tdContrat.innerHTML="<span style='font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:#f0fdf4;color:#16a34a'>CDI</span>";
-    }
+    // Taux horaire
     var tdTaux=tr.insertCell();tdTaux.style.cssText="padding:8px 10px;border:1px solid var(--brd);font-weight:500;text-align:right";
     tdTaux.textContent=sal.taux!=null?sal.taux.toFixed(2)+" €/h":"—";
     // Téléphone
@@ -2136,8 +1999,8 @@ function confirmGroupAbs(){
   RA();
 }
 
-function addAbs(){var salId=document.getElementById("absal").value,debut=document.getElementById("abd").value,fin=document.getElementById("abf").value,type=document.getElementById("abt").value;var heureDebut=document.getElementById("abhd").value,heureFin=document.getElementById("abhf").value;if(!salId||!debut||!fin){alert("Remplir tous les champs.");return;}if(debut>fin){alert("Date fin après début.");return;}var entry={id:"abs_"+Date.now(),salId:salId,debut:debut,fin:fin,type:type};if(heureDebut)entry.heureDebut=heureDebut;if(heureFin)entry.heureFin=heureFin;D.absences.push(entry);if(typeof _cleanedAbsenceMonths!=="undefined")_cleanedAbsenceMonths={};syncRdv();document.getElementById("absal").value="";document.getElementById("abd").value="";document.getElementById("abf").value="";document.getElementById("abhd").value="";document.getElementById("abhf").value="";RA();}
-function delAbs(id){D.absences=D.absences.filter(function(a){return a.id!==id;});syncRdv();save();RA();}
+function addAbs(){var salId=document.getElementById("absal").value,debut=document.getElementById("abd").value,fin=document.getElementById("abf").value,type=document.getElementById("abt").value;var heureDebut=document.getElementById("abhd").value,heureFin=document.getElementById("abhf").value;if(!salId||!debut||!fin){alert("Remplir tous les champs.");return;}if(debut>fin){alert("Date fin après début.");return;}var entry={id:"abs_"+Date.now(),salId:salId,debut:debut,fin:fin,type:type};if(heureDebut)entry.heureDebut=heureDebut;if(heureFin)entry.heureFin=heureFin;D.absences.push(entry);if(typeof _cleanedAbsenceMonths!=="undefined")_cleanedAbsenceMonths={};save();document.getElementById("absal").value="";document.getElementById("abd").value="";document.getElementById("abf").value="";document.getElementById("abhd").value="";document.getElementById("abhf").value="";RA();}
+function delAbs(id){D.absences=D.absences.filter(function(a){return a.id!==id;});save();RA();}
 function RA(){
   rafSel();var el=document.getElementById("abslist");
   if(!D.absences.length){el.innerHTML="<div class='empty'><div class='empty-icon'>📅</div><p>Aucune absence.</p></div>";return;}
@@ -2163,91 +2026,9 @@ function addVeh(){var immat=document.getElementById("vimm").value.trim(),model=d
 function delVeh(id){if(!confirm("Supprimer ?"))return;D.vehicules=D.vehicules.filter(function(v){return v.id!==id;});Object.keys(D.vehAssign).forEach(function(k){if(D.vehAssign[k]===id)delete D.vehAssign[k];});save();RV();}
 function nD(last,mo){if(!last)return "";var d=new Date(last);d.setMonth(d.getMonth()+mo);return ds(d);}
 function vStat(next){if(!next)return{cls:"none",b:"—",tip:"—"};var diff=Math.round((pd(next)-new Date())/86400000);if(diff<0)return{cls:"late",b:"Dépassé",tip:"Dépassé de "+(-diff)+" j"};if(diff<=60)return{cls:"soon",b:"Dans "+diff+"j",tip:diff+" j"};return{cls:"ok",b:"OK",tip:"OK"};}
-function syncRdv(){
-  // 1. Nettoyer les indispos automatiques (RDV + absence salarié)
-  Object.keys(D.vehIndispo).forEach(function(k){
-    if(D.vehIndispo[k].fromRdv||D.vehIndispo[k].fromAbsence)delete D.vehIndispo[k];
-  });
-  // 2. RDV entretien programmé → véhicule au dépôt
-  D.vehicules.forEach(function(v){
-    (v.rdvs||[]).forEach(function(rdv){
-      var d=pd(rdv.date),dw=d.getDay();
-      if(dw===0||dw===6)return;
-      var ms=ds(getMon(d)),di=dw-1;
-      D.vehIndispo[ms+"|"+di+"|"+v.id]={reason:"garage",note:rdv.type==="vidange"?"Vidange":rdv.type==="ct"?"CT":rdv.type==="antipol"?"Anti-pol.":"Rdv garage",fromRdv:true};
-    });
-    // 3. Salarié affecté absent → véhicule au dépôt
-    if(v.salAffecte){
-      var sal=D.salaries.find(function(s){return s.id===v.salAffecte;});
-      if(sal&&D.absences){
-        D.absences.forEach(function(a){
-          if(a.salId!==sal.id)return;
-          var dStart=pd(a.debut),dEnd=pd(a.fin);
-          var d2=new Date(dStart);
-          while(d2<=dEnd){
-            var dw2=d2.getDay();
-            if(dw2>=1&&dw2<=5){
-              var ms2=ds(getMon(d2)),di2=dw2-1;
-              var k2=ms2+"|"+di2+"|"+v.id;
-              if(!D.vehIndispo[k2]){
-                D.vehIndispo[k2]={reason:"absence",note:sal.prenom+" absent(e)",fromAbsence:true};
-              }
-            }
-            d2.setDate(d2.getDate()+1);
-          }
-        });
-      }
-    }
-  });
-  save();
-}
+function syncRdv(){Object.keys(D.vehIndispo).forEach(function(k){if(D.vehIndispo[k].fromRdv)delete D.vehIndispo[k];});D.vehicules.forEach(function(v){(v.rdvs||[]).forEach(function(rdv){var d=pd(rdv.date),dw=d.getDay();if(dw===0||dw===6)return;var ms=ds(getMon(d)),di=dw-1;D.vehIndispo[ms+"|"+di+"|"+v.id]={reason:"garage",note:rdv.type==="vidange"?"Vidange":rdv.type==="ct"?"CT":rdv.type==="antipol"?"Anti-pol.":"Rdv garage",fromRdv:true};});});save();}
 function addRdv(vId,type,date,note){var v=D.vehicules.find(function(x){return x.id===vId;});if(!v)return;if(!v.rdvs)v.rdvs=[];v.rdvs.push({id:"rdv_"+Date.now(),type:type,date:date,note:note});syncRdv();RV();}
 function delRdv(vId,rId){var v=D.vehicules.find(function(x){return x.id===vId;});if(!v)return;v.rdvs=(v.rdvs||[]).filter(function(r){return r.id!==rId;});syncRdv();RV();}
-function editVeh(vid){
-  var v=D.vehicules.find(function(x){return x.id===vid;});
-  if(!v)return;
-  var existing=document.getElementById("veh-edit-modal");if(existing)existing.remove();
-  var modal=document.createElement("div");modal.id="veh-edit-modal";
-  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
-  var box=document.createElement("div");
-  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:400px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:'DM Sans',sans-serif";
-  var dstyle="width:100%;height:32px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none;box-sizing:border-box";
-  function mkRow2(label,input){
-    var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:10px";
-    var lbl=document.createElement("label");lbl.style.cssText="font-size:12px;font-weight:500;width:120px;flex-shrink:0;color:#475569";lbl.textContent=label;
-    row.appendChild(lbl);row.appendChild(input);box.appendChild(row);return input;
-  }
-  var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:16px;color:#13201e";title.textContent="✏️ Modifier le véhicule";box.appendChild(title);
-  var fNum=mkRow2("N°",Object.assign(document.createElement("input"),{value:v.num||"",placeholder:"ex: 1",style:dstyle}));
-  var fImmat=mkRow2("Immatriculation",Object.assign(document.createElement("input"),{value:v.immat||"",placeholder:"ex: EG-019-ZY",style:dstyle}));
-  var fModel=mkRow2("Modèle",Object.assign(document.createElement("input"),{value:v.model||"",placeholder:"ex: FIAT DUCATO",style:dstyle}));
-  var fVid=mkRow2("Dernière vidange",Object.assign(document.createElement("input"),{type:"date",value:v.vidange||"",style:dstyle}));
-  var fCt=mkRow2("Contrôle technique",Object.assign(document.createElement("input"),{type:"date",value:v.ct||"",style:dstyle}));
-  var fAp=mkRow2("Anti-pollution",Object.assign(document.createElement("input"),{type:"date",value:v.antipol||"",style:dstyle}));
-  var selSal=document.createElement("select");selSal.style.cssText=dstyle;
-  var optNone=document.createElement("option");optNone.value="";optNone.textContent="— Non affecté —";selSal.appendChild(optNone);
-  D.salaries.filter(function(s){return s.prenom&&s.prenom.trim();}).forEach(function(s){
-    var opt=document.createElement("option");opt.value=s.id;
-    opt.textContent=s.prenom+" "+(s.nom||"")+(s.isBureau?" (Bureau)":"");
-    if(v.salAffecte===s.id)opt.selected=true;
-    selSal.appendChild(opt);
-  });
-  mkRow2("👷 Salarié affecté",selSal);
-  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:14px";
-  var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
-  okBtn.onclick=function(){
-    v.num=fNum.value.trim();v.immat=fImmat.value.trim();v.model=fModel.value.trim();
-    v.vidange=fVid.value||null;v.ct=fCt.value||null;v.antipol=fAp.value||null;
-    v.salAffecte=selSal.value||null;
-    saveNow();modal.remove();syncRdv();RV();showToast("✅ Véhicule mis à jour !");
-  };
-  var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid var(--brd2);border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
-  cancelBtn.onclick=function(){modal.remove();};
-  btnRow.appendChild(okBtn);btnRow.appendChild(cancelBtn);box.appendChild(btnRow);
-  modal.appendChild(box);document.body.appendChild(modal);
-  modal.onclick=function(e){if(e.target===modal)modal.remove();};
-}
-
 function upVeh(id,f,val){var veh=D.vehicules.find(function(x){return x.id===id;});if(!veh)return;veh[f]=val;save();RV();}
 function RV(){
   var el=document.getElementById("vehlist");
@@ -2255,13 +2036,13 @@ function RV(){
   D.vehicules.forEach(function(v){
     [{f:"vidange",m:12,l:"Vidange"},{f:"ct",m:24,l:"CT"},{f:"antipol",m:12,l:"Anti-pol."}].forEach(function(c){
       var n=nD(v[c.f],c.m);if(!n)return;var diff=Math.round((pd(n)-new Date())/86400000);
-      if(diff<=30){var vn=(v.num?"N°"+v.num+" ":"")+(v.immat||v.model||"Veh");alerts.push({vn:vn,l:c.l,diff:diff,cls:diff<0?"late":"soon"});}
+      if(diff<=60){var vn=(v.num?"N°"+v.num+" ":"")+(v.immat||v.model||"Veh");alerts.push({vn:vn,l:c.l,diff:diff,cls:diff<0?"late":"soon"});}
     });
   });
   el.innerHTML="";
   if(alerts.length){
     var alertWrap=document.createElement("div");alertWrap.style.cssText="margin-bottom:14px;display:flex;flex-direction:column;gap:5px";
-    var atitle=document.createElement("div");atitle.style.cssText="font-size:12px;font-weight:600;color:#92400e";atitle.textContent="⚠️ Rappels — échéances dans 30 jours ou dépassées";alertWrap.appendChild(atitle);
+    var atitle=document.createElement("div");atitle.style.cssText="font-size:12px;font-weight:600;color:#92400e";atitle.textContent="⚠️ Rappels (60j)";alertWrap.appendChild(atitle);
     alerts.forEach(function(a){
       var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:8px;background:"+(a.cls==="late"?"var(--red-bg)":"var(--warn-bg)")+";border:1px solid "+(a.cls==="late"?"#fca5a5":"#fde047")+";border-radius:8px;padding:7px 12px;font-size:12px";
       row.innerHTML="<b>"+a.vn+"</b><span style='color:var(--muted)'>—</span>"+a.l+"<span style='margin-left:auto;font-weight:600;color:"+(a.cls==="late"?"var(--red)":"var(--warn)")+"'>"+(a.diff<0?"Dépassé de "+(-a.diff)+" j":"Dans "+a.diff+" j")+"</span>";
@@ -2275,7 +2056,7 @@ function RV(){
   var wrap=document.createElement("div");wrap.style.overflowX="auto";
   var table=document.createElement("table");table.className="veh-table";
   var thead=table.createTHead();var hr=thead.insertRow();
-  ["N°","👷 Salarié","Immat.","Modèle","Dern. vidange","État","Ctrl tech.","État","Anti-pol.","État","📅 RDV",""].forEach(function(h,i){var th=document.createElement("th");th.textContent=h;if(i===10)th.style.minWidth="160px";hr.appendChild(th);});
+  ["N°","Immat.","Modèle","Dern. vidange","État","Ctrl tech.","État","Anti-pol.","État","📅 RDV",""].forEach(function(h,i){var th=document.createElement("th");th.textContent=h;if(i===9)th.style.minWidth="160px";hr.appendChild(th);});
   var tbody=table.createTBody();
   D.vehicules.forEach(function(v){
     if(!v.rdvs)v.rdvs=[];
@@ -2284,21 +2065,6 @@ function RV(){
     var fmt=function(n){return n?pd(n).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"2-digit"}):"—";};
     var row=tbody.insertRow();
     var td0=row.insertCell();td0.innerHTML="<b>"+(v.num||"—")+"</b>";
-    // Salarié affecté
-    var tdSal=row.insertCell();
-    var selSal=document.createElement("select");
-    selSal.style.cssText="height:26px;border:1px solid var(--brd);border-radius:3px;padding:0 5px;font-size:11px;width:140px;background:var(--bg);color:var(--txt);outline:none";
-    var optNone=document.createElement("option");optNone.value="";optNone.textContent="— Non affecté —";selSal.appendChild(optNone);
-    D.salaries.filter(function(s){return s.prenom&&s.prenom.trim();}).forEach(function(s){
-      var opt=document.createElement("option");opt.value=s.id;opt.textContent=s.prenom+" "+(s.nom||"");
-      if(v.salAffecte===s.id)opt.selected=true;
-      selSal.appendChild(opt);
-    });
-    selSal.addEventListener("change",(function(vid){return function(){
-      var vv=D.vehicules.find(function(x){return x.id===vid;});
-      if(vv){vv.salAffecte=this.value||null;save();showToast("Véhicule affecté !");}
-    };})(v.id));
-    tdSal.appendChild(selSal);
     var td1=row.insertCell();td1.style.cssText="font-weight:600;color:var(--acc)";td1.textContent=v.immat||"—";
     var td2=row.insertCell();td2.textContent=v.model||"—";
     function mkDateCell(field,lastVal,stat,nextVal){
@@ -2334,18 +2100,11 @@ function RV(){
     var addRdvBtn=document.createElement("button");addRdvBtn.className="rdv-add-btn";addRdvBtn.textContent="+ RDV";
     addRdvBtn.onclick=function(){rdvForm.style.display="flex";};
     rdvWrap.appendChild(rdvForm);rdvWrap.appendChild(addRdvBtn);tdRdv.appendChild(rdvWrap);
-    var tdDel=row.insertCell();
-    var editBtn=document.createElement("button");editBtn.className="bico";editBtn.title="Modifier";editBtn.textContent="✏️";
-    editBtn.onclick=(function(vid){return function(){editVeh(vid);};})(v.id);
-    tdDel.appendChild(editBtn);
-    var delBtn=document.createElement("button");delBtn.className="bico";delBtn.textContent="×";delBtn.style.marginLeft="4px";
+    var tdDel=row.insertCell();var delBtn=document.createElement("button");delBtn.className="bico";delBtn.textContent="×";
     delBtn.onclick=(function(vid){return function(){delVeh(vid);};})(v.id);
     tdDel.appendChild(delBtn);
   });
   wrap.appendChild(table);el.appendChild(wrap);
-  // Dot orange sur le bouton Véhicules si des rappels sont actifs
-  var vehDot=document.getElementById("veh-alert-dot");
-  if(vehDot)vehDot.style.display=alerts.length?"block":"none";
 }
 
 // ── COLOR PICKER ──
@@ -2371,11 +2130,9 @@ function XCSV(){
 
 // ── PROFILS ──
 var PROFILES = {
-  bureau: { name: "Bureau", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites","messages"], readOnly: false },
-  bureau_alexis: { name: "Alexis", pin: "@@@@", color: "#0d9488", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites","messages"], readOnly: false },
-  bureau_valerie: { name: "Valérie", pin: "@@@@", color: "#7c3aed", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites","messages"], readOnly: false },
+  bureau: { name: "Bureau", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","salaries","absences","formation","pointage","indemnites"], readOnly: false },
   analyse: { name: "Analyse", pin: "@@@@", color: "#0891b2", tabs: ["gantt","bilan"], readOnly: false },
-  salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence","messages"], readOnly: true },
+  salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnly: true },
   planningpublic: { name: "Planning (lecture seule)", pin: null, color: "#0891b2", tabs: ["planning"], readOnly: true }
 };
 var _currentProfile = null;
@@ -2464,10 +2221,6 @@ function showGHTokenModal(){
   var inp2label=document.createElement("div");inp2label.style.cssText="font-size:11px;font-weight:600;color:#6b7c79;margin-bottom:4px;margin-top:10px";inp2label.textContent="Token lecture seule (salariés via QR code)";
   var inp2=document.createElement("input");inp2.id="gh-token-readonly-input";inp2.type="password";inp2.value=D.readonlyToken||"";inp2.placeholder="github_pat_... (lecture seule)";inp2.style.cssText="width:100%;height:34px;border:1px solid #c0cccb;border-radius:6px;padding:0 10px;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px";
   var inp2hint=document.createElement("div");inp2hint.style.cssText="font-size:10px;color:#6b7c79;margin-bottom:10px";inp2hint.textContent="Créez un token Fine-grained avec Contents:Read-only sur blo-planning.";
-
-  var waLabel=document.createElement("div");waLabel.style.cssText="font-size:11px;font-weight:600;color:#6b7c79;margin-bottom:4px;margin-top:10px";waLabel.textContent="📱 N° WhatsApp Alexis (notifications demandes)";
-  var waInp=document.createElement("input");waInp.type="tel";waInp.value=localStorage.getItem("alexis_wa")||"33762853767";waInp.placeholder="ex: 33612345678 (sans + ni espaces)";waInp.style.cssText="width:100%;height:34px;border:1px solid #c0cccb;border-radius:6px;padding:0 10px;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:4px";
-  var waHint=document.createElement("div");waHint.style.cssText="font-size:10px;color:#6b7c79;margin-bottom:10px";waHint.textContent="Format international sans + : 33612345678 pour 06 12 34 56 78";
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px";
   var okB=document.createElement("button");okB.style.cssText="flex:1;height:34px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okB.textContent="Enregistrer";
   okB.onclick=function(){
@@ -2476,15 +2229,13 @@ function showGHTokenModal(){
     GH_TOKEN=t;
     var t2=inp2.value.trim();
     if(t2){D.readonlyToken=t2;GH_TOKEN_READONLY=t2;save();}
-    var wa=waInp.value.trim();
-    if(wa)localStorage.setItem("alexis_wa",wa);
     modal.remove();
     showToast("✅ Tokens sauvegardés !");
   };
   var cancelB=document.createElement("button");cancelB.style.cssText="height:34px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelB.textContent="Annuler";
   cancelB.onclick=function(){modal.remove();};
   btnRow.appendChild(okB);btnRow.appendChild(cancelB);
-  box.appendChild(title);box.appendChild(desc);box.appendChild(inp);box.appendChild(inp2label);box.appendChild(inp2);box.appendChild(inp2hint);box.appendChild(waLabel);box.appendChild(waInp);box.appendChild(waHint);box.appendChild(btnRow);
+  box.appendChild(title);box.appendChild(desc);box.appendChild(inp);box.appendChild(inp2label);box.appendChild(inp2);box.appendChild(inp2hint);box.appendChild(btnRow);
   modal.appendChild(box);document.body.appendChild(modal);
   modal.onclick=function(e){if(e.target===modal)modal.remove();};
 }
@@ -2579,7 +2330,7 @@ function showProfileModal() {
     info.appendChild(nm);
     var ds = document.createElement("div");
     ds.style.cssText = "font-size:11px;color:#6b7c79;margin-top:2px";
-    ds.textContent = key === "bureau" ? "Accès complet · Admin" : key === "bureau_alexis" ? "Accès complet" : key === "bureau_valerie" ? "Accès complet" : key === "salarie" ? "Planning · Pointage · Absences" : key === "analyse" ? "Prévisionnel · Bilans" : "";
+    ds.textContent = key === "bureau" ? "Accès complet · Tout modifiable" : key === "salarie" ? "Planning · Pointage · Absences" : key === "analyse" ? "Prévisionnel · Bilans" : "";
     info.appendChild(ds);
     if(key==="valerie"){
       if(vCount>0){
@@ -2613,20 +2364,7 @@ function showProfileModal() {
   // sans aucun autre onglet, quel que soit le profil précédemment utilisé sur cet appareil.
   if(urlParams.get("view")==="planning"){
     applyProfile("planningpublic");
-    // Charger la semaine spécifiée si présente dans l'URL
-    var weekParam=urlParams.get("week");
-    if(weekParam){
-      CW=weekParam;
-      var wdEl=document.getElementById("wdate");
-      if(wdEl)wdEl.value=CW;
-      var wlblEl=document.getElementById("wlbl");
-      if(wlblEl)wlblEl.textContent=fmw(CW);
-      var slEl=document.getElementById("sal-wlbl");
-      if(slEl)slEl.textContent=fmw(CW);
-    }
-    loadFromCloud(function(){
-      setTimeout(function(){TAB("planning");},150);
-    });
+    setTimeout(function(){TAB("planning");},150);
     return;
   }
   // QR code direct link: ?sal=ID forces Salarié profile + Mon pointage
@@ -2634,74 +2372,44 @@ function showProfileModal() {
     _salLockedId=urlParams.get("sal");
     applyProfile("salarie");
 
+    // Afficher un écran de chargement
     var loadScreen=document.createElement("div");
     loadScreen.id="qr-load-screen";
-    loadScreen.style.cssText="position:fixed;inset:0;background:#f3f6f6;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:'DM Sans',sans-serif;padding:20px;text-align:center";
-    loadScreen.innerHTML="<div style='font-size:36px'>⏳</div><div style='font-weight:700;font-size:16px;color:#13201e'>Chargement...</div><div id='qr-load-status' style='font-size:12px;color:#6b7c79'>Connexion à GitHub...</div>";
+    loadScreen.style.cssText="position:fixed;inset:0;background:#f3f6f6;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:'DM Sans',sans-serif";
+    loadScreen.innerHTML="<div style='font-size:40px'>⏳</div><div style='font-weight:700;font-size:16px;color:#13201e'>Chargement en cours...</div><div id='qr-load-status' style='font-size:12px;color:#6b7c79'>Connexion aux données</div>";
     document.body.appendChild(loadScreen);
-
-    function setStatus(msg){var el=document.getElementById("qr-load-status");if(el)el.innerHTML=msg;}
 
     function finishLoad(){
       var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
       var screen=document.getElementById("qr-load-screen");
       if(!sal){
-        if(screen){screen.innerHTML="<div style='font-size:36px'>❌</div><div style='font-weight:700;font-size:16px;color:#dc2626'>Compte introuvable.<br>Demandez un nouveau QR code.</div><div style='font-size:10px;color:#6b7c79;margin-top:8px;word-break:break-all'>"+_salLockedId+"</div><div style='font-size:11px;margin-top:6px'>Salariés chargés: "+(D.salaries?D.salaries.length:0)+"</div>";}
+        // Salarié pas trouvé
+        if(screen){
+          screen.innerHTML="<div style='font-size:40px'>❌</div><div style='font-weight:700;font-size:16px;color:#dc2626;text-align:center;padding:0 20px'>Compte introuvable.<br>Demandez un nouveau QR code.</div><div style='font-size:11px;color:#6b7c79;margin-top:8px'>ID: "+_salLockedId+"</div>";
+        }
         return;
       }
       if(screen)screen.remove();
       TAB("pointage");
     }
 
-    var tentative=0;
-    function tryLoad(){
-      tentative++;
-      setStatus("Tentative "+tentative+"/3...<br><small>"+GH_REPO+"</small>");
-      var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?t="+Date.now();
-      fetch(rawUrl,{cache:"no-store"})
-        .then(function(r){
-          setStatus("HTTP "+r.status+(r.ok?" ✅":" ❌")+" — décodage...");
-          return r.ok?r.json():null;
-        })
-        .then(function(remote){
-          if(remote){
-            setStatus("OK — "+((remote.salaries||[]).length)+" sal / "+((remote.chantiers||[]).length)+" ch");
-            applyRemote(remote);
-            setTimeout(finishLoad,400);
-          } else if(tentative<3){
-            setStatus("Données vides, réessai dans 2s...");
-            setTimeout(tryLoad,2000);
-          } else {
-            setStatus("Utilisation données locales");
-            var loc=localStorage.getItem(SK);
-            if(loc){try{applyRemote(JSON.parse(loc));}catch(e){}}
-            setTimeout(finishLoad,400);
-          }
-        })
-        .catch(function(e){
-          setStatus("Erreur réseau: "+(e.message||"?")+"<br>Réessai "+(tentative+1)+"/3...");
-          if(tentative<3){setTimeout(tryLoad,2000);}
-          else{
-            var loc=localStorage.getItem(SK);
-            if(loc){try{applyRemote(JSON.parse(loc));}catch(ex){}}
-            setTimeout(finishLoad,400);
-          }
-        });
-    }
-    tryLoad();
+    // Tentative 1 : chargement immédiat
+    var statusEl=document.getElementById("qr-load-status");
+    if(statusEl)statusEl.textContent="Récupération des données...";
+    loadFromCloud(function(){
+      var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
+      if(sal){finishLoad();return;}
+      // Tentative 2 après 3 secondes (au cas où Netlify était en cours de déploiement)
+      if(statusEl)statusEl.textContent="Nouvelle tentative...";
+      setTimeout(function(){
+        loadFromCloud(finishLoad);
+      },3000);
+    });
     return;
   }
   var saved = localStorage.getItem("current_profile");
   if(saved && PROFILES[saved]){
     applyProfile(saved);
-    // Recharger depuis GitHub au démarrage pour avoir les données fraîches
-    loadFromCloud(function(){
-      RP();RC();RS();RA();RV();
-      renderPtValidationsList();
-      updateAbsDemandesDot();
-      updatePointageDot();
-      updateMsgDot();
-    });
   } else {
     setTimeout(showProfileModal, 300);
   }
@@ -2842,78 +2550,57 @@ function showODSetupModal(){
 
 // ── WHATSAPP ──
 function showWhatsAppModal(){
-  var existing=document.getElementById("wa-modal");
-  if(existing)existing.remove();
-  var modal=document.createElement("div");
-  modal.id="wa-modal";
-  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
+  var existing = document.getElementById("wa-modal");
+  if(existing) existing.remove();
+  // Capture current week at this exact moment
+  var currentCW = CW;
+  var dates = wd(currentCW);
+  var modal = document.createElement("div");
+  modal.id = "wa-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
 
-  var baseUrl="https://accueil-eng.github.io/blo-planning/";
+  var html = "<div style='background:#fff;border-radius:14px;padding:24px 28px;max-width:480px;width:92%;max-height:85vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif'>";
+  html += "<div style='font-family:Syne,sans-serif;font-weight:800;font-size:17px;margin-bottom:4px'>📱 Notifier l'équipe</div>";
 
-  // Générer les 6 prochaines semaines pour le choix
-  function getMon(d){var dt=new Date(d);var day=dt.getDay()||7;dt.setDate(dt.getDate()-(day-1));dt.setHours(0,0,0,0);return dt;}
-  function fmtSem(cw){var d=pd(cw);var d5=new Date(d.getTime()+4*86400000);var fmt=function(x){return x.toLocaleDateString("fr-FR",{day:"numeric",month:"short"});};return "Sem. du "+fmt(d)+" au "+fmt(d5);}
-  var semaines=[];
-  var cur=getMon(new Date());
-  for(var i=0;i<8;i++){
-    var cw=cur.getFullYear()+"-"+("0"+(cur.getMonth()+1)).slice(-2)+"-"+("0"+cur.getDate()).slice(-2);
-    semaines.push({cw:cw,label:fmtSem(cw)});
-    cur=new Date(cur.getTime()+7*86400000);
-  }
+  var d1 = pd(dates[0]);
+  var d5 = pd(dates[4]);
+  var fmt = function(d){ return d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); };
+  html += "<div style='font-size:12px;color:#6b7c79;margin-bottom:16px'>Semaine du "+fmt(d1)+" au "+fmt(d5)+"</div>";
 
-  var selOpts=semaines.map(function(s,i){return "<option value='"+s.cw+"'"+(i===0?" selected":"")+">"+s.label+"</option>";}).join("");
+  // Simple announcement message (ready vs modified) — no schedule detail, no link
+  if(!D.planningNotifSent)D.planningNotifSent={};
+  var alreadyNotified=!!D.planningNotifSent[currentCW];
+  var groupMsg = alreadyNotified
+    ? "📅 Le planning de la semaine du "+fmt(d1)+" au "+fmt(d5)+" a été modifié.\nMerci de consulter votre espace personnel."
+    : "📅 Le planning de la semaine du "+fmt(d1)+" au "+fmt(d5)+" est prêt.\nMerci de consulter votre espace personnel.";
 
-  var box=document.createElement("div");
-  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:480px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:'DM Sans',sans-serif";
-  box.innerHTML=
-    "<div style='font-family:Syne,sans-serif;font-weight:800;font-size:17px;margin-bottom:14px'>📱 Envoyer le planning</div>"+
-    "<div style='font-size:12px;font-weight:600;color:#475569;margin-bottom:6px'>Choisir la semaine :</div>"+
-    "<select id='wa-sem-sel' style='width:100%;height:38px;border:1px solid var(--brd2);border-radius:8px;padding:0 12px;font-size:13px;margin-bottom:14px;outline:none'>"+selOpts+"</select>"+
-    "<div id='wa-link-preview' style='background:#f0fdfa;border:1px solid #5eead4;border-radius:8px;padding:10px 14px;font-size:12px;word-break:break-all;margin-bottom:12px;color:#0d9488'></div>"+
-    "<div id='wa-msg-preview' style='background:#f8f7f4;border:1px solid #dde5e4;border-radius:8px;padding:12px 14px;font-size:12px;white-space:pre-wrap;margin-bottom:14px;font-family:monospace;color:#475569'></div>"+
-    "<button id='wa-copy-btn' style='width:100%;height:42px;background:#25d366;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px'>📋 Copier le message</button>"+
-    "<button id='wa-open-btn' style='width:100%;height:42px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px'>📲 Ouvrir WhatsApp</button>"+
-    "<button onclick='document.getElementById(\"wa-modal\").remove()' style='width:100%;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer'>Fermer</button>";
+  html += "<div style='background:#f8f7f4;border:1px solid #dde5e4;border-radius:8px;padding:12px 14px;font-size:12px;color:#475569;white-space:pre-wrap;margin-bottom:14px;font-family:monospace'>"+groupMsg.replace(/</g,"&lt;")+"</div>";
 
-  modal.appendChild(box);
+  html += "<button id='copy-group-msg-btn' style='width:100%;height:42px;background:#25d366;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:8px'>📋 Copier ce message</button>";
+  html += "<div style='font-size:11px;color:#9ca3af;margin-bottom:16px;text-align:center'>Collez-le ensuite dans votre groupe WhatsApp</div>";
+
+  var closeBtn = document.createElement("button"); closeBtn.textContent="Fermer"; closeBtn.style.cssText="width:100%;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer"; closeBtn.onclick=function(){document.getElementById("wa-modal").remove();}; html += closeBtn.outerHTML;
+  html += "</div>";
+
+  modal.innerHTML = html;
   document.body.appendChild(modal);
-  modal.onclick=function(e){if(e.target===modal)modal.remove();};
-
-  function buildLink(){
-    var sel=document.getElementById("wa-sem-sel");
-    if(!sel)return;
-    var cw=sel.value;
-    var link=baseUrl+"?view=planning&week="+cw;
-    var d=pd(cw);
-    var d5=new Date(d.getTime()+4*86400000);
-    var fmt=function(x){return x.toLocaleDateString("fr-FR",{day:"numeric",month:"long"});};
-    var msg="📅 Planning BLO — semaine du "+fmt(d)+" au "+fmt(d5)+"\n🔗 "+link+"\n\n(Consultation uniquement — lecture seule)";
-    var prev=document.getElementById("wa-link-preview");
-    if(prev)prev.textContent=link;
-    var msgPrev=document.getElementById("wa-msg-preview");
-    if(msgPrev)msgPrev.textContent=msg;
-    var copyBtn=document.getElementById("wa-copy-btn");
-    if(copyBtn)copyBtn.onclick=function(){
-      navigator.clipboard.writeText(msg).then(function(){
-        copyBtn.textContent="✅ Copié ! Collez dans WhatsApp";
-        setTimeout(function(){copyBtn.textContent="📋 Copier le message";},2500);
+  modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
+  var copyBtn=document.getElementById("copy-group-msg-btn");
+  if(copyBtn){
+    copyBtn.onclick=function(){
+      navigator.clipboard.writeText(groupMsg).then(function(){
+        copyBtn.textContent="✅ Copié ! Collez-le dans WhatsApp";
+        setTimeout(function(){copyBtn.textContent="📋 Copier ce message";},2500);
       }).catch(function(){
-        var ta=document.createElement("textarea");ta.value=msg;document.body.appendChild(ta);ta.select();
-        try{document.execCommand("copy");copyBtn.textContent="✅ Copié !";}catch(e){}
+        // Fallback for browsers without clipboard API
+        var ta=document.createElement("textarea");ta.value=groupMsg;document.body.appendChild(ta);ta.select();
+        try{document.execCommand("copy");copyBtn.textContent="✅ Copié !";}catch(e){alert("Copie impossible, copiez manuellement.");}
         document.body.removeChild(ta);
       });
-      if(!D.planningNotifSent)D.planningNotifSent={};
-      D.planningNotifSent[cw]=true;save();
-    };
-    var openBtn=document.getElementById("wa-open-btn");
-    if(openBtn)openBtn.onclick=function(){
-      window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank");
+      D.planningNotifSent[currentCW]=true;
+      save();
     };
   }
-
-  var sel=document.getElementById("wa-sem-sel");
-  if(sel)sel.onchange=buildLink;
-  buildLink();
 }
 
 // ── RDV ──
@@ -2933,22 +2620,26 @@ function addRDV(){
     appele:false
   });
   save();
-  // Notification WhatsApp Alexis
-  var rdv=D.rdvs[D.rdvs.length-1];
-  var notifMsg="📋 Nouvelle demande de RDV\n"+
-    "👤 "+rdv.nom+"\n"+
-    (rdv.adresse?"📍 "+rdv.adresse+"\n":"")+
-    (rdv.tel?"📞 "+rdv.tel+"\n":"")+
-    (rdv.travaux?"🔨 "+rdv.travaux+"\n":"")+
-    (rdv.date?"📅 "+new Date(rdv.date).toLocaleDateString("fr-FR")+"\n":"");
-  window.open("https://wa.me/33762853767?text="+encodeURIComponent(notifMsg),"_blank");
+  // Send WhatsApp notification
+  var rdvNom=document.getElementById("rdv-nom").value;
+  var rdvDate=document.getElementById("rdv-date").value;
+  var rdvTel=document.getElementById("rdv-tel").value;
+  var rdvTrav=document.getElementById("rdv-travaux").value;
+  var notifMsg="🔔 Nouvelle demande de RDV%0A"
+    +"👤 "+encodeURIComponent(rdvNom)+"%0A"
+    +(rdvDate?"📅 "+encodeURIComponent(new Date(rdvDate).toLocaleDateString("fr-FR"))+"%0A":"")
+    +(rdvTel?"📱 "+encodeURIComponent(rdvTel)+"%0A":"")
+    +(rdvTrav?"🔧 "+encodeURIComponent(rdvTrav)+"%0A":"")
+    +"%0AVoir : https://accueil-eng.github.io/planning/";
+  var notifUrl="https://wa.me/33627991855?text="+notifMsg;
+  window.open(notifUrl,"_blank");
   ["rdv-date","rdv-nom","rdv-adresse","rdv-tel","rdv-mail","rdv-travaux","rdv-obs"].forEach(function(id){document.getElementById(id).value="";});
   RRDV();
 }
 
 
 // ── DEMANDES D'ABSENCE (compte Salarié <-> Bureau) ──
-var ABSDEM_NOTIF_PHONES = ["33762853767","33626610036"]; // Alexis et Valérie
+var ABSDEM_NOTIF_PHONES = ["33627991855","33626610036"]; // Quentin et Valérie
 
 function RABSDEMANDE(){
   var sel=document.getElementById("ad-sal");
@@ -2991,7 +2682,7 @@ function renderMesDemandes(){
   var sel=document.getElementById("ad-sal");
   var salId=(_currentProfile==="salarie")?_salLockedId:(sel?sel.value:"");
   if(!salId){wrap.innerHTML="";return;}
-  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
+  if(!D.absDemandes)D.absDemandes=[];
   var mine=D.absDemandes.filter(function(d){return d.salId===salId;}).sort(function(a,b){return b.createdAt-a.createdAt;});
   if(!mine.length){wrap.innerHTML="";return;}
   var html="<div style='font-size:13px;font-weight:700;color:#475569;margin-bottom:10px'>📋 Statut de vos demandes :</div>";
@@ -3019,7 +2710,7 @@ function sendAbsDemande(){
   if(!salId){alert("Veuillez sélectionner votre nom");return;}
   if(!debut){alert("Veuillez indiquer une date de début");return;}
   var sal=D.salaries.find(function(s){return s.id===salId;});
-  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
+  if(!D.absDemandes)D.absDemandes=[];
   var demande={id:"adem_"+Date.now(),salId:salId,type:type,debut:debut,fin:fin,motif:motif,status:"pending",createdAt:Date.now()};
   if(heureDebut)demande.heureDebut=heureDebut;
   if(heureFin)demande.heureFin=heureFin;
@@ -3043,13 +2734,7 @@ function sendAbsDemande(){
   document.getElementById("ad-motif").value="";
   showToast("✅ Demande envoyée !");
   renderMesDemandes();
-  // Notifier Alexis ET Valérie automatiquement
-  setTimeout(function(){
-    window.open("https://wa.me/33762853767?text="+msg,"_blank");
-    setTimeout(function(){
-      window.open("https://wa.me/33626610036?text="+msg,"_blank");
-    },1000);
-  },500);
+  showAbsDemandeNotifModal(msg);
 }
 
 function showAbsDemandeNotifModal(msg){
@@ -3073,7 +2758,7 @@ function showAbsDemandeNotifModal(msg){
 
 function updateAbsDemandesDot(){
   var dot=document.getElementById("absdemandes-dot");
-  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
+  if(!D.absDemandes)D.absDemandes=[];
   var pendingCount=D.absDemandes.filter(function(d){return d.status==="pending";}).length;
   if(dot)dot.style.display=pendingCount?"block":"none";
 
@@ -3093,7 +2778,7 @@ function RABSDEMANDES(){
   var wrap=document.getElementById("absdemandes-wrap");
   if(!wrap)return;
   updateAbsDemandesDot();
-  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
+  if(!D.absDemandes)D.absDemandes=[];
   var pending=D.absDemandes.filter(function(d){return d.status==="pending";}).sort(function(a,b){return a.createdAt-b.createdAt;});
   var done=D.absDemandes.filter(function(d){return d.status!=="pending"&&!d.archived;}).sort(function(a,b){return b.createdAt-a.createdAt;}).slice(0,10);
   var archived=D.absDemandes.filter(function(d){return d.archived;}).sort(function(a,b){return b.createdAt-a.createdAt;});
@@ -3158,27 +2843,6 @@ function toggleAbsArchive(){
   if(arrow)arrow.textContent=isOpen?"▾":"▴";
 }
 
-function sendRdvWa(){
-  var nom=(document.getElementById("rdvwa-nom")||{}).value||"";
-  var prenom=(document.getElementById("rdvwa-prenom")||{}).value||"";
-  var adresse=(document.getElementById("rdvwa-adresse")||{}).value||"";
-  var tel=(document.getElementById("rdvwa-tel")||{}).value||"";
-  var travaux=(document.getElementById("rdvwa-travaux")||{}).value||"";
-  if(!nom&&!prenom){showToast("⚠️ Indiquez au moins le nom du client");return;}
-  var msg=encodeURIComponent(
-    "📋 Nouvelle demande de RDV\n"+
-    "👤 "+prenom+" "+nom+"\n"+
-    (adresse?"📍 "+adresse+"\n":"")+
-    (tel?"📞 "+tel+"\n":"")+
-    (travaux?"🔨 "+travaux+"\n":"")
-  );
-  window.open("https://wa.me/33762853767?text="+msg,"_blank");
-  ["rdvwa-nom","rdvwa-prenom","rdvwa-adresse","rdvwa-tel","rdvwa-travaux"].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.value="";
-  });
-  showToast("📱 WhatsApp ouvert pour Alexis !");
-}
-
 function decideAbsDemande(id,status){
   var d=D.absDemandes.find(function(x){return x.id===id;});
   if(!d)return;
@@ -3201,22 +2865,11 @@ function decideAbsDemande(id,status){
       +"%0A"+encodeURIComponent(ABLBLS[d.type])+" du "+encodeURIComponent(new Date(d.debut).toLocaleDateString("fr-FR"))+" au "+encodeURIComponent(new Date(d.fin).toLocaleDateString("fr-FR"));
     window.open("https://wa.me/33"+sal.whatsapp.replace(/^0/,"")+"?text="+msg,"_blank");
   }
-
-  // Notifier Valérie de la réponse d'Alexis
-  var nomSal=sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?";
-  var msgVal=encodeURIComponent((status==="accepted"?"✅ Alexis a ACCEPTÉ":"❌ Alexis a REFUSÉ")+" la demande d'absence de "+nomSal
-    +"\n"+ABLBLS[d.type]+" du "+new Date(d.debut).toLocaleDateString("fr-FR")+" au "+new Date(d.fin).toLocaleDateString("fr-FR"));
-  setTimeout(function(){
-    window.open("https://wa.me/33626610036?text="+msgVal,"_blank");
-  },500);
-
-  showToast(status==="accepted"?"✅ Demande acceptée — Valérie notifiée":"❌ Demande refusée — Valérie notifiée");
+  showToast(status==="accepted"?"✅ Demande acceptée":"❌ Demande refusée");
 }
 
 function RRDV(){
   var el=document.getElementById("rdvlist");if(!el)return;
-
-
   if(!D.rdvs||!D.rdvs.length){
     el.innerHTML="<div class='empty'><div class='empty-icon'>📅</div><p>Aucune demande de RDV.</p></div>";return;
   }
@@ -3749,10 +3402,6 @@ function addChantierFromGantt(){
   }
   var fZoneE2=mkRow("Zone (indemnités)",mkZoneSelect2());
 
-  // Effectif nécessaire
-  var fEff2=Object.assign(document.createElement("input"),{type:"number",min:"1",max:"20",placeholder:"ex: 3",style:"flex:1;height:32px;border:1px solid #0d9488;border-radius:6px;padding:0 8px;font-size:12px;outline:none"});
-  mkRow("👷 Effectif nécessaire",fEff2);
-
   // Date previsionnel
   var sep=document.createElement("div");sep.style.cssText="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:8px;margin-top:4px;padding:4px 8px;background:#ede9fe;border-radius:5px";sep.textContent="Période prévisionnelle";box.appendChild(sep);
   var fDP=mkRow("Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
@@ -3781,13 +3430,12 @@ function addChantierFromGantt(){
       dateDebutPrev:fDP.value,
       dateFinPrev:fFP.value,
       zoneEcouflant:fZoneE2.value||null,
-      effectifNecessaire:fEff2?parseInt(fEff2.value)||null:null,
       color:scGantt
     };
     D.chantiers.push(newCh);
     save();modal.remove();
-    RC();if(typeof RGANTT==="function")RGANTT();
-    showToast("✅ Chantier "+newCh.ref+" créé — visible dans Chantiers et Prévisionnel !");
+    RC();RGANTT();
+    showToast("✅ Chantier "+newCh.ref+" créé !");
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
@@ -3847,8 +3495,6 @@ function RGANTT(){
   var gWrap=document.getElementById("gantt-wrap");
   var legend=document.getElementById("gantt-legend");
   if(!gWrap)return;
-  gWrap.innerHTML="";
-  if(legend)legend.innerHTML="";
 
   var dsEl=document.getElementById("gantt-date-start");
   var deEl=document.getElementById("gantt-date-end");
@@ -3880,14 +3526,6 @@ function RGANTT(){
     if(!rb)return -1;
     return ra.localeCompare(rb,undefined,{numeric:true});
   });
-  // Déduplication : une seule ligne par code chantier
-  var _seenRef={};
-  chantiers=chantiers.filter(function(c){
-    var k=(c.ref||c.id||"").trim().toLowerCase();
-    if(_seenRef[k])return false;
-    _seenRef[k]=true;
-    return true;
-  });
 
   function getMon(d){var dt=new Date(d);var day=dt.getDay()||7;dt.setDate(dt.getDate()-(day-1));dt.setHours(0,0,0,0);return dt;}
 
@@ -3895,7 +3533,11 @@ function RGANTT(){
   var cur2=getMon(startDate);
   while(cur2<=endDate){weeks.push(new Date(cur2));cur2=new Date(cur2.getTime()+7*24*60*60*1000);}
 
-
+  gWrap.innerHTML="";
+  if(!chantiers.length){
+    gWrap.innerHTML="<div class='empty'><p>Renseignez des dates dans les fiches chantiers.</p></div>";
+    return;
+  }
 
   var LW=180,DW=160,WW=28;
   var wrap=document.createElement("div");wrap.style.cssText="overflow-x:auto;overflow-y:auto;max-height:75vh";
@@ -3912,8 +3554,7 @@ function RGANTT(){
     return th;
   }
   tr0.appendChild(mkTH("Chantier","#13201e","#fff",LW,true));
-  tr0.appendChild(mkTH("Période","#13201e","#fff",DW));
-  tr0.appendChild(mkTH("👷","#13201e","#fff",36));
+  tr0.appendChild(mkTH("Periode","#13201e","#fff",DW));
 
   // Group weeks by month
   var lastM=-1,lastY=-1,curTH=null;
@@ -3932,7 +3573,6 @@ function RGANTT(){
   var tr1=document.createElement("tr");
   tr1.appendChild(mkTH("","#e2e8f0","",LW,true));
   tr1.appendChild(mkTH("","#e2e8f0","",DW));
-  tr1.appendChild(mkTH("","#e2e8f0","",36));
   weeks.forEach(function(w){
     var wk=getISOWeek(w);
     var isNow=(w<=today&&today<new Date(w.getTime()+7*24*60*60*1000));
@@ -3945,72 +3585,42 @@ function RGANTT(){
   tbl.appendChild(thead);
 
   var tbody=document.createElement("tbody");
-  chantiers.filter(function(c){return c.dateDebutPrev&&c.dateFinPrev;}).forEach(function(ch,ri){
+  chantiers.forEach(function(ch,ri){
     var tr=document.createElement("tr");
     var bg=ri%2===0?"#fff":"#f8f7f4";
 
-    // Name cell — avec input effectif inline
+    // Name cell
     var tdN=document.createElement("td");
     tdN.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:"+bg+";z-index:1;min-width:"+LW+"px";
-    var nomTxt=(ch.ref?ch.ref+" - ":"")+ch.nom+(ch.ville?" ("+ch.ville+")":"");
-    tdN.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+nomTxt;
+    var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px";
+    tdN.appendChild(dot);
+    tdN.appendChild(document.createTextNode((ch.ref?ch.ref+" - ":"")+ch.nom+(ch.ville?" ("+ch.ville+")":"")));
     tr.appendChild(tdN);
 
-    // Dates cell — inputs inline
+    // Dates cell
     var tdD=document.createElement("td");
-    tdD.style.cssText="border:1px solid #e2e8f0;padding:4px 6px;font-size:10px;min-width:"+DW+"px;vertical-align:top";
-    var lblDeb=document.createElement("div");lblDeb.style.cssText="font-size:9px;color:#7c3aed;font-weight:600;margin-bottom:2px";lblDeb.textContent="Début prév.";
-    var inpDeb=document.createElement("input");inpDeb.type="date";inpDeb.value=ch.dateDebutPrev||"";
-    inpDeb.style.cssText="width:100%;height:24px;border:1px solid #c4b5fd;border-radius:4px;padding:0 4px;font-size:10px;outline:none;box-sizing:border-box";
-    inpDeb.addEventListener("change",(function(cid){return function(){
-      var c2=D.chantiers.find(function(x){return x.id===cid;});
-      if(c2){c2.dateDebutPrev=this.value||null;save();RC();RGANTT();showToast("✅ Date début mise à jour !");}
-    };})(ch.id));
-    var lblFin=document.createElement("div");lblFin.style.cssText="font-size:9px;color:#7c3aed;font-weight:600;margin-bottom:2px;margin-top:4px";lblFin.textContent="Fin prév.";
-    var inpFin=document.createElement("input");inpFin.type="date";inpFin.value=ch.dateFinPrev||"";
-    inpFin.style.cssText="width:100%;height:24px;border:1px solid #c4b5fd;border-radius:4px;padding:0 4px;font-size:10px;outline:none;box-sizing:border-box";
-    inpFin.addEventListener("change",(function(cid){return function(){
-      var c2=D.chantiers.find(function(x){return x.id===cid;});
-      if(c2){c2.dateFinPrev=this.value||null;save();RC();RGANTT();showToast("✅ Date fin mise à jour !");}
-    };})(ch.id));
-    tdD.appendChild(lblDeb);tdD.appendChild(inpDeb);
-    tdD.appendChild(lblFin);tdD.appendChild(inpFin);
-    if(ch.dateDebut){
-      var lblReal=document.createElement("div");lblReal.style.cssText="font-size:9px;color:"+ch.color+";font-weight:600;margin-top:4px";
-      lblReal.textContent="▪ Réel: "+new Date(ch.dateDebut).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-      tdD.appendChild(lblReal);
+    tdD.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;min-width:"+DW+"px";
+    var fmt2=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"2-digit"}):"?";};
+    var hh="";
+    if(ch.dateDebutPrev&&ch.dateFinPrev){
+      hh+="<div style='color:#7c3aed'>&#9633; "+fmt2(ch.dateDebutPrev)+" &#8594; "+fmt2(ch.dateFinPrev)+"</div>";
+    } else if(ch.dateDebutPrev){
+      hh+="<div style='color:#7c3aed'>&#9633; D&#233;but pr&#233;v: "+fmt2(ch.dateDebutPrev)+"</div>";
     }
+    if(ch.dateDebut){
+      hh+="<div style='color:"+ch.color+";font-weight:600'>&#9632; D&#233;but r&#233;el: "+fmt2(ch.dateDebut)+"</div>";
+    }
+    if(!hh)hh="<span style='color:#94a3b8;font-style:italic;font-size:10px'>Cliquer &#9998; pour saisir</span>";
+    tdD.innerHTML=hh;
+    // Edit button
+    var eb3=document.createElement("button");eb3.className="btn";eb3.style.cssText="font-size:10px;padding:1px 5px;margin-top:3px;display:block";eb3.textContent="✏️";
+    eb3.onclick=(function(cid){return function(){editGanttDates(cid);};})(ch.id);
+    tdD.appendChild(eb3);
     tr.appendChild(tdD);
 
-    // Cellule effectif nécessaire (inline)
-    var tdEff0=document.createElement("td");
-    tdEff0.style.cssText="border:1px solid #e2e8f0;padding:4px;text-align:center;width:36px;min-width:36px";
-    var effInp0=document.createElement("input");
-    effInp0.type="number";effInp0.min="0";effInp0.max="20";
-    effInp0.value=ch.effectifNecessaire||"";effInp0.placeholder="?";
-    effInp0.title="Effectif nécessaire — appuyez sur Entrée pour valider";
-    effInp0.style.cssText="width:32px;height:22px;border:1px solid #5eead4;border-radius:4px;font-size:11px;font-weight:700;text-align:center;padding:0;color:#0d9488;background:#f0fdfa;outline:none";
-    // Empêcher le scroll de la page quand on utilise les flèches
-    effInp0.addEventListener("wheel",function(e){e.stopPropagation();},{passive:false});
-    effInp0.addEventListener("keydown",function(e){
-      if(e.key==="ArrowUp"||e.key==="ArrowDown"){e.stopPropagation();}
-      if(e.key==="Enter"){this.blur();}
-    });
-    effInp0.addEventListener("click",function(e){e.stopPropagation();this.select();});
-    // Sauvegarder au blur (quitter le champ) sans rechargement complet
-    effInp0.addEventListener("blur",(function(cid,inp){return function(){
-      var v=parseInt(inp.value)||null;
-      var c2=D.chantiers.find(function(x){return x.id===cid;});
-      if(c2&&c2.effectifNecessaire!==v){c2.effectifNecessaire=v;save();showToast("✅ Effectif sauvegardé");}
-    };})(ch.id,effInp0));
-    tdEff0.appendChild(effInp0);
-    tr.appendChild(tdEff0);
-
-    // Parser les dates en heure locale pour éviter les décalages UTC
-    function parseLocalDate(s){if(!s)return null;var p=s.split("-");return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
-    var chS=parseLocalDate(ch.dateDebutPrev);
-    var chE=ch.dateFinPrev?new Date(parseLocalDate(ch.dateFinPrev).getTime()+24*60*60*1000):null; // +1 jour pour inclure la journée de fin
-    var chR=parseLocalDate(ch.dateDebut);
+    var chS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
+    var chE=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
+    var chR=ch.dateDebut?new Date(ch.dateDebut):null;
 
     weeks.forEach(function(w){
       var wE=new Date(w.getTime()+7*24*60*60*1000);
@@ -4040,511 +3650,96 @@ function RGANTT(){
     });
     tbody.appendChild(tr);
   });
-
-  // Chantiers sans dates → lignes grisées dans le même tableau
-  var chNoDates=chantiers.filter(function(c){return !c.dateDebutPrev||!c.dateFinPrev;});
-  chNoDates.forEach(function(ch){
-    var tr2=document.createElement("tr");tr2.style.opacity="0.7";
-    // Nom
-    var tdN2=document.createElement("td");
-    tdN2.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:#f3f6f6;z-index:1;min-width:"+LW+"px;color:#6b7c79";
-    tdN2.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px'></span>"+(ch.ref?ch.ref+" — ":"")+ch.nom;
-    tr2.appendChild(tdN2);
-    // Cellule dates — inputs éditables
-    var tdD2=document.createElement("td");
-    tdD2.style.cssText="border:1px solid #e2e8f0;padding:4px 6px;font-size:10px;min-width:"+DW+"px;vertical-align:top";
-    var lD=document.createElement("div");lD.style.cssText="font-size:9px;color:#7c3aed;font-weight:600;margin-bottom:2px";lD.textContent="Début prév.";
-    var iD=document.createElement("input");iD.type="date";iD.value=ch.dateDebutPrev||"";
-    iD.style.cssText="width:100%;height:22px;border:1px solid #c4b5fd;border-radius:4px;padding:0 4px;font-size:10px;outline:none;box-sizing:border-box";
-    iD.addEventListener("change",(function(cid){return function(){
-      var c2=D.chantiers.find(function(x){return x.id===cid;});
-      if(c2){c2.dateDebutPrev=this.value||null;save();RC();RGANTT();showToast("✅ Date début ajoutée !");}
-    };})(ch.id));
-    var lF=document.createElement("div");lF.style.cssText="font-size:9px;color:#7c3aed;font-weight:600;margin-bottom:2px;margin-top:3px";lF.textContent="Fin prév.";
-    var iF=document.createElement("input");iF.type="date";iF.value=ch.dateFinPrev||"";
-    iF.style.cssText="width:100%;height:22px;border:1px solid #c4b5fd;border-radius:4px;padding:0 4px;font-size:10px;outline:none;box-sizing:border-box";
-    iF.addEventListener("change",(function(cid){return function(){
-      var c2=D.chantiers.find(function(x){return x.id===cid;});
-      if(c2){c2.dateFinPrev=this.value||null;save();RC();RGANTT();showToast("✅ Date fin ajoutée !");}
-    };})(ch.id));
-    tdD2.appendChild(lD);tdD2.appendChild(iD);tdD2.appendChild(lF);tdD2.appendChild(iF);
-    tr2.appendChild(tdD2);
-    // Cellule effectif — input éditable
-    var tdE2=document.createElement("td");tdE2.style.cssText="border:1px solid #e2e8f0;padding:4px;text-align:center;width:36px";
-    var effInpND=document.createElement("input");
-    effInpND.type="number";effInpND.min="0";effInpND.max="20";
-    effInpND.value=ch.effectifNecessaire||"";effInpND.placeholder="?";
-    effInpND.style.cssText="width:32px;height:22px;border:1px solid #5eead4;border-radius:4px;font-size:11px;font-weight:700;text-align:center;padding:0;color:#0d9488;background:#f0fdfa;outline:none";
-    effInpND.addEventListener("wheel",function(e){e.stopPropagation();},{passive:false});
-    effInpND.addEventListener("keydown",function(e){if(e.key==="ArrowUp"||e.key==="ArrowDown")e.stopPropagation();if(e.key==="Enter")this.blur();});
-    effInpND.addEventListener("blur",(function(cid,inp){return function(){
-      var v=parseInt(inp.value)||null;
-      var c2=D.chantiers.find(function(x){return x.id===cid;});
-      if(c2&&c2.effectifNecessaire!==v){c2.effectifNecessaire=v;save();showToast("✅ Effectif sauvegardé");}
-    };})(ch.id,effInpND));
-    effInpND.addEventListener("click",function(e){e.stopPropagation();this.select();});
-    tdE2.appendChild(effInpND);
-    tr2.appendChild(tdE2);
-    // Cellules semaines vides
-    weeks.forEach(function(){var td2=document.createElement("td");td2.style.cssText="border:1px solid #e2e8f0;background:#f3f6f6;width:"+WW+"px;min-width:"+WW+"px";tr2.appendChild(td2);});
-    tbody.appendChild(tr2);
-  });
-  tbl.appendChild(tbody);
-
-  // ── LIGNE EFFECTIF DISPONIBLE PAR SEMAINE ──
-  var tfootEff=document.createElement("tfoot");
-  var trEff=document.createElement("tr");
-  var tdEffLabel=document.createElement("td");
-  tdEffLabel.colSpan=3;
-  tdEffLabel.style.cssText="border:1px solid #e2e8f0;padding:5px 8px;font-weight:700;font-size:11px;position:sticky;left:0;background:#1e3a5f;color:#fff;z-index:2";
-  var totSals=D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).length;
-  tdEffLabel.textContent="👷 Affectés / "+totSals+" salariés";
-  trEff.appendChild(tdEffLabel);
-
-  var trBesoin=document.createElement("tr");
-  var tdBesoinLabel=document.createElement("td");
-  tdBesoinLabel.colSpan=3;
-  tdBesoinLabel.style.cssText="border:1px solid #e2e8f0;padding:5px 8px;font-weight:700;font-size:11px;position:sticky;left:0;background:#374151;color:#fff;z-index:2";
-  tdBesoinLabel.textContent="🎯 Besoin / Écart";
-  trBesoin.appendChild(tdBesoinLabel);
-
-  weeks.forEach(function(w){
-    var wE=new Date(w.getTime()+7*24*60*60*1000);
-    var cwMon=w.getFullYear()+"-"+("0"+(w.getMonth()+1)).slice(-2)+"-"+("0"+w.getDate()).slice(-2);
-    var isNow2=(w<=today&&today<wE);
-
-    // Compter salariés affectés cette semaine
-    var salAffectes=new Set();
-    var n2=typeof getNR==="function"?getNR():6;
-    for(var r=0;r<n2;r++){
-      for(var di=0;di<5;di++){
-        var ck2=cwMon+"|"+r+"|"+di;
-        (D.cells[ck2]||[]).forEach(function(sId){salAffectes.add(sId);});
-      }
-    }
-    var nbAff=salAffectes.size;
-    var nbDispo=totSals-nbAff;
-
-    // Besoin total des chantiers actifs cette semaine
-    var besoin=0;
-    chantiers.filter(function(c){return c.dateDebutPrev&&c.dateFinPrev;}).forEach(function(ch){
-      var chS2=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
-      var chE2=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
-      if(chS2&&chE2&&w<chE2&&wE>chS2&&ch.effectifNecessaire){besoin+=ch.effectifNecessaire;}
-    });
-
-    // Cellule dispo
-    var tdEff=document.createElement("td");
-    tdEff.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;background:"+(isNow2?"#dbeafe":"#f0fdfa")+";color:#0d9488;width:"+WW+"px;min-width:"+WW+"px";
-    tdEff.innerHTML="<div style='font-size:10px;font-weight:700'>"+nbAff+"</div><div style='font-size:8px;color:#6b7c79'>"+nbDispo+" dispo</div>";
-    trEff.appendChild(tdEff);
-
-    // Cellule besoin
-    var tdB=document.createElement("td");
-    var manque=besoin-nbAff;
-    var couleurB=manque>0?"#dc2626":manque===0&&besoin>0?"#16a34a":"#6b7c79";
-    tdB.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;background:"+(isNow2?"#fef9c3":"#fff")+";color:"+couleurB+";width:"+WW+"px;min-width:"+WW+"px";
-    if(besoin>0){
-      var ecartTxt2=manque>0?"⚠️"+manque:manque===0?"✅":"➕"+Math.abs(manque);
-      tdB.innerHTML="<div>"+besoin+"</div><div style='font-size:9px'>"+ecartTxt2+"</div>";
-    }
-    trBesoin.appendChild(tdB);
-  });
-
-  tfootEff.appendChild(trEff);
-  tfootEff.appendChild(trBesoin);
-  tbl.appendChild(tfootEff);
-
-  wrap.appendChild(tbl);gWrap.appendChild(wrap);
-
-  if(legend)legend.innerHTML=
-    "<span style='margin-right:14px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Période prévisionnelle</span>"+
-    "<span style='margin-right:14px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> Période réelle démarrée</span>"+
-    "<span style='margin-right:14px;color:#dc2626;font-weight:600'>| Semaine en cours</span>"+
-    "<span style='margin-right:14px'><b>👷 Affectés/Total</b> : salariés du planning cette semaine</span>"+
-    "<span style='margin-right:14px;color:#dc2626'><b>⚠️ -X</b> : manque X personnes</span>"+
-    "<span style='margin-right:14px;color:#16a34a'><b>✅</b> : effectif couvert</span>"+
-    "<span style='color:#0d9488'><b>➕ X</b> : X personnes de disponibles en plus</span>";
+  tbl.appendChild(tbody);wrap.appendChild(tbl);gWrap.appendChild(wrap);
+  if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Pr&#233;visionnel (hachuré)</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> R&#233;el (plein)</span><span style='color:#dc2626'>| Aujourd&#39;hui</span>";
 }
 
 
-function showGanttPrintModal(){
-  var existing=document.getElementById("gantt-print-modal");if(existing)existing.remove();
-  var modal=document.createElement("div");modal.id="gantt-print-modal";
+function editChAnalyse(id){
+  var ch=D.chantiers.find(function(c){return c.id===id;});if(!ch)return;
+  var existing=document.getElementById("edit-ch-analyse-modal");if(existing)existing.remove();
+  var modal=document.createElement("div");modal.id="edit-ch-analyse-modal";
   modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
   var box=document.createElement("div");
-  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:440px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:'DM Sans',sans-serif";
-
-  var title=document.createElement("div");
-  title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:16px;margin-bottom:16px;color:#13201e";
-  title.textContent="🖨️ Imprimer le planning annuel";
-  box.appendChild(title);
-
-  var today=new Date();
-  var curYear=today.getFullYear();
-  var MOIS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-
-  // Sélection de l'année
-  var yearRow=document.createElement("div");yearRow.style.cssText="margin-bottom:14px;display:flex;align-items:center;gap:10px";
-  var yearLbl=document.createElement("label");yearLbl.style.cssText="font-size:12px;font-weight:600;color:#475569;width:50px";yearLbl.textContent="Année";
-  var yearSel=document.createElement("select");yearSel.style.cssText="flex:1;height:32px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none";
-  [curYear-1,curYear,curYear+1].forEach(function(y){var o=document.createElement("option");o.value=y;o.textContent=y;if(y===curYear)o.selected=true;yearSel.appendChild(o);});
-  yearRow.appendChild(yearLbl);yearRow.appendChild(yearSel);box.appendChild(yearRow);
-
-  // Choix mois
-  var moisTitle=document.createElement("div");moisTitle.style.cssText="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px";moisTitle.textContent="Mois à imprimer :";
-  box.appendChild(moisTitle);
-
-  // Bouton Tout/Rien
-  var allRow=document.createElement("div");allRow.style.cssText="display:flex;gap:8px;margin-bottom:8px";
-  var btnAll=document.createElement("button");btnAll.textContent="Tout cocher";btnAll.style.cssText="height:26px;padding:0 10px;background:#f0fdfa;border:1px solid #5eead4;border-radius:6px;font-size:11px;cursor:pointer;color:#0d9488;font-weight:600";
-  var btnNone=document.createElement("button");btnNone.textContent="Tout décocher";btnNone.style.cssText="height:26px;padding:0 10px;background:#f3f6f6;border:1px solid var(--brd2);border-radius:6px;font-size:11px;cursor:pointer;color:#6b7c79";
-  allRow.appendChild(btnAll);allRow.appendChild(btnNone);box.appendChild(allRow);
-
-  // Grille des mois
-  var grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px";
-  var checkboxes=[];
-  MOIS.forEach(function(m,i){
-    var wrap=document.createElement("label");wrap.style.cssText="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 6px;border:1px solid var(--brd2);border-radius:6px;background:var(--bg)";
-    var cb=document.createElement("input");cb.type="checkbox";cb.value=i;cb.checked=true;
-    cb.style.cssText="accent-color:#0d9488";
-    checkboxes.push(cb);
-    wrap.appendChild(cb);wrap.appendChild(document.createTextNode(m.substring(0,3)));
-    grid.appendChild(wrap);
-  });
-  box.appendChild(grid);
-
-  btnAll.onclick=function(){checkboxes.forEach(function(c){c.checked=true;});};
-  btnNone.onclick=function(){checkboxes.forEach(function(c){c.checked=false;});};
-
-  // Boutons action
-  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px";
-  var printBtn=document.createElement("button");printBtn.style.cssText="flex:1;height:38px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer";printBtn.textContent="🖨️ Imprimer";
-  var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:38px;padding:0 14px;background:none;border:1px solid var(--brd2);border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
-
-  printBtn.onclick=function(){
-    var year=parseInt(yearSel.value);
-    var selectedMonths=checkboxes.filter(function(c){return c.checked;}).map(function(c){return parseInt(c.value);});
-    if(!selectedMonths.length){showToast("⚠️ Sélectionnez au moins un mois");return;}
-    modal.remove();
-    printGantt(year,selectedMonths);
+  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:420px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif";
+  var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:16px;margin-bottom:4px;color:#13201e";
+  title.textContent="📊 Analyse — "+(ch.ref?ch.ref+" ":"")+ch.nom;
+  var sub=document.createElement("div");sub.style.cssText="font-size:11px;color:#6b7c79;margin-bottom:16px";
+  sub.textContent=ch.adresse||"";
+  box.appendChild(title);box.appendChild(sub);
+  function mkRow(label,input){
+    var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:10px";
+    var lbl=document.createElement("label");lbl.style.cssText="font-size:12px;font-weight:500;width:150px;flex-shrink:0;color:#475569";lbl.textContent=label;
+    row.appendChild(lbl);row.appendChild(input);box.appendChild(row);return input;
+  }
+  var fDeb=mkRow("📅 Début réel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebut||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fDebPrev=mkRow("📅 Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebutPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fFinPrev=mkRow("📅 Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateFinPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fHEst=mkRow("⏱ Heures estimées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresEst||"",min:0,placeholder:"ex: 120",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fHReal=mkRow("⏱ Heures réalisées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresReal||"",min:0,placeholder:"ex: 98",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  // Separator
+  var sep=document.createElement("div");sep.style.cssText="border-top:1px solid #dde5e4;margin:12px 0 12px;font-size:11px;font-weight:700;color:#475569";sep.textContent="💰 Données financières";box.appendChild(sep);
+  var fDevis=mkRow("Montant devis €",Object.assign(document.createElement("input"),{type:"number",value:ch.devis||"",min:0,step:"0.01",placeholder:"ex: 25000",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fFacture=mkRow("Montant facturé €",Object.assign(document.createElement("input"),{type:"number",value:ch.facture||"",min:0,step:"0.01",placeholder:"ex: 24500",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fEncaisse=mkRow("Montant encaissé €",Object.assign(document.createElement("input"),{type:"number",value:ch.encaisse||"",min:0,step:"0.01",placeholder:"ex: 20000",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fMat=mkRow("Coût matériaux €",Object.assign(document.createElement("input"),{type:"number",value:ch.coutMat||"",min:0,step:"0.01",placeholder:"ex: 8000",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fST=mkRow("Sous-traitance €",Object.assign(document.createElement("input"),{type:"number",value:ch.coutST||"",min:0,step:"0.01",placeholder:"ex: 3000",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var fFrais=mkRow("Autres frais €",Object.assign(document.createElement("input"),{type:"number",value:ch.coutFrais||"",min:0,step:"0.01",placeholder:"ex: 500",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:6px";
+  var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
+  okBtn.onclick=function(){
+    ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;
+    ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;
+    ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;
+    ch.devis=fDevis.value?parseFloat(fDevis.value):null;
+    ch.facture=fFacture.value?parseFloat(fFacture.value):null;
+    ch.encaisse=fEncaisse.value?parseFloat(fEncaisse.value):null;
+    ch.coutMat=fMat.value?parseFloat(fMat.value):null;
+    ch.coutST=fST.value?parseFloat(fST.value):null;
+    ch.coutFrais=fFrais.value?parseFloat(fFrais.value):null;
+    save();modal.remove();RANALYSE();
   };
+  var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
-  btnRow.appendChild(printBtn);btnRow.appendChild(cancelBtn);box.appendChild(btnRow);
+  btnRow.appendChild(okBtn);btnRow.appendChild(cancelBtn);box.appendChild(btnRow);
   modal.appendChild(box);document.body.appendChild(modal);
   modal.onclick=function(e){if(e.target===modal)modal.remove();};
 }
 
-function printGantt(year,selectedMonths){
-  var win=window.open("","_blank","width=1200,height=800");
-  if(!win){showToast("Autorisez les pop-ups");return;}
 
-  var MOIS=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-  var moisLabels=selectedMonths.map(function(m){return MOIS[m];}).join(", ");
+// ── POINTAGE ──
+var PT_ROWS = [
+  {id:"panier",    label:"Panier repas",         type:"check",  unit:""},
+  {id:"trajet",    label:"Trajet (zone)",         type:"zone_dd", unit:""},
+  {id:"transport", label:"Transport (zone)",      type:"zone_dd", unit:""},
+  {id:"cp",        label:"Congés payés",          type:"number", unit:"h"},
+  {id:"css",       label:"Congés sans solde",     type:"number", unit:"h"},
+  {id:"hs",        label:"Heures supplémentaires",type:"number", unit:"h"},
+  {id:"formation", label:"École / Formation",     type:"number", unit:"h"},
+  {id:"maladie",   label:"Arrêt maladie",         type:"number", unit:"h"},
+  {id:"intemp",    label:"Intempéries",           type:"number", unit:"h"}
+];
+var PT_ZONES = ["Z1A","Z1B","Z2","Z3","Z4","Z5","Z6","Z7","Z8","Z9","Z10"];
+var PT_DAYS  = ["L","M","M","J","V"];
 
-  // Calculer les semaines pour les mois sélectionnés
-  var weeks=[];
-  var seen={};
-  selectedMonths.forEach(function(mo){
-    var d=new Date(year,mo,1);
-    while(d.getMonth()===mo){
-      var dow=d.getDay()||7;
-      var mon=new Date(d);mon.setDate(d.getDate()-(dow-1));mon.setHours(0,0,0,0);
-      var key=mon.getFullYear()+"-"+mon.getMonth()+"-"+mon.getDate();
-      if(!seen[key]){seen[key]=true;weeks.push(new Date(mon));}
-      d.setDate(d.getDate()+1);
-    }
-  });
-  weeks.sort(function(a,b){return a-b;});
-
-  var chantiers=D.chantiers.filter(function(c){return !c.done;}).sort(function(a,b){
-    var ra=(a.ref||"").trim(),rb=(b.ref||"").trim();
-    if(!ra)return 1;if(!rb)return -1;
-    return ra.localeCompare(rb,undefined,{numeric:true});
-  });
-
-  function parseLD(s){if(!s)return null;var p=s.split("-");return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
-
-  var WW=24;
-  var html="<!DOCTYPE html><html><head><meta charset='utf-8'><title>Planning BLO — "+year+"</title><style>";
-  html+="body{font-family:Arial,sans-serif;font-size:9px;margin:10mm;} @media print{body{margin:5mm}}";
-  html+=".logo{max-height:40px} .header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1e3a5f;padding-bottom:8px;margin-bottom:10px}";
-  html+="table{border-collapse:collapse;font-size:8px;width:100%} th,td{border:1px solid #e2e8f0;padding:2px 3px}";
-  html+=".ch-name{min-width:140px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:sticky;left:0;background:#fff}";
-  html+=".wk-cell{width:"+WW+"px;min-width:"+WW+"px;height:22px;position:relative;padding:0}";
-  html+=".bar-prev{position:absolute;top:3px;height:7px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px)}";
-  html+=".bar-real{position:absolute;top:12px;height:7px}";
-  html+=".hdr-mo{background:#1e3a5f;color:#fff;font-weight:700;text-align:center;font-size:8px}";
-  html+=".hdr-wk{background:#e9eeee;text-align:center;font-size:7px}";
-  html+="</style></head><body>";
-
-  // Header
-  html+="<div class='header'>";
-  html+="<img src='"+LOGO_BLO+"' class='logo'>";
-  html+="<div style='text-align:right'><div style='font-size:13px;font-weight:700;color:#1e3a5f'>Planning Prévisionnel "+year+"</div>";
-  html+="<div style='font-size:9px;color:#6b7c79'>"+moisLabels+"</div>";
-  html+="<div style='font-size:9px;color:#6b7c79'>95 quai Émile Cormerais — 44800 Saint-Herblain</div></div></div>";
-
-  html+="<table><thead>";
-  // Ligne mois
-  html+="<tr><th class='ch-name' rowspan='2'>Chantier</th>";
-  // Regrouper par mois
-  var moGroups={};
-  weeks.forEach(function(w){var mo=w.getMonth();if(!moGroups[mo])moGroups[mo]=0;moGroups[mo]++;});
-  Object.keys(moGroups).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(mo){
-    html+="<th colspan='"+moGroups[mo]+"' class='hdr-mo'>"+MOIS[parseInt(mo)]+"</th>";
-  });
-  html+="</tr>";
-  // Ligne semaines
-  html+="<tr>";
-  weeks.forEach(function(w){html+="<th class='hdr-wk'>S"+getISOWeek(w)+"<br>"+w.getDate()+"/"+(w.getMonth()+1)+"</th>";});
-  html+="</tr></thead><tbody>";
-
-  // Lignes chantiers
-  chantiers.forEach(function(ch){
-    var chS=parseLD(ch.dateDebutPrev);
-    var chE=ch.dateFinPrev?new Date(parseLD(ch.dateFinPrev).getTime()+86400000):null;
-    var chR=parseLD(ch.dateDebut);
-    var hasSomething=chS||chR;
-    if(!hasSomething)return;
-    html+="<tr><td class='ch-name' title='"+(ch.ref?ch.ref+" — ":"")+ch.nom+"'>";
-    html+="<span style='display:inline-block;width:6px;height:6px;border-radius:50%;background:"+ch.color+";margin-right:4px;vertical-align:middle'></span>";
-    html+=(ch.ref?ch.ref+" — ":"")+ch.nom+"</td>";
-    weeks.forEach(function(w){
-      var wE=new Date(w.getTime()+7*86400000);
-      html+="<td class='wk-cell'>";
-      if(chS&&chE&&w<chE&&wE>chS){
-        var isFst=w<=chS&&wE>chS;var isLst=w<chE&&wE>=chE;
-        var left=isFst?"2px":"0";var right=isLst?"2px":"0";
-        html+="<div class='bar-prev' style='left:"+left+";right:"+right+";background:repeating-linear-gradient(45deg,"+ch.color+","+ch.color+" 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px);border:1px solid "+ch.color+";border-radius:"+(isFst?"3px 0 0 3px":"")+(isLst?" 0 3px 3px 0":"")+"'></div>";
-      }
-      if(chR&&wE>chR&&w<(chE||new Date(9e12))){
-        var isFstR=w<=chR&&wE>chR;
-        html+="<div class='bar-real' style='left:"+(isFstR?"2px":"0")+";right:2px;background:"+ch.color+";border-radius:"+(isFstR?"3px 0 0 3px":"0")+"'></div>";
-      }
-      html+="</td>";
-    });
-    html+="</tr>";
-  });
-
-  html+="</tbody></table>";
-  // Légende
-  html+="<div style='margin-top:12px;font-size:8px;color:#475569;display:flex;gap:16px'>";
-  html+="<span><span style='display:inline-block;width:16px;height:6px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px);vertical-align:middle;margin-right:4px'></span>Période prévisionnelle</span>";
-  html+="<span><span style='display:inline-block;width:16px;height:6px;background:#0d9488;vertical-align:middle;margin-right:4px'></span>Période réelle</span>";
-  html+="</div>";
-  html+="</body></html>";
-
-  win.document.write(html);win.document.close();
-  win.onload=function(){win.print();};
+function ptKey(mois,annee,section,salId,semaine,col){
+  return annee+"-"+("0"+mois).slice(-2)+"|"+section+"|"+salId+"|S"+semaine+"|"+col;
 }
-
-function openChantierEdit(id){
-  editChAnalyse(id);
+function ptGet(mois,annee,section,salId,semaine,col){
+  if(!D.pointages)D.pointages={};
+  var k=ptKey(mois,annee,section,salId,semaine,col);
+  return D.pointages[k]!==undefined?D.pointages[k]:"";
 }
-
-// ── MESSAGES ──
-function msgGetMyId(){
-  if(_currentProfile==="salarie")return _salLockedId;
-  if(_currentProfile==="bureau_alexis")return "alexis";
-  if(_currentProfile==="bureau_valerie")return "valerie";
-  return "bureau";
+// Returns true only if a value was explicitly ever stored (even if empty), false if truly never touched.
+function ptWasStored(mois,annee,section,salId,semaine,col){
+  if(!D.pointages)D.pointages={};
+  var k=ptKey(mois,annee,section,salId,semaine,col);
+  return D.pointages[k]!==undefined;
 }
-function msgGetMyName(){
-  if(_currentProfile==="salarie"){
-    var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
-    return sal?(sal.prenom+" "+(sal.nom||"")).trim():"Salarié";
-  }
-  if(_currentProfile==="bureau_alexis")return "Alexis";
-  if(_currentProfile==="bureau_valerie")return "Valérie";
-  return "Bureau";
-}
-function updateMsgDot(){
-  var dot=document.getElementById("msg-dot");
-  if(!dot||!D.messages)return;
-  var myId=msgGetMyId();
-  var unread=D.messages.filter(function(m){
-    if(m.from===myId)return false;
-    return !m.read&&(m.to===myId||m.to==="all"||m.to==="everyone"||(m.to==="bureau"&&["bureau","bureau_alexis","bureau_valerie"].indexOf(_currentProfile)>=0));
-  }).length;
-  dot.style.display=unread>0?"block":"none";
-  if(unread>0)dot.title=unread+" message(s) non lu(s)";
-}
-
-function sendMsg(){
-  var text=document.getElementById("msg-text");
-  if(!text||!text.value.trim())return;
-  var toEl=document.getElementById("msg-to");
-  var to=toEl?toEl.value:"bureau";
-  if(!D.messages)D.messages=[];
-  D.messages.push({id:"msg_"+Date.now(),from:msgGetMyId(),fromName:msgGetMyName(),to:to,text:text.value.trim(),ts:Date.now(),read:false});
-  save();text.value="";RMESSAGES();showToast("✅ Message envoyé !");
-}
-
-function delMsg(id){
-  if(!confirm("Supprimer ce message ?"))return;
-  D.messages=D.messages.filter(function(m){return m.id!==id;});
-  save();RMESSAGES();
-}
-
-function markMsgRead(id){
-  var m=D.messages&&D.messages.find(function(x){return x.id===id;});
-  if(m){m.read=true;save();RMESSAGES();}
-}
-
-function RMESSAGES(){
-  var wrap=document.getElementById("msg-wrap");
-  if(!wrap)return;
-  if(!D.messages)D.messages=[];
-  var myId=msgGetMyId();
-  var prof=_currentProfile;
-  var isBureauAny=(prof==="bureau"||prof==="bureau_alexis"||prof==="bureau_valerie");
-
-  // Marquer comme lus les messages reçus
-  var changed=false;
-  D.messages.forEach(function(m){
-    if(m.from===myId)return;
-    if(!m.read&&(m.to===myId||m.to==="all"||(m.to==="bureau"&&isBureauAny))){m.read=true;changed=true;}
-  });
-  if(changed){save();updateMsgDot();}
-
-  // Options destinataires selon profil
-  var toOptions="";
-  if(prof==="salarie"){
-    toOptions="<option value='alexis'>👤 Alexis</option>"+
-              "<option value='valerie'>👤 Valérie</option>"+
-              "<option value='bureau'>👥 Alexis & Valérie</option>";
-  } else if(prof==="bureau_alexis"){
-    toOptions="<option value='valerie'>👤 Valérie</option>"+
-              "<option value='all'>📢 Tous les salariés</option>";
-    (D.salaries||[]).filter(function(s){return s.prenom&&!s.isBureau;}).forEach(function(s){
-      toOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
-    });
-  } else if(prof==="bureau_valerie"){
-    toOptions="<option value='alexis'>👤 Alexis</option>"+
-              "<option value='all'>📢 Tous les salariés</option>";
-    (D.salaries||[]).filter(function(s){return s.prenom&&!s.isBureau;}).forEach(function(s){
-      toOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
-    });
-  } else {
-    // Bureau admin — tous les destinataires possibles
-    toOptions="<option value='alexis'>👤 Alexis</option>"+
-              "<option value='valerie'>👤 Valérie</option>"+
-              "<option value='bureau'>👥 Alexis &amp; Valérie</option>"+
-              "<option value='all'>📢 Tous les salariés</option>"+
-              "<option value='everyone'>📢 Tous (Alexis + Valérie + Salariés)</option>";
-    (D.salaries||[]).filter(function(s){return s.prenom&&!s.isBureau;}).forEach(function(s){
-      toOptions+="<option value='"+s.id+"'>"+s.prenom+" "+(s.nom||"")+"</option>";
-    });
-  }
-
-  var html="<div style='background:#fff;border:1px solid var(--brd);border-radius:12px;padding:14px 16px;margin-bottom:16px'>";
-  html+="<div style='font-size:13px;font-weight:700;margin-bottom:10px'>✉️ Envoyer un message</div>";
-  html+="<div style='margin-bottom:8px'><select id='msg-to' style='width:100%;height:34px;border:1px solid var(--brd2);border-radius:6px;padding:0 10px;font-size:12px;outline:none'>"+toOptions+"</select></div>";
-  html+="<div style='display:flex;gap:8px'><textarea id='msg-text' placeholder='Votre message...' style='flex:1;height:60px;border:1px solid var(--brd2);border-radius:6px;padding:8px;font-size:13px;resize:none;outline:none;font-family:DM Sans,sans-serif'></textarea>";
-  html+="<button onclick='sendMsg()' style='height:60px;padding:0 16px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer'>Envoyer</button></div></div>";
-
-  // Messages visibles pour ce profil
-  var msgs=D.messages.filter(function(m){
-    if(m.from===myId)return true;
-    if(m.to===myId)return true;
-    if(m.to==="all")return true;
-    if(m.to==="everyone")return true;
-    if(m.to==="bureau"&&isBureauAny)return true;
-    if(m.to==="alexis"&&(prof==="bureau_alexis"||prof==="bureau"))return true;
-    if(m.to==="valerie"&&(prof==="bureau_valerie"||prof==="bureau"))return true;
-    if(prof==="bureau")return true; // Bureau admin voit tout
-    return false;
-  }).sort(function(a,b){return b.ts-a.ts;});
-
-  if(!msgs.length){
-    html+="<div style='text-align:center;color:#6b7c79;padding:30px;font-size:13px'>Aucun message</div>";
-  } else {
-    msgs.forEach(function(m){
-      var isFromMe=(m.from===myId);
-      var isUnread=!m.read&&!isFromMe;
-      var bg=isFromMe?"#f0fdfa":(isUnread?"#fef9c3":"#fff");
-      var border=isFromMe?"#5eead4":(isUnread?"#fde047":"#e2e8f0");
-      var d=new Date(m.ts);
-      var ds2=d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
-      var toName={all:"Tous les salariés",bureau:"Alexis & Valérie",alexis:"Alexis",valerie:"Valérie",everyone:"Tous"};
-      var dest=toName[m.to]||(D.salaries||[]).reduce(function(acc,s){return s.id===m.to?(s.prenom+" "+(s.nom||"")).trim():acc;},"?");
-      html+="<div style='margin-bottom:10px;display:flex;flex-direction:column;align-items:"+(isFromMe?"flex-end":"flex-start")+"'>";
-      html+="<div style='font-size:10px;color:#6b7c79;margin-bottom:3px'>"+(isUnread?"🔵 ":"")+"<b>"+m.fromName+"</b> → "+dest+" · "+ds2+"</div>";
-      html+="<div style='max-width:85%;background:"+bg+";border:1px solid "+border+";border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5'>"+m.text.split("\n").join("<br>")+"</div>";
-      html+="<div style='display:flex;gap:6px;margin-top:3px'>";
-      // Actions: Lu + Supprimer (DOM instead of HTML strings to avoid quote issues)
-      html+="<div id=\"msgact_"+m.id+"\" style=\"display:flex;gap:6px;margin-top:3px\"></div>";
-      html+="</div></div>";
-    });
-  }
-  wrap.innerHTML=html;
-  // Ajouter les boutons Lu/Supprimer via DOM pour éviter les conflits de guillemets
-  msgs.forEach(function(m){
-    var actDiv=document.getElementById("msgact_"+m.id);
-    if(!actDiv)return;
-    var isFromMe2=(m.from===msgGetMyId());
-    var isUnread2=!m.read&&!isFromMe2;
-    if(isUnread2){
-      var luBtn=document.createElement("button");
-      luBtn.style.cssText="font-size:10px;background:none;border:1px solid #fde047;border-radius:4px;padding:1px 6px;cursor:pointer;color:#92400e";
-      luBtn.textContent="Lu ✓";
-      luBtn.onclick=(function(mid){return function(){markMsgRead(mid);};})(m.id);
-      actDiv.appendChild(luBtn);
-    }
-    var prof2=_currentProfile;
-    if(isFromMe2||prof2==="bureau"){
-      var delBtn2=document.createElement("button");
-      delBtn2.style.cssText="font-size:10px;background:none;border:none;color:#6b7c79;cursor:pointer";
-      delBtn2.textContent="🗑 Supprimer";
-      delBtn2.onclick=(function(mid){return function(){delMsg(mid);};})(m.id);
-      actDiv.appendChild(delBtn2);
-    }
-  });
-  updateMsgDot();
-}
-
-
-function syncChantierRealDates(){
-  if(!D.pointages||!D.chantiers)return;
-  var changed=false;
-  D.chantiers.forEach(function(ch){
-    var earliest=null;
-    var latest=null;
-    // Chercher dans tous les pointages les entrées pour ce chantier
-    Object.keys(D.pointages).forEach(function(k){
-      // Format clé: mois|annee|ch_ID|salId|semaine|col
-      if(k.indexOf("ch_"+ch.id)===(-1))return;
-      var val=D.pointages[k];
-      var h=parseFloat(val)||0;
-      if(h<=0)return;
-      // Extraire mois et annee de la clé
-      var parts=k.split("|");
-      if(parts.length<5)return;
-      var mo=parseInt(parts[0]),an=parseInt(parts[1]),sem=parseInt(parts[4]);
-      if(!mo||!an||!sem)return;
-      // Trouver la date du lundi de cette semaine
-      var jan4=new Date(an,0,4);
-      var dow=jan4.getDay()||7;
-      var wMon=new Date(jan4.getTime()-(dow-1)*86400000+(sem-1)*7*86400000);
-      var ds=wMon.getFullYear()+"-"+("0"+(wMon.getMonth()+1)).slice(-2)+"-"+("0"+wMon.getDate()).slice(-2);
-      if(!earliest||ds<earliest)earliest=ds;
-      if(!latest||ds>latest)latest=ds;
-    });
-    if(earliest&&ch.dateDebut!==earliest){
-      ch.dateDebut=earliest;
-      changed=true;
-    }
-  });
-  if(changed)save();
-}
-
 function ptSet(mois,annee,section,salId,semaine,col,val){
   if(!D.pointages)D.pointages={};
   D.pointages[ptKey(mois,annee,section,salId,semaine,col)]=val;
   save();
-  // Mettre à jour les dates réelles des chantiers si heures saisies
-  if(section&&section.indexOf("ch_")===0)syncChantierRealDates();
 }
 
 function getISOWeek(d){
@@ -4585,20 +3780,7 @@ function getChantierHoursPerDay(salId, date){
     if((D.cells[ck]||[]).indexOf(salId)>=0){
       var chId=D.rowChantiers[cwMon+"|"+r];
       var ch=chId?D.chantiers.find(function(c){return c.id===chId;}):null;
-      result.push({chId:chId||"inconnu",chNom:ch?ch.nom:"+ chantier",hours:0});
-    }
-  }
-  if(result.length>0){
-    // Total journée : 7h15 lun-jeu, 6h vendredi
-    var totalH=date.getDay()===5?6:7.25;
-    if(result.length===1){
-      // Un seul chantier → heures complètes
-      result[0].hours=totalH;
-    } else {
-      // Plusieurs chantiers → répartition équitable arrondie au quart d'heure
-      var base=Math.floor((totalH/result.length)*4)/4; // arrondi inférieur au 0.25
-      var reste=Math.round((totalH-base*result.length)*4)/4;
-      result.forEach(function(r,i){r.hours=base+(i===0?reste:0);});
+      result.push({chId:chId||"inconnu",chNom:ch?ch.nom:"+ chantier",hours:dt.getDay()===5?6:7.25});
     }
   }
   return result;
@@ -5154,23 +4336,9 @@ var _salLockedId=null; // The locked salarié ID for "salarie" profile, set once
 // Supprime définitivement heures chantier, panier, et RTT acquis pour les jours où le salarié
 // a une absence pleine journée (maladie, RTT, intempéries). S'exécute une fois par mois affiché.
 var _cleanedAbsenceMonths={};
-var PT_DAYS=["L","M","M","J","V"];
-var PT_ROWS=[
-  {id:"panier",    label:"Panier repas",         type:"check",  unit:""},
-  {id:"trajet",    label:"Trajet (zone)",         type:"zone_dd", unit:""},
-  {id:"transport", label:"Transport (zone)",      type:"zone_dd", unit:""},
-  {id:"cp",        label:"Congés payés (h)",      type:"number", unit:"h"},
-  {id:"css",       label:"Congés sans solde (h)", type:"number", unit:"h"},
-  {id:"hs",        label:"Heures supplémentaires",type:"number", unit:"h"},
-  {id:"formation", label:"École / Formation",     type:"number", unit:"h"},
-  {id:"maladie",   label:"Arrêt maladie (h)",     type:"number", unit:"h"},
-  {id:"intemperies",label:"Intempéries (h)",      type:"number", unit:"h"},
-  {id:"autre",     label:"Autre absence (h)",     type:"number", unit:"h"}
-];
 // Nettoie heures chantier / panier / RTT acquis pour un salarié à une date précise (mois/annee/wk/di).
 // Retourne true si quelque chose a été modifié.
 function cleanPointageForDaySalarie(salId,mois,annee,wk,di){
-  if(!D.pointages)D.pointages={};
   var changed=false;
   var dt=getDatesOfWeek(wk,annee)[di];
   var plannedChIds={};
@@ -5179,6 +4347,7 @@ function cleanPointageForDaySalarie(salId,mois,annee,wk,di){
     var k=ptKey(mois,annee,"ch_"+ch.id,salId,wk,di);
     var hasManual=D.pointages[k]!==undefined&&D.pointages[k]!=="";
     var isPlanned=!!plannedChIds[ch.id];
+    // Ne touche que les chantiers qui avaient déjà quelque chose (saisie manuelle ou suggestion du planning) ce jour-là
     if(!hasManual&&!isPlanned)return;
     if(D.pointages[k]!=="0"){D.pointages[k]="0";changed=true;}
     var rkey=mois+"|"+annee+"|ch_"+ch.id+"|"+salId+"|"+wk+"|"+di;
@@ -5189,13 +4358,14 @@ function cleanPointageForDaySalarie(salId,mois,annee,wk,di){
   var panierWasSet=D.pointages[kPanier]!==undefined;
   var panierAutoSuggested=dt?shouldAutoPanier(salId,dt):false;
   if((panierWasSet||panierAutoSuggested)&&D.pointages[kPanier]!=="0"){D.pointages[kPanier]="0";changed=true;}
+  // RTT acquis a un défaut de 0.5h/jour (L-J) même sans saisie : on force toujours "0" explicite
+  var kRttAcq=ptKey(mois,annee,"rtt_acq",salId,wk,di);
+  if(D.pointages[kRttAcq]!=="0"){D.pointages[kRttAcq]="0";changed=true;}
   if(changed)save();
   return changed;
 }
 
 function cleanPointageForFullDayAbsences(mois,annee){
-  if(!_cleanedAbsenceMonths)_cleanedAbsenceMonths={};
-  if(!D.pointages)D.pointages={};
   var ck=mois+"|"+annee;
   if(_cleanedAbsenceMonths[ck])return; // already cleaned this session for this month
   if(!D.absences||!D.absences.length)return;
@@ -5217,13 +4387,6 @@ function cleanPointageForFullDayAbsences(mois,annee){
 }
 
 function RPOINTAGE(){
-  try { _RPOINTAGE_inner(); } catch(e) {
-    var wrap=document.getElementById("pointage-wrap");
-    if(wrap) wrap.innerHTML="<div style='padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#dc2626;font-size:12px'><b>Erreur pointage:</b> "+e.message+"<br><small>"+e.stack+"</small></div>";
-    console.error("RPOINTAGE error:",e);
-  }
-}
-function _RPOINTAGE_inner(){
   var isSalMode=(_currentProfile==="salarie");
   if(isSalMode&&_salLockedId===null){
     var urlParams0=new URLSearchParams(window.location.search);
@@ -5704,7 +4867,7 @@ function archiveOldAbsences(){
 // Elles ne sont PAS supprimées, juste marquées "archived" pour disparaître de la liste normale
 // et n'être consultables que dans la section Archives.
 function autoArchiveOldAbsDemandesSilent(){
-  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
+  if(!D.absDemandes)D.absDemandes=[];
   var now=new Date();
   var cutoffMonthStart=new Date(now.getFullYear(),now.getMonth(),1); // 1er du mois en cours
   var cutoffTs=cutoffMonthStart.getTime();
@@ -5719,7 +4882,7 @@ function autoArchiveOldAbsDemandesSilent(){
 }
 
 function archiveOldAbsDemandes(){
-  if(!D.absDemandes)D.absDemandes=[];if(!D.messages)D.messages=[];
+  if(!D.absDemandes)D.absDemandes=[];
   var cutoff=Date.now()-365*24*60*60*1000;
   var before=D.absDemandes.length;
   // Only archive demandes already treated (accepted/refused), keep pending ones regardless of age
@@ -5877,21 +5040,8 @@ function validateMyWeek(salId,semaine,annee){
   };
   save();
   showToast("✅ Semaine validée et envoyée au Bureau !");
-  if(typeof updatePointageDot==="function")updatePointageDot();
   var mois=parseInt(document.getElementById("pt-mois").value);
   renderValidateWeekButton(mois,annee,salId);
-}
-
-function updatePointageDot(){
-  var dot=document.getElementById("pointage-dot");
-  if(!dot)return;
-  if(!D.ptWeekValidations)return;
-  // Compter les semaines validées par salariés mais pas encore par Alexis (bureauWeekValidations)
-  var pending=Object.keys(D.ptWeekValidations).filter(function(k){
-    return !(D.bureauWeekValidations&&D.bureauWeekValidations[k]);
-  }).length;
-  dot.style.display=pending>0?"block":"none";
-  if(pending>0)dot.title=pending+" pointage(s) en attente de validation Alexis";
 }
 
 function renderPtValidationsList(){
@@ -5900,6 +5050,7 @@ function renderPtValidationsList(){
   if(_currentProfile!=="bureau"){wrap.innerHTML="";return;}
   if(!D.ptWeekValidations)D.ptWeekValidations={};
   if(!D.bureauWeekValidations)D.bureauWeekValidations={};
+  if(!D.ptTraite)D.ptTraite={};
 
   var pending=[], validated=[];
   Object.keys(D.ptWeekValidations).forEach(function(k){
@@ -5910,18 +5061,16 @@ function renderPtValidationsList(){
 
   var html="";
 
-  // ── BANNIÈRE ALEXIS ──
-  html+="<div style='background:"+(pending.length?"#fffbeb":"#f0fdf4")+";border:1px solid "+(pending.length?"#fcd34d":"#bbf7d0")+";border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
-  html+="<div style='font-size:13px;font-weight:700;color:"+(pending.length?"#92400e":"#166534")+";margin-bottom:"+(pending.length?"10px":"0")+"'>📋 Alexis — Pointages à valider"+(pending.length?" ("+pending.length+")":"")+"</div>";
+  // ── SECTION ALEXIS ──
+  html+="<div style='background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
+  html+="<div style='font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px'>📋 Alexis — Pointages à valider"+(pending.length?" ("+pending.length+")":"")+"</div>";
   if(!pending.length){
-    html+="<div style='font-size:12px;color:#166534'>✅ Aucun pointage en attente</div>";
+    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucun pointage en attente ✓</div>";
   } else {
     pending.forEach(function(item){
       var e=item.e; var k=item.key;
-      var d=new Date(e.ts);
-      var dateStr=d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
       html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap'>";
-      html+="<div><div style='font-size:12px;font-weight:700'>"+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Sem. "+e.semaine+" · Validé le "+dateStr+"</div></div>";
+      html+="<div style='font-size:12px'>📋 Sem. <b>"+e.semaine+"</b> — <b>"+e.nom+"</b></div>";
       html+="<div style='display:flex;gap:6px'>";
       html+="<button onclick='ptVoirSalarie("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#f0fdfa;color:#0d9488;border:1px solid #5eead4;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>👁 Voir</button>";
       html+="<button onclick='alexisValider("+JSON.stringify(k)+")' style='height:28px;padding:0 10px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>✅ Valider</button>";
@@ -5930,34 +5079,34 @@ function renderPtValidationsList(){
   }
   html+="</div>";
 
-  // ── BANNIÈRE VALÉRIE ──
-  html+="<div style='background:"+(validated.length?"#f5f3ff":"#f0fdf4")+";border:1px solid "+(validated.length?"#c4b5fd":"#bbf7d0")+";border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
-  html+="<div style='font-size:13px;font-weight:700;color:"+(validated.length?"#7c3aed":"#166534")+";margin-bottom:"+(validated.length?"10px":"0")+"'>📬 Valérie — À traiter pour les salaires"+(validated.length?" ("+validated.length+")":"")+"</div>";
+  // ── SECTION VALÉRIE ──
+  html+="<div style='background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
+  html+="<div style='font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px'>📬 Valérie — À traiter pour les salaires"+(validated.length?" ("+validated.length+")":"")+"</div>";
   if(!validated.length){
-    html+="<div style='font-size:12px;color:#166534'>✅ Aucun pointage à traiter</div>";
+    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucun pointage validé en attente ✓</div>";
   } else {
     validated.forEach(function(item){
       var e=item.e; var k=item.key;
       var d=new Date(item.v.ts);
       var dateStr=d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
       html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #ede9fe;border-radius:8px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap'>";
-      html+="<div><div style='font-size:12px;font-weight:700'>"+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Sem. "+e.semaine+" · Validé Alexis le "+dateStr+"</div></div>";
+      html+="<div><div style='font-size:12px;font-weight:600'>Sem. "+e.semaine+" — "+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Validé par Alexis le "+dateStr+"</div></div>";
       html+="<div style='display:flex;gap:6px;flex-wrap:wrap'>";
       html+="<button onclick='ptVoirSalarie("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>👁 Voir</button>";
       html+="<button onclick='ptExportSalSemaine("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>📥 Excel</button>";
       html+="<button onclick='marquerTransmisValerie("+JSON.stringify(k)+")' style='height:28px;padding:0 10px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>Traité ✓</button>";
       html+="</div></div>";
     });
-    html+="<div style='margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'>";
-    html+="<button onclick='ptPrintAllPDF()' style='height:32px;padding:0 14px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📄 PDF tous les salariés</button>";
-    html+="<button onclick='window.print()' style='height:32px;padding:0 14px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
-    html+="</div>";
   }
+  // Bouton PDF global
+  html+="<div style='margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'>";
+  html+="<button onclick='ptPrintAllPDF()' style='height:32px;padding:0 14px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📄 PDF tous les salariés</button>";
+  html+="<button onclick='window.print()' style='height:32px;padding:0 14px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
+  html+="</div>";
   html+="</div>";
 
   wrap.innerHTML=html;
 }
-
 
 function ptVoirSalarie(salId,semaine,annee){
   // Filtrer le pointage sur ce salarié
@@ -5973,13 +5122,11 @@ function ptManualRefresh(){
   loadFromCloud(function(){
     var nbChantiers=D.chantiers?D.chantiers.length:0;
     var nbSalaries=D.salaries?D.salaries.length:0;
-    var nbCells=D.cells?Object.keys(D.cells).length:0;
-    var salFound=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
-    var debugMsg="✅ "+nbSalaries+" sal / "+nbChantiers+" ch / "+nbCells+" cells"+(salFound?" — "+salFound.prenom:" — ID INTROUVABLE: "+_salLockedId);
+    var chInfo=(D.chantiers||[]).map(function(c){return (c.ref||c.nom||"?")+(c.done?" [DONE]":"");}).join(", ");
     if(btn){
-      btn.innerHTML=debugMsg;
+      btn.innerHTML="✅ "+nbChantiers+" chantier(s): "+chInfo+" / "+nbSalaries+" salarié(s)";
       btn.disabled=false;
-      setTimeout(function(){btn.innerHTML="<span>🔄</span><span> Actualiser</span>";},8000);
+      setTimeout(function(){btn.innerHTML="<span>🔄</span><span> Actualiser les données</span>";},6000);
     }
     RPOINTAGE();
   });
@@ -6517,6 +5664,13 @@ function clearPtReview(mois,annee,section,salId,wk,di){
   RPOINTAGE();
 }
 
+function updatePointageDot(){
+  var dot=document.getElementById("pointage-dot");
+  if(!dot)return;
+  if(!D.ptReview)D.ptReview={};
+  dot.style.display=Object.keys(D.ptReview).length?"block":"none";
+}
+
 function exportPointageXLSX(){
   var mois=parseInt(document.getElementById("pt-mois").value);
   var annee=parseInt(document.getElementById("pt-annee").value);
@@ -6975,14 +6129,6 @@ function exportIndemCSV(){
 // Pas de pré-configuration automatique du token GitHub pour BLO : à saisir manuellement
 // via le bouton ☁️ de synchronisation si besoin (stocké uniquement dans le navigateur).
 initW();
-// Initialiser le sélecteur de mois/année au mois courant
-(function(){
-  var now=new Date();
-  var moisEl=document.getElementById("pt-mois");
-  var anneeEl=document.getElementById("pt-annee");
-  if(moisEl)moisEl.value=String(now.getMonth()+1);
-  if(anneeEl)anneeEl.value=String(now.getFullYear());
-})();
 setTimeout(function(){
   var imgEl=document.getElementById("header-logo");
   if(imgEl)imgEl.src=LOGO_BLO;
@@ -7118,9 +6264,5 @@ setTimeout(_fixColWidth,100);
   window.TAB=function(n){_origTAB(n);if(n==="urgence")setTimeout(initUrgence,30);};
 })();
 </script>
-<div class="pg" id="pg-messages" style="max-width:680px;margin:0 auto;padding-bottom:40px">
-  <h2 class="stitle">💬 Messages</h2>
-  <div id="msg-wrap"></div>
-</div>
 </body>
 </html>
