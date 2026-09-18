@@ -2645,7 +2645,7 @@ function addRDV(){
 
 
 // ── DEMANDES D'ABSENCE (compte Salarié <-> Bureau) ──
-var ABSDEM_NOTIF_PHONES = ["33627991855","33626610036"]; // Quentin et Valérie
+var ABSDEM_NOTIF_PHONES = ["33762853767"]; // Alexis uniquement en premier
 
 function RABSDEMANDE(){
   var sel=document.getElementById("ad-sal");
@@ -2871,7 +2871,15 @@ function decideAbsDemande(id,status){
       +"%0A"+encodeURIComponent(ABLBLS[d.type])+" du "+encodeURIComponent(new Date(d.debut).toLocaleDateString("fr-FR"))+" au "+encodeURIComponent(new Date(d.fin).toLocaleDateString("fr-FR"));
     window.open("https://wa.me/33"+sal.whatsapp.replace(/^0/,"")+"?text="+msg,"_blank");
   }
-  showToast(status==="accepted"?"✅ Demande acceptée":"❌ Demande refusée");
+  // Notifier Valérie et Quentin dans l'app (message interne) + WhatsApp Valérie
+  var nomSal=sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?";
+  var msgNotif=(status==="accepted"?"✅ Alexis a ACCEPTÉ":"❌ Alexis a REFUSÉ")+" la demande de "+nomSal
+    +" ("+( ABLBLS[d.type]||d.type)+" du "+new Date(d.debut).toLocaleDateString("fr-FR")+" au "+new Date(d.fin).toLocaleDateString("fr-FR")+")";
+  if(!D.messages)D.messages=[];
+  D.messages.push({id:"msg_abs_"+Date.now(),from:"alexis",fromName:"Alexis",to:"bureau",text:msgNotif,ts:Date.now(),read:false});
+  save();
+  setTimeout(function(){window.open("https://wa.me/33626610036?text="+encodeURIComponent(msgNotif),"_blank");},800);
+  showToast(status==="accepted"?"✅ Acceptée — Valérie & Quentin notifiés":"❌ Refusée — Valérie & Quentin notifiés");
 }
 
 function RRDV(){
