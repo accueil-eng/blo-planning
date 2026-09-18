@@ -2138,9 +2138,8 @@ var PROFILES = {
   bureau: { name: "Quentin", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","absences","vehicules","formation","pointage","indemnites","messages","gantt","bilan"], readOnly: false },
   bureau_alexis: { name: "Alexis", pin: "@@@@", color: "#0d9488", tabs: ["planning","rdv","chantiers","absences","vehicules","formation","pointage","indemnites","messages","gantt","bilan"], readOnly: false },
   bureau_valerie: { name: "Valérie", pin: "@@@@", color: "#7c3aed", tabs: ["planning","rdv","chantiers","salaries","absences","vehicules","formation","pointage","indemnites","messages","gantt","bilan"], readOnly: false },
-  analyse: { name: "Analyse", pin: "@@@@", color: "#0891b2", tabs: ["gantt","bilan"], readOnly: false },
-  salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence","messages"], readOnly: true },
-  planningpublic: { name: "Planning (lecture seule)", pin: null, color: "#0891b2", tabs: ["planning"], readOnly: true }
+  salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence","messages"], readOnly: true, hidden: true },
+  planningpublic: { name: "Planning (lecture seule)", pin: null, color: "#0891b2", tabs: ["planning"], readOnly: true, hidden: true }
 };
 var _currentProfile = null;
 
@@ -2269,8 +2268,8 @@ function showProfileModal() {
   box.appendChild(sub);
 
   Object.keys(PROFILES).forEach(function(key){
-    if(key==="planningpublic")return; // accessible uniquement via le lien dédié, pas au choix manuel
     var p = PROFILES[key];
+    if(p.hidden)return;
     var btn = document.createElement("div");
     btn.style.cssText = "display:flex;align-items:center;gap:12px;padding:14px 16px;border:2px solid " + (key===_currentProfile ? p.color : "#dde5e4") + ";border-radius:10px;cursor:pointer;margin-bottom:10px;transition:border-color .15s";
     btn.onmouseover = function(){ btn.style.borderColor = p.color; };
