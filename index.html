@@ -705,7 +705,7 @@ function _planningHash(){
 }
 
 function checkPlanningChangeForNotif(){
-  if(_currentProfile!=="bureau")return; // only Bureau triggers notifications
+  if(_currentProfile!=="bureau"&&_currentProfile!=="bureau_alexis")return; // only Bureau/Alexis triggers notifications
   var h=_planningHash();
   if(_lastPlanningHash===null){_lastPlanningHash=h;return;} // first load, no notif
   if(h===_lastPlanningHash)return;
@@ -2738,9 +2738,12 @@ function sendAbsDemande(){
   document.getElementById("ad-heuredebut").value="";
   document.getElementById("ad-heurefin").value="";
   document.getElementById("ad-motif").value="";
-  showToast("✅ Demande envoyée !");
+  showToast("✅ Demande envoyée ! WhatsApp ouvert pour Alexis...");
   renderMesDemandes();
-  showAbsDemandeNotifModal(msg);
+  // Ouvrir WhatsApp directement vers Alexis
+  setTimeout(function(){
+    window.open("https://wa.me/33762853767?text="+msg,"_blank");
+  },600);
 }
 
 function showAbsDemandeNotifModal(msg){
@@ -2771,7 +2774,7 @@ function updateAbsDemandesDot(){
   // Persistent banner, visible across all tabs, Bureau only
   var banner=document.getElementById("absdemandes-banner");
   if(banner){
-    if(pendingCount&&_currentProfile==="bureau"){
+    if(pendingCount&&(_currentProfile==="bureau"||_currentProfile==="bureau_alexis")){
       banner.style.display="block";
       banner.textContent="🏖 "+pendingCount+" demande"+(pendingCount>1?"s":"")+" d'absence en attente de validation — cliquez pour traiter";
     } else {
@@ -5061,7 +5064,7 @@ function validateMyWeek(salId,semaine,annee){
 function renderPtValidationsList(){
   var wrap=document.getElementById("pt-validations-wrap");
   if(!wrap)return;
-  if(_currentProfile!=="bureau"){wrap.innerHTML="";return;}
+  if(_currentProfile!=="bureau"&&_currentProfile!=="bureau_alexis"&&_currentProfile!=="bureau_valerie"){wrap.innerHTML="";return;}
   if(!D.ptWeekValidations)D.ptWeekValidations={};
   if(!D.bureauWeekValidations)D.bureauWeekValidations={};
   if(!D.ptTraite)D.ptTraite={};
