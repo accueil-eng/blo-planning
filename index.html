@@ -762,6 +762,21 @@ window.addEventListener("beforeunload",function(e){
 });
 
 function _doGithubSave(){
+  if(!GH_TOKEN){return;} // pas de token → pas de sauvegarde
+  // Si on n'a pas le SHA, le récupérer d'abord
+  if(!_ghSha){
+    fetch(GH_API,{headers:{"Authorization":"token "+GH_TOKEN,"Accept":"application/vnd.github.v3+json"}})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(d){
+        if(d&&d.sha){_ghSha=d.sha;}
+        _doGithubSaveWithSha();
+      })
+      .catch(function(){_doGithubSaveWithSha();});
+    return;
+  }
+  _doGithubSaveWithSha();
+}
+function _doGithubSaveWithSha(){
   var ind=document.getElementById("sind");
   if(ind){ind.textContent="☁️ Sync...";ind.style.opacity="1";}
   // Compress: remove empty/null values to reduce size
