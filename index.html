@@ -1730,8 +1730,7 @@ function editCh(id){
   var fFinPrev=mkRow("📅 Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateFinPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fHEst=mkRow("⏱ Heures estimées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresEst||"",min:0,placeholder:"ex: 120",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fHReal=mkRow("⏱ Heures réalisées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresReal||"",min:0,placeholder:"ex: 98",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-
-  // ── PHASES ──
+  var fEff=mkRow("👷 Effectif nécessaire",Object.assign(document.createElement("input"),{type:"number",value:ch.effectifNecessaire||"",min:0,max:20,placeholder:"ex: 3",style:"flex:1;height:32px;border:1px solid #0d9488;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var phasesSep=document.createElement("div");phasesSep.style.cssText="font-size:11px;font-weight:700;color:#7c3aed;margin:10px 0 6px;padding:4px 8px;background:#ede9fe;border-radius:5px;display:flex;align-items:center;justify-content:space-between";
   var phasesLabel=document.createElement("span");phasesLabel.textContent="📐 Phases du chantier";phasesSep.appendChild(phasesLabel);
   var cbPhases=document.createElement("input");cbPhases.type="checkbox";cbPhases.checked=!!(ch.phases&&ch.phases.length);cbPhases.style.cssText="width:16px;height:16px;accent-color:#7c3aed;cursor:pointer";
@@ -1776,6 +1775,7 @@ function editCh(id){
   okBtn.onclick=function(){
     if(!fNom.value.trim()){alert("Nom requis");return;}
     ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;
+    ch.effectifNecessaire=fEff.value?parseInt(fEff.value):null;
     ch.phases=cbPhases.checked?phases.filter(function(p){return p.nom||p.debut;}):[]; 
     saveNow();modal.remove();RC();RGANTT();
   };
@@ -3690,7 +3690,7 @@ function RGANTT(){
     tdD.innerHTML=hh;
     // Edit button
     var eb3=document.createElement("button");eb3.className="btn";eb3.style.cssText="font-size:10px;padding:1px 5px;margin-top:3px;display:block";eb3.textContent="✏️";
-    eb3.onclick=(function(cid){return function(){editGanttDates(cid);};})(ch.id);
+    eb3.onclick=(function(cid){return function(){editCh(cid);};})(ch.id);
     tdD.appendChild(eb3);
     tr.appendChild(tdD);
 
