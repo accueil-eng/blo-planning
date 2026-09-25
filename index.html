@@ -3764,47 +3764,39 @@ function RGANTT(){
         td.appendChild(bR);
       }
       if(isNow2){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5";td.appendChild(tl);}
+
+      // Phases dans la même cellule — sous la barre principale
+      if(ch.phases&&ch.phases.length){
+        ch.phases.forEach(function(ph,phi){
+          if(!ph.debut&&!ph.fin)return;
+          function parseLD3(s){if(!s)return null;var p=s.split("-");return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
+          var phS3=parseLD3(ph.debut);
+          var phE3=ph.fin?new Date(parseLD3(ph.fin).getTime()+86400000):null;
+          if(!phS3||!phE3)return;
+          if(!(w<phE3&&wE>phS3))return;
+          var isFph=w<=phS3&&wE>phS3;var isLph=w<phE3&&wE>=phE3;
+          var barPh=document.createElement("div");
+          barPh.style.cssText="position:absolute;height:8px;background:"+ch.color+";opacity:0.45;"
+            +"top:"+(22+phi*10)+"px;"
+            +"left:"+(isFph?"3":"0")+"px;right:"+(isLph?"3":"0")+"px;"
+            +"border-radius:"+(isFph?"3px 0 0 3px":"")+(isLph?" 0 3px 3px 0":"")+";"
+            +"border:1px solid "+ch.color+";box-sizing:border-box";
+          td.appendChild(barPh);
+          // Nom de la phase sur la première cellule visible
+          if(isFph&&ph.nom){
+            var namePh=document.createElement("div");
+            namePh.style.cssText="position:absolute;font-size:7px;font-weight:700;color:"+ch.color+";"
+              +"top:"+(23+phi*10)+"px;left:5px;white-space:nowrap;overflow:hidden;max-width:"+(WW-6)+"px;pointer-events:none";
+            namePh.textContent=ph.nom;
+            td.appendChild(namePh);
+          }
+        });
+        td.style.height=(36+ch.phases.length*10)+"px";
+      }
+
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
-
-    // Sous-lignes phases
-    if(ch.phases&&ch.phases.length){
-      ch.phases.forEach(function(ph){
-        if(!ph.nom&&!ph.debut)return;
-        var trPh=document.createElement("tr");trPh.style.cssText="background:#f5f3ff;border-top:1px solid #ede9fe";
-        // Cellule nom phase (collée à gauche, même colonne que le chantier)
-        var tdNPh=document.createElement("td");
-        tdNPh.style.cssText="border:1px solid #e2e8f0;padding:4px 8px 4px 20px;font-size:10px;position:sticky;left:0;background:#f9f7ff;z-index:1;min-width:"+LW+"px;color:#7c3aed;white-space:normal";
-        var f2ph=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):""};
-        var phLabel="↳ <b>"+(ph.nom||"Phase")+"</b>";
-        if(ph.debut||ph.fin)phLabel+="<span style='font-size:9px;color:#94a3b8;margin-left:6px'>"+f2ph(ph.debut)+(ph.debut&&ph.fin?" → ":"")+f2ph(ph.fin)+"</span>";
-        if(ph.effectif)phLabel+="<span style='font-size:9px;background:#ede9fe;border-radius:3px;padding:1px 4px;margin-left:4px'>👷"+ph.effectif+"</span>";
-        tdNPh.innerHTML=phLabel;
-        trPh.appendChild(tdNPh);
-        // Barres semaines — parse local (évite décalage UTC)
-        function parseLD2(s){if(!s)return null;var p=s.split("-");return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
-        var phS=parseLD2(ph.debut);
-        var phE=ph.fin?new Date(parseLD2(ph.fin).getTime()+86400000):null; // +1j fin incluse
-        weeks.forEach(function(w){
-          var wE2=new Date(w.getTime()+7*24*60*60*1000);
-          var tdPh=document.createElement("td");tdPh.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:18px;position:relative;background:#f9f7ff";
-          if(phS&&phE&&w<phE&&wE2>phS){
-            var isFstPh=w<=phS&&wE2>phS;var isLstPh=w<phE&&wE2>=phE;
-            var bPh=document.createElement("div");
-            bPh.style.cssText="position:absolute;top:4px;height:9px;"
-              +"left:"+(isFstPh?"3":"0")+"px;right:"+(isLstPh?"3":"0")+"px;"
-              +"background:"+ch.color+";opacity:0.5;"
-              +"border-radius:"+(isFstPh?"4px 0 0 4px":"")+(isLstPh?" 0 4px 4px 0":"")+";"
-              +"border-top:2px solid "+ch.color+";border-bottom:2px solid "+ch.color+";"
-              +"box-sizing:border-box";
-            tdPh.appendChild(bPh);
-          }
-          trPh.appendChild(tdPh);
-        });
-        tbody.appendChild(trPh);
-      });
-    }
   });
   tbl.appendChild(tbody);
 
