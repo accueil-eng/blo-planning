@@ -3671,6 +3671,12 @@ function RGANTT(){
     var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px";
     tdN.appendChild(dot);
     tdN.appendChild(document.createTextNode((ch.ref?ch.ref+" - ":"")+ch.nom+(ch.ville?" ("+ch.ville+")":"")));
+    var editBtn=document.createElement("button");
+    editBtn.textContent="✏️";
+    editBtn.title="Modifier ce chantier";
+    editBtn.style.cssText="margin-left:6px;background:none;border:1px solid #dde5e4;border-radius:4px;cursor:pointer;font-size:11px;padding:1px 4px;vertical-align:middle;opacity:0.7";
+    editBtn.onclick=(function(cid){return function(e){e.stopPropagation();editCh(cid);};})(ch.id);
+    tdN.appendChild(editBtn);
     tr.appendChild(tdN);
 
     // Dates cell
@@ -3686,12 +3692,8 @@ function RGANTT(){
     if(ch.dateDebut){
       hh+="<div style='color:"+ch.color+";font-weight:600'>&#9632; D&#233;but r&#233;el: "+fmt2(ch.dateDebut)+"</div>";
     }
-    if(!hh)hh="<span style='color:#94a3b8;font-style:italic;font-size:10px'>Cliquer &#9998; pour saisir</span>";
+    if(!hh)hh="<span style='color:#94a3b8;font-style:italic;font-size:10px'>Cliquer ✏️ pour saisir</span>";
     tdD.innerHTML=hh;
-    // Edit button
-    var eb3=document.createElement("button");eb3.className="btn";eb3.style.cssText="font-size:10px;padding:1px 5px;margin-top:3px;display:block";eb3.textContent="✏️";
-    eb3.onclick=(function(cid){return function(){editCh(cid);};})(ch.id);
-    tdD.appendChild(eb3);
     tr.appendChild(tdD);
 
     var chS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
