@@ -3737,10 +3737,11 @@ function RGANTT(){
       ch.phases.forEach(function(ph,phi){
         if(!ph.nom&&!ph.debut)return;
         var f3=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):""};
-        var phItem=document.createElement("div");phItem.style.cssText="font-size:9px;color:#13201e;display:flex;align-items:center;gap:4px;margin-bottom:1px";
-        var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:8px;height:3px;background:"+ch.color+";border-radius:2px;flex-shrink:0";
-        var txt=document.createElement("span");txt.style.cssText="font-weight:600";
-        txt.textContent=(ph.nom||"Phase "+(phi+1))+(ph.debut?" · "+f3(ph.debut)+(ph.fin?" → "+f3(ph.fin):""):"");
+        var phItem=document.createElement("div");
+        phItem.style.cssText="font-size:9px;color:#000;font-weight:700;display:flex;align-items:center;gap:4px;height:16px;margin-bottom:3px";
+        var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:10px;height:2px;border-top:2px dashed "+ch.color+";flex-shrink:0";
+        var txt=document.createElement("span");
+        txt.textContent=(ph.nom||"Phase "+(phi+1))+(ph.debut?" "+f3(ph.debut)+(ph.fin?"→"+f3(ph.fin):""):"");
         phItem.appendChild(dot);phItem.appendChild(txt);
         phListDiv.appendChild(phItem);
       });
@@ -3801,14 +3802,6 @@ function RGANTT(){
             +"left:"+(isFph?"3":"0")+"px;right:"+(isLph?"3":"0")+"px;"
             +"border-radius:3px;box-sizing:border-box";
           td.appendChild(barPh);
-          // Nom en absolu au-dessus de la barre — déborde librement
-          if(isFph&&ph.nom){
-            var namePh=document.createElement("div");
-            namePh.style.cssText="position:absolute;font-size:9px;font-weight:700;color:#000;"
-              +"top:"+(22+phi*19)+"px;left:5px;white-space:nowrap;z-index:5;pointer-events:none";
-            namePh.textContent=ph.nom;
-            td.appendChild(namePh);
-          }
         });
         td.style.height=(36+ch.phases.length*19)+"px";
       }
