@@ -1776,32 +1776,38 @@ function editCh(id){
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
     if(!fNom.value.trim()){alert("Nom requis");return;}
-    ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;
-    ch.effectifNecessaire=fEff.value?parseInt(fEff.value):null;
-    // Synchro finale depuis les inputs du DOM avant sauvegarde
+    // Mise à jour directe dans D.chantiers par ID (évite tout problème de référence)
+    var chIdx=D.chantiers.findIndex(function(c){return c.id===ch.id;});
+    if(chIdx<0){showToast("⚠️ Chantier introuvable");return;}
+    D.chantiers[chIdx].ref=fRef.value.trim();
+    D.chantiers[chIdx].nom=fNom.value.trim();
+    D.chantiers[chIdx].adresse=fAdr.value.trim();
+    D.chantiers[chIdx].cp=fCp.value.trim();
+    D.chantiers[chIdx].ville=fVille.value.trim();
+    D.chantiers[chIdx].dateDebut=fDeb.value;
+    D.chantiers[chIdx].dateDebutPrev=fDebPrev.value;
+    D.chantiers[chIdx].dateFinPrev=fFinPrev.value;
+    D.chantiers[chIdx].heuresEst=fHEst.value?parseFloat(fHEst.value):null;
+    D.chantiers[chIdx].heuresReal=fHReal.value?parseFloat(fHReal.value):null;
+    D.chantiers[chIdx].zoneEcouflant=fZoneE.value||null;
+    D.chantiers[chIdx].effectifNecessaire=fEff.value?parseInt(fEff.value):null;
+    // Phases
+    var finalPhases=[];
     if(cbPhases.checked){
-      var allRows=phasesWrap ? phasesWrap.querySelectorAll("div[data-phase-idx]") : [];
-      if(allRows.length>0){
-        ch.phases=[];
-        for(var pi=0;pi<allRows.length;pi++){
-          var ins=allRows[pi].querySelectorAll("input");
-          if(ins.length>0){
-            var pnom=ins[0]?ins[0].value.trim():"";
-            var pdeb=ins[1]?ins[1].value:"";
-            var pfin=ins[2]?ins[2].value:"";
-            var peff=ins[3]?parseInt(ins[3].value)||null:null;
-            if(pnom||pdeb)ch.phases.push({nom:pnom,debut:pdeb,fin:pfin,effectif:peff});
-          }
-        }
-      } else {
-        ch.phases=phases.filter(function(p){return p.nom||p.debut;});
+      var allRows=phasesWrap?phasesWrap.querySelectorAll("div[data-phase-idx]"):[];
+      for(var pi=0;pi<allRows.length;pi++){
+        var ins=allRows[pi].querySelectorAll("input");
+        var pnom=ins[0]?ins[0].value.trim():"";
+        var pdeb=ins[1]?ins[1].value:"";
+        var pfin=ins[2]?ins[2].value:"";
+        var peff=ins[3]?parseInt(ins[3].value)||null:null;
+        if(pnom||pdeb)finalPhases.push({nom:pnom,debut:pdeb,fin:pfin,effectif:peff});
       }
-    } else {
-      ch.phases=[];
+      if(!finalPhases.length)finalPhases=phases.filter(function(p){return p.nom||p.debut;});
     }
+    D.chantiers[chIdx].phases=finalPhases;
     saveNow();
-    var nbPhases=ch.phases?ch.phases.length:0;
-    showToast("✅ Chantier sauvegardé"+(nbPhases?" avec "+nbPhases+" phase(s)":""));
+    showToast("✅ Chantier sauvegardé"+(finalPhases.length?" avec "+finalPhases.length+" phase(s)":""));
     modal.remove();RC();RGANTT();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
