@@ -290,7 +290,7 @@ body.profile-salarie .tabs{display:none}
       <option value="formation">Formation</option>
       <option value="cp">Congés payés</option><option value="intemperies">Intempéries</option>
       <option value="css">Congés sans solde</option><option value="formation">Formation</option>
-      <option value="maladie">Arrêt maladie</option><option value="autre">Autre</option>
+      <option value="maladie">Arrêt maladie</option><option value="ecole">École</option><option value="autre">Autre</option>
     </select>
     <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#6b7c79">De <input type="time" id="abhd" style="width:90px"></label>
     <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#6b7c79">à <input type="time" id="abhf" style="width:90px"></label>
@@ -495,6 +495,7 @@ body.profile-salarie .tabs{display:none}
       <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px">Type d'absence</label>
       <select id="ad-type" style="height:38px;border:1px solid var(--brd2);border-radius:8px;padding:0 10px;font-size:14px;background:var(--bg);color:var(--txt);outline:none;width:100%">
         <option value="cp">Congés payés</option>
+        <option value="ecole">École</option>
         <option value="css">Congés sans solde</option>
         <option value="autre">Autre</option>
       </select>
@@ -559,8 +560,8 @@ body.profile-salarie .tabs{display:none}
 
 <script>
 var COLORS=["#2563eb","#16a34a","#dc2626","#d97706","#7c3aed","#db2777","#0891b2","#65a30d","#9333ea","#ea580c","#0d9488","#be185d","#4338ca","#b45309","#0f766e"];
-var ABLBLS={cp:"Congés payés",intemperies:"Intempéries",css:"Congés sans solde",formation:"Formation",rtt:"RTT",maladie:"Arrêt maladie",autre:"Autre"};
-var ABABBR={cp:"CP",intemperies:"INT",css:"CSS",formation:"FOR",rtt:"RTT",maladie:"AM",autre:"AUT"};
+var ABLBLS={cp:"Congés payés",intemperies:"Intempéries",css:"Congés sans solde",formation:"Formation",rtt:"RTT",maladie:"Arrêt maladie",ecole:"École",autre:"Autre"};
+var ABABBR={cp:"CP",intemperies:"INT",css:"CSS",formation:"FOR",rtt:"RTT",maladie:"AM",ecole:"ECO",autre:"AUT"};
 var DN=["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 // ── GITHUB SYNC ──
 var GH_TOKEN = localStorage.getItem("gh_token")||"";
@@ -2028,6 +2029,7 @@ function showGroupAbsModal(){
     "<option value='css'>Congés sans solde</option>"+
     "<option value='formation'>Formation</option>"+
     "<option value='maladie'>Arrêt maladie</option>"+
+    "<option value='ecole'>École</option>"+
     "<option value='autre'>Autre</option>"+
     "</select></div>"+
     "<div style='display:flex;gap:10px;margin-bottom:16px'>"+
@@ -3842,30 +3844,64 @@ function RGANTT(){
     hTitle.textContent="🌡️ Carte de charge mensuelle";
 
     // Sélecteur année + mois pour la carte de chaleur
-    var hCtrl=document.createElement("div");hCtrl.style.cssText="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap";
-    var hYearSel=document.createElement("select");hYearSel.style.cssText="height:30px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none";
+    // ── CURSEUR GLISSANT ──
     var curY=today.getFullYear();
+    var MOIS_C2=["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+    var hCtrl=document.createElement("div");hCtrl.style.cssText="margin-bottom:14px";
+
+    // Sélecteur année
+    var yearRow=document.createElement("div");yearRow.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:10px";
+    var hYearSel=document.createElement("select");hYearSel.style.cssText="height:30px;border:1px solid var(--brd2);border-radius:6px;padding:0 10px;font-size:12px;outline:none";
     [curY-1,curY,curY+1].forEach(function(y){var o=document.createElement("option");o.value=y;o.textContent=y;if(y===curY)o.selected=true;hYearSel.appendChild(o);});
-    var hMonDe=document.createElement("select");hMonDe.style.cssText="height:30px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none";
-    var hMonFi=document.createElement("select");hMonFi.style.cssText="height:30px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none";
-    var MOIS_NM=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-    MOIS_NM.forEach(function(m,i){
-      var o1=document.createElement("option");o1.value=i;o1.textContent=m;if(i===0)o1.selected=true;hMonDe.appendChild(o1);
-      var o2=document.createElement("option");o2.value=i;o2.textContent=m;if(i===11)o2.selected=true;hMonFi.appendChild(o2);
-    });
-    var hLabel1=document.createElement("span");hLabel1.style.cssText="font-size:11px;color:#6b7c79";hLabel1.textContent="De";
-    var hLabel2=document.createElement("span");hLabel2.style.cssText="font-size:11px;color:#6b7c79";hLabel2.textContent="à";
-    hCtrl.appendChild(hYearSel);hCtrl.appendChild(hLabel1);hCtrl.appendChild(hMonDe);hCtrl.appendChild(hLabel2);hCtrl.appendChild(hMonFi);
+    var yLbl=document.createElement("span");yLbl.style.cssText="font-size:12px;font-weight:600;color:#475569";yLbl.textContent="Année :";
+    yearRow.appendChild(yLbl);yearRow.appendChild(hYearSel);
+    hCtrl.appendChild(yearRow);
+
+    // Curseurs glissants pour début et fin de période
+    var sliderWrap=document.createElement("div");sliderWrap.style.cssText="position:relative;padding:4px 0 20px";
+
+    // Labels mois
+    var labelsRow=document.createElement("div");labelsRow.style.cssText="display:flex;justify-content:space-between;font-size:9px;color:#6b7c79;margin-bottom:4px;padding:0 2px";
+    MOIS_C2.forEach(function(m){var s=document.createElement("span");s.textContent=m;labelsRow.appendChild(s);});
+    sliderWrap.appendChild(labelsRow);
+
+    // Track
+    var track=document.createElement("div");track.style.cssText="position:relative;height:6px;background:#e2e8f0;border-radius:3px;margin:4px 0";
+    var fill=document.createElement("div");fill.style.cssText="position:absolute;height:100%;background:#0d9488;border-radius:3px";
+    track.appendChild(fill);sliderWrap.appendChild(track);
+
+    // Slider début
+    var sMin=document.createElement("input");sMin.type="range";sMin.min=0;sMin.max=11;sMin.value=0;
+    sMin.style.cssText="position:absolute;top:0;left:0;width:100%;height:14px;opacity:0;cursor:pointer;z-index:3;margin:0";
+    // Slider fin
+    var sMax=document.createElement("input");sMax.type="range";sMax.min=0;sMax.max=11;sMax.value=11;
+    sMax.style.cssText="position:absolute;top:0;left:0;width:100%;height:14px;opacity:0;cursor:pointer;z-index:4;margin:0";
+
+    sliderWrap.appendChild(sMin);sliderWrap.appendChild(sMax);
+
+    // Label valeur sélectionnée
+    var rangeLabel=document.createElement("div");rangeLabel.style.cssText="text-align:center;font-size:11px;font-weight:600;color:#0d9488;margin-top:2px";
+    sliderWrap.appendChild(rangeLabel);
+    hCtrl.appendChild(sliderWrap);
     hDiv.appendChild(hCtrl);
 
-    // Recalculer moisList selon sélection
+    function updateFill(){
+      var lo=parseInt(sMin.value);var hi=parseInt(sMax.value);
+      if(lo>hi){if(this===sMin)sMin.value=hi;else sMax.value=lo;lo=parseInt(sMin.value);hi=parseInt(sMax.value);}
+      fill.style.left=(lo/11*100)+"%";fill.style.width=((hi-lo)/11*100)+"%";
+      rangeLabel.textContent=MOIS_C2[lo]+" → "+MOIS_C2[hi];
+    }
+    sMin.oninput=function(){updateFill.call(this);rebuildHeat();};
+    sMax.oninput=function(){updateFill.call(this);rebuildHeat();};
+    updateFill();
+
     function getMoisList(){
-      var y=parseInt(hYearSel.value);var mDe=parseInt(hMonDe.value);var mFi=parseInt(hMonFi.value);
-      var ml=[];for(var m2=mDe;m2<=mFi;m2++)ml.push({year:y,month:m2});return ml;
+      var y=parseInt(hYearSel.value);var lo=parseInt(sMin.value);var hi=parseInt(sMax.value);
+      var ml=[];for(var m2=lo;m2<=hi;m2++)ml.push({year:y,month:m2});return ml;
     }
     moisList=getMoisList();
     function rebuildHeat(){moisList=getMoisList();renderHeatTable();}
-    hYearSel.onchange=rebuildHeat;hMonDe.onchange=rebuildHeat;hMonFi.onchange=rebuildHeat;
+    hYearSel.onchange=rebuildHeat;
 
     hDiv.appendChild(hTitle);
 
