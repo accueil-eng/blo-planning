@@ -3780,7 +3780,7 @@ function RGANTT(){
       }
       if(isNow2){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5";td.appendChild(tl);}
 
-      // Barres de phases dans les cellules semaines (sans texte)
+      // Barres de phases - toutes au même niveau sous la barre principale
       if(ch.phases&&ch.phases.length){
         ch.phases.forEach(function(ph,phi){
           if(!ph.debut&&!ph.fin)return;
@@ -3790,17 +3790,26 @@ function RGANTT(){
           if(!phS3||!phE3)return;
           if(!(w<phE3&&wE>phS3))return;
           var isFph=w<=phS3&&wE>phS3;var isLph=w<phE3&&wE>=phE3;
+          // Barre phase — décalage vertical uniquement si superposition dans la même semaine
           var barPh=document.createElement("div");
-          var colors=["rgba(0,0,0,0.55)","rgba(0,0,0,0.35)","rgba(0,0,0,0.2)"];
-          barPh.style.cssText="position:absolute;height:5px;"
-            +"background:"+ch.color+";opacity:0.8;"
-            +"top:"+(24+phi*7)+"px;"
+          barPh.style.cssText="position:absolute;height:6px;"
+            +"background:"+ch.color+";opacity:"+(0.75-phi*0.15)+";"
+            +"top:"+(24+phi*8)+"px;"
             +"left:"+(isFph?"4":"0")+"px;right:"+(isLph?"4":"0")+"px;"
             +"border-radius:"+(isFph?"3px 0 0 3px":"")+(isLph?" 0 3px 3px 0":"")+";"
-            +"box-shadow:0 1px 2px rgba(0,0,0,0.3)";
+            +"box-shadow:0 1px 3px rgba(0,0,0,0.25)";
           td.appendChild(barPh);
+          // Nom en NOIR en dessous
+          if(isFph&&ph.nom){
+            var namePh=document.createElement("div");
+            namePh.style.cssText="position:absolute;font-size:8px;font-weight:700;color:#13201e;"
+              +"top:"+(32+phi*8)+"px;left:4px;white-space:nowrap;pointer-events:none;"
+              +"text-shadow:0 0 2px #fff,0 0 2px #fff";
+            namePh.textContent=ph.nom;
+            td.appendChild(namePh);
+          }
         });
-        td.style.height=(36+ch.phases.length*7)+"px";
+        td.style.height="52px";
       }
 
       tr.appendChild(td);
