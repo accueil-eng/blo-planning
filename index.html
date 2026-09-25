@@ -3772,7 +3772,7 @@ function RGANTT(){
     if(ch.phases&&ch.phases.length){
       ch.phases.forEach(function(ph){
         if(!ph.nom&&!ph.debut)return;
-        var trPh=document.createElement("tr");trPh.style.background="#f9f7ff";
+        var trPh=document.createElement("tr");trPh.style.cssText="background:#f5f3ff;border-top:1px solid #ede9fe";
         // Cellule nom phase (collée à gauche, même colonne que le chantier)
         var tdNPh=document.createElement("td");
         tdNPh.style.cssText="border:1px solid #e2e8f0;padding:4px 8px 4px 20px;font-size:10px;position:sticky;left:0;background:#f9f7ff;z-index:1;min-width:"+LW+"px;color:#7c3aed;white-space:normal";
@@ -3782,13 +3782,24 @@ function RGANTT(){
         if(ph.effectif)phLabel+="<span style='font-size:9px;background:#ede9fe;border-radius:3px;padding:1px 4px;margin-left:4px'>👷"+ph.effectif+"</span>";
         tdNPh.innerHTML=phLabel;
         trPh.appendChild(tdNPh);
-        // Barres semaines
-        var phS=ph.debut?new Date(ph.debut):null;if(phS)phS.setHours(0,0,0,0);
-        var phE=ph.fin?new Date(ph.fin):null;if(phE)phE.setHours(23,59,59,999);
+        // Barres semaines — parse local (évite décalage UTC)
+        function parseLD2(s){if(!s)return null;var p=s.split("-");return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
+        var phS=parseLD2(ph.debut);
+        var phE=ph.fin?new Date(parseLD2(ph.fin).getTime()+86400000):null; // +1j fin incluse
         weeks.forEach(function(w){
           var wE2=new Date(w.getTime()+7*24*60*60*1000);
-          var tdPh=document.createElement("td");tdPh.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:16px;position:relative;background:#f9f7ff";
-          if(phS&&phE&&w<phE&&wE2>phS){var b=document.createElement("div");b.style.cssText="position:absolute;top:3px;bottom:3px;left:1px;right:1px;background:"+ch.color+";opacity:0.35;border-radius:2px";tdPh.appendChild(b);}
+          var tdPh=document.createElement("td");tdPh.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:18px;position:relative;background:#f9f7ff";
+          if(phS&&phE&&w<phE&&wE2>phS){
+            var isFstPh=w<=phS&&wE2>phS;var isLstPh=w<phE&&wE2>=phE;
+            var bPh=document.createElement("div");
+            bPh.style.cssText="position:absolute;top:4px;height:9px;"
+              +"left:"+(isFstPh?"3":"0")+"px;right:"+(isLstPh?"3":"0")+"px;"
+              +"background:"+ch.color+";opacity:0.5;"
+              +"border-radius:"+(isFstPh?"4px 0 0 4px":"")+(isLstPh?" 0 4px 4px 0":"")+";"
+              +"border-top:2px solid "+ch.color+";border-bottom:2px solid "+ch.color+";"
+              +"box-sizing:border-box";
+            tdPh.appendChild(bPh);
+          }
           trPh.appendChild(tdPh);
         });
         tbody.appendChild(trPh);
