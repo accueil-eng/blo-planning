@@ -1754,9 +1754,9 @@ function editCh(id){
       var nomInp=document.createElement("input");nomInp.type="text";nomInp.value=ph.nom||"";nomInp.placeholder="Nom phase";nomInp.style.cssText=dstyle+";flex:1;min-width:80px";
       nomInp.oninput=function(){phases[i].nom=this.value;};
       var debInp=document.createElement("input");debInp.type="date";debInp.value=ph.debut||"";debInp.style.cssText=dstyle+";width:130px";
-      debInp.onchange=function(){phases[i].debut=this.value;};
+      debInp.oninput=function(){phases[i].debut=this.value;};debInp.onchange=function(){phases[i].debut=this.value;};
       var finInp=document.createElement("input");finInp.type="date";finInp.value=ph.fin||"";finInp.style.cssText=dstyle+";width:130px";
-      finInp.onchange=function(){phases[i].fin=this.value;};
+      finInp.oninput=function(){phases[i].fin=this.value;};finInp.onchange=function(){phases[i].fin=this.value;};
       var effInp=document.createElement("input");effInp.type="number";effInp.min="0";effInp.max="20";effInp.value=ph.effectif||"";effInp.placeholder="👷";effInp.title="Effectif";effInp.style.cssText=dstyle+";width:50px;text-align:center";
       effInp.oninput=function(){phases[i].effectif=parseInt(this.value)||null;};
       var delBtn=document.createElement("button");delBtn.textContent="×";delBtn.style.cssText="height:28px;width:28px;background:#dc2626;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:14px;flex-shrink:0";
@@ -1778,25 +1778,31 @@ function editCh(id){
     if(!fNom.value.trim()){alert("Nom requis");return;}
     ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;
     ch.effectifNecessaire=fEff.value?parseInt(fEff.value):null;
-    // Lire les phases directement depuis les inputs du DOM (évite les problèmes de focus)
+    // Synchro finale depuis les inputs du DOM avant sauvegarde
     if(cbPhases.checked){
-      var phRows=phasesWrap.querySelectorAll("div[data-phase-idx]");
-      var savedPhases=[];
-      phRows.forEach(function(row){
-        var inputs=row.querySelectorAll("input");
-        if(inputs.length>=3){
-          var nom=inputs[0].value.trim();
-          var debut=inputs[1].value;
-          var fin=inputs[2].value;
-          var eff=inputs[3]?parseInt(inputs[3].value)||null:null;
-          if(nom||debut)savedPhases.push({nom:nom,debut:debut,fin:fin,effectif:eff});
+      var allRows=phasesWrap ? phasesWrap.querySelectorAll("div[data-phase-idx]") : [];
+      if(allRows.length>0){
+        ch.phases=[];
+        for(var pi=0;pi<allRows.length;pi++){
+          var ins=allRows[pi].querySelectorAll("input");
+          if(ins.length>0){
+            var pnom=ins[0]?ins[0].value.trim():"";
+            var pdeb=ins[1]?ins[1].value:"";
+            var pfin=ins[2]?ins[2].value:"";
+            var peff=ins[3]?parseInt(ins[3].value)||null:null;
+            if(pnom||pdeb)ch.phases.push({nom:pnom,debut:pdeb,fin:pfin,effectif:peff});
+          }
         }
-      });
-      ch.phases=savedPhases.length?savedPhases:phases.filter(function(p){return p.nom||p.debut;});
+      } else {
+        ch.phases=phases.filter(function(p){return p.nom||p.debut;});
+      }
     } else {
       ch.phases=[];
     }
-    saveNow();modal.remove();RC();RGANTT();
+    saveNow();
+    var nbPhases=ch.phases?ch.phases.length:0;
+    showToast("✅ Chantier sauvegardé"+(nbPhases?" avec "+nbPhases+" phase(s)":""));
+    modal.remove();RC();RGANTT();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
