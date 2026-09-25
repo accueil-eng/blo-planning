@@ -3685,6 +3685,89 @@ function RGANTT(){
     tbody.appendChild(tr);
   });
   tbl.appendChild(tbody);wrap.appendChild(tbl);gWrap.appendChild(wrap);
+
+  // ── CARTE DE CHALEUR MENSUELLE ──
+  var MOIS_C=["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+  var chAvecEff=chantiers.filter(function(c){return c.effectifNecessaire&&c.dateDebutPrev&&c.dateFinPrev;});
+  var moisSet={};
+  weeks.forEach(function(w){var k=w.getFullYear()+"-"+w.getMonth();if(!moisSet[k])moisSet[k]={year:w.getFullYear(),month:w.getMonth()};});
+  var moisList=Object.values(moisSet).sort(function(a,b){return a.year!==b.year?a.year-b.year:a.month-b.month;});
+
+  if(chAvecEff.length>0&&moisList.length>0){
+    var hDiv=document.createElement("div");
+    hDiv.style.cssText="margin-top:16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;overflow-x:auto";
+    var hTitle=document.createElement("div");hTitle.style.cssText="font-size:12px;font-weight:700;color:#13201e;margin-bottom:12px";
+    hTitle.textContent="🌡️ Carte de charge mensuelle";hDiv.appendChild(hTitle);
+
+    var htbl=document.createElement("table");htbl.style.cssText="border-collapse:collapse;font-size:11px;min-width:100%";
+    var hthead=document.createElement("thead");var htrH=document.createElement("tr");
+    var hth0=document.createElement("th");hth0.style.cssText="padding:4px 10px;text-align:left;font-size:11px;color:#6b7c79;font-weight:600;white-space:nowrap;min-width:140px;position:sticky;left:0;background:#fff;z-index:2";hth0.textContent="Chantier";htrH.appendChild(hth0);
+    moisList.forEach(function(mo){
+      var th=document.createElement("th");
+      var isCur=(mo.year===today.getFullYear()&&mo.month===today.getMonth());
+      th.style.cssText="padding:4px 6px;text-align:center;font-size:10px;font-weight:700;min-width:44px;"+(isCur?"background:#fffde7;color:#92400e":"color:#475569");
+      th.textContent=MOIS_C[mo.month];htrH.appendChild(th);
+    });
+    hthead.appendChild(htrH);htbl.appendChild(hthead);
+    var htbody=document.createElement("tbody");
+
+    // Lignes chantiers
+    chAvecEff.forEach(function(ch,ri){
+      var tr2=document.createElement("tr");
+      var tdN2=document.createElement("td");tdN2.style.cssText="padding:4px 10px;font-size:11px;white-space:nowrap;position:sticky;left:0;background:"+(ri%2?"#f8f7f4":"#fff")+";z-index:1;border-top:1px solid #f1f5f9";
+      tdN2.innerHTML="<span style='display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:5px'></span>"+(ch.ref?ch.ref+" — ":"")+ch.nom;
+      tr2.appendChild(tdN2);
+      var chS2=new Date(ch.dateDebutPrev);chS2.setHours(0,0,0,0);
+      var chE2=new Date(ch.dateFinPrev);chE2.setHours(23,59,59,999);
+      moisList.forEach(function(mo){
+        var mS=new Date(mo.year,mo.month,1),mE=new Date(mo.year,mo.month+1,0,23,59,59);
+        var td2=document.createElement("td");td2.style.cssText="padding:3px;text-align:center;border-top:1px solid #f1f5f9";
+        if(chS2<=mE&&chE2>=mS){
+          var c2=document.createElement("div");c2.style.cssText="background:"+ch.color+";opacity:0.75;border-radius:4px;height:18px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700";
+          c2.textContent=ch.effectifNecessaire;td2.appendChild(c2);
+        } else {td2.innerHTML="<div style='height:18px'></div>";}
+        tr2.appendChild(td2);
+      });
+      htbody.appendChild(tr2);
+    });
+
+    // Séparateur
+    var trSep=document.createElement("tr");var tdSep=document.createElement("td");tdSep.colSpan=moisList.length+1;tdSep.style.cssText="height:4px;background:#f1f5f9";trSep.appendChild(tdSep);htbody.appendChild(trSep);
+
+    // Ligne charge globale
+    var trC=document.createElement("tr");
+    var tdCLabel=document.createElement("td");tdCLabel.style.cssText="padding:6px 10px;font-size:11px;font-weight:700;color:#13201e;position:sticky;left:0;background:#f8f7f4;z-index:1";tdCLabel.textContent="🌡️ Charge globale";trC.appendChild(tdCLabel);
+    moisList.forEach(function(mo){
+      var mS=new Date(mo.year,mo.month,1),mE=new Date(mo.year,mo.month+1,0,23,59,59);
+      var besoin=0;
+      chAvecEff.forEach(function(ch){
+        var chS2=new Date(ch.dateDebutPrev);chS2.setHours(0,0,0,0);
+        var chE2=new Date(ch.dateFinPrev);chE2.setHours(23,59,59,999);
+        if(chS2<=mE&&chE2>=mS)besoin+=ch.effectifNecessaire;
+      });
+      var dispo=D.salaries.filter(function(s){
+        if(!s.prenom||!s.prenom.trim()||s.isBureau)return false;
+        if(s.contrat==="CDD"){
+          if(s.contratDebut&&new Date(s.contratDebut)>mE)return false;
+          if(s.contratFin&&new Date(s.contratFin)<mS)return false;
+        }
+        return !(D.absences||[]).some(function(a){return a.salId===s.id&&new Date(a.debut)<=mS&&new Date(a.fin)>=mE;});
+      }).length;
+      var td3=document.createElement("td");td3.style.cssText="padding:3px;text-align:center";
+      var ecart=besoin-dispo;
+      var couleur=besoin===0?"#e2e8f0":ecart>0?"#dc2626":ecart===0?"#f97316":"#16a34a";
+      var label=besoin===0?"":( ecart>0?"⚠️ "+besoin+"/"+dispo:ecart===0?"🟡 "+besoin+"/"+dispo:"✅ "+besoin+"/"+dispo);
+      var c3=document.createElement("div");c3.style.cssText="border-radius:5px;height:24px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;background:"+couleur;
+      c3.textContent=label;c3.title="Besoin: "+besoin+" / Dispo: "+dispo;
+      td3.appendChild(c3);trC.appendChild(td3);
+    });
+    htbody.appendChild(trC);
+    htbl.appendChild(htbody);
+    var leg2=document.createElement("div");leg2.style.cssText="display:flex;gap:14px;margin-top:10px;font-size:10px;color:#6b7c79;flex-wrap:wrap";
+    leg2.innerHTML="<span><span style='background:#16a34a;border-radius:3px;padding:1px 6px;color:#fff;font-size:9px'>✅ x/y</span> Suffisant</span><span><span style='background:#f97316;border-radius:3px;padding:1px 6px;color:#fff;font-size:9px'>🟡 x/y</span> Saturé</span><span><span style='background:#dc2626;border-radius:3px;padding:1px 6px;color:#fff;font-size:9px'>⚠️ x/y</span> Surcharge</span><span style='color:#94a3b8'>x=besoin · y=dispo</span>";
+    hDiv.appendChild(htbl);hDiv.appendChild(leg2);
+    gWrap.appendChild(hDiv);
+  }
   if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Pr&#233;visionnel (hachuré)</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> R&#233;el (plein)</span><span style='color:#dc2626'>| Aujourd&#39;hui</span>";
 }
 
