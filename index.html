@@ -3801,12 +3801,11 @@ function RGANTT(){
             +"border-radius:"+(isFph?"3px 0 0 3px":"")+(isLph?" 0 3px 3px 0":"")+";"
             +"box-shadow:0 1px 3px rgba(0,0,0,0.25)";
           td.appendChild(barPh);
-          // Nom en NOIR en dessous
+          // Nom en NOIR sous la barre, sur la 1ère semaine de la phase
           if(isFph&&ph.nom){
             var namePh=document.createElement("div");
-            namePh.style.cssText="position:absolute;font-size:8px;font-weight:700;color:#13201e;"
-              +"top:"+(32+phi*8)+"px;left:4px;white-space:nowrap;pointer-events:none;"
-              +"text-shadow:0 0 2px #fff,0 0 2px #fff";
+            namePh.style.cssText="position:absolute;font-size:9px;font-weight:700;color:#000;"
+              +"top:"+(32+phi*8)+"px;left:3px;white-space:nowrap;pointer-events:none;";
             namePh.textContent=ph.nom;
             td.appendChild(namePh);
           }
