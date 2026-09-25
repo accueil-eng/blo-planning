@@ -3812,60 +3812,101 @@ function RGANTT(){
   });
   tbl.appendChild(tbody);
 
-  // ── LIGNES DE CHARGE EN BAS DU TABLEAU ──
+  tbl.appendChild(tbody);
+  wrap.appendChild(tbl);gWrap.appendChild(wrap);
+
+  // ── GRAPHIQUE CHARGE PRÉVISIONNELLE ──
   var totSals=D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).length;
-  var tfoot=document.createElement("tfoot");
+  var chartWrap=document.createElement("div");
+  chartWrap.style.cssText="margin-top:12px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;overflow-x:auto";
 
-  // Ligne 1 : Affectés / total salariés
-  var trEff=document.createElement("tr");
-  var tdEffLbl=document.createElement("td");tdEffLbl.colSpan=1;
-  tdEffLbl.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;font-size:10px;position:sticky;left:0;background:#1e3a5f;color:#fff;z-index:2;white-space:nowrap";
-  tdEffLbl.textContent="👷 Affectés / "+totSals+" sal.";trEff.appendChild(tdEffLbl);
+  var chartTitle=document.createElement("div");
+  chartTitle.style.cssText="font-size:13px;font-weight:700;color:#13201e;margin-bottom:2px;display:flex;align-items:center;gap:8px";
+  chartTitle.innerHTML="📊 Charge prévisionnelle — capacité : <b>"+totSals+" salariés</b>";
+  chartWrap.appendChild(chartTitle);
+  var chartSub=document.createElement("div");
+  chartSub.style.cssText="font-size:11px;color:#6b7c79;margin-bottom:14px";
+  chartSub.textContent="Besoin en personnel par semaine, comparé à l'effectif disponible.";
+  chartWrap.appendChild(chartSub);
 
-  // Ligne 2 : Besoin / Écart
-  var trBesoin=document.createElement("tr");
-  var tdBesoinLbl=document.createElement("td");tdBesoinLbl.colSpan=1;
-  tdBesoinLbl.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;font-size:10px;position:sticky;left:0;background:#374151;color:#fff;z-index:2;white-space:nowrap";
-  tdBesoinLbl.textContent="🎯 Besoin / Écart";trBesoin.appendChild(tdBesoinLbl);
-
+  // Calcul des données par semaine
+  var barData=[];
+  var maxBesoin=0;
   weeks.forEach(function(w){
-    var wE=new Date(w.getTime()+7*24*60*60*1000);
+    var wE=new Date(w.getFullYear(),w.getMonth(),w.getDate()+7);
     var isNow=(w<=today&&today<wE);
-
-    // Compter affectés cette semaine
-    var cwMon=w.getFullYear()+"-"+("0"+(w.getMonth()+1)).slice(-2)+"-"+("0"+w.getDate()).slice(-2);
-    var salAff=new Set();
-    for(var r=0;r<20;r++){for(var di=0;di<5;di++){(D.cells[cwMon+"|"+r+"|"+di]||[]).forEach(function(sid){salAff.add(sid);});}}
-    var nbAff=salAff.size;
-
-    // Besoin total chantiers actifs
     var besoin=0;
     chantiers.forEach(function(ch){
       if(!ch.effectifNecessaire)return;
-      var chS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;if(chS)chS.setHours(0,0,0,0);
-      var chE=ch.dateFinPrev?new Date(ch.dateFinPrev):null;if(chE)chE.setHours(23,59,59,999);
+      function pLD(s){if(!s)return null;var p=s.split("-");return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
+      var chS=pLD(ch.dateDebutPrev);var chE=ch.dateFinPrev?new Date(pLD(ch.dateFinPrev).getTime()+86400000):null;
       if(chS&&chE&&w<chE&&wE>chS)besoin+=ch.effectifNecessaire;
     });
+    if(besoin>maxBesoin)maxBesoin=besoin;
+    barData.push({w:w,besoin:besoin,isNow:isNow});
+  });
+  var maxH=Math.max(maxBesoin,totSals,1);
+  var BAR_H=100; // hauteur max des barres en px
 
-    // Cellule affectés
-    var tdAff=document.createElement("td");
-    tdAff.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;width:"+WW+"px;background:"+(isNow?"#fffde7":"#f0fdfa")+";color:#0d9488";
-    tdAff.textContent=nbAff>0?nbAff+"/"+totSals:"";
-    trEff.appendChild(tdAff);
+  // Conteneur barres
+  var barsWrap=document.createElement("div");
+  barsWrap.style.cssText="display:flex;align-items:flex-end;gap:0;position:relative;height:"+(BAR_H+50)+"px;border-bottom:1px solid #e2e8f0";
 
-    // Cellule besoin/écart
-    var tdB=document.createElement("td");
-    var ecart=besoin-nbAff;
-    var couleurB=besoin===0?"":ecart>0?"#dc2626":ecart===0?"#f97316":"#16a34a";
-    tdB.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;width:"+WW+"px;background:"+(isNow?"#fef9c3":"#fff")+";color:"+couleurB;
-    if(besoin>0)tdB.textContent=besoin+(ecart>0?" ⚠️":ecart===0?" 🟡":" ✅");
-    trBesoin.appendChild(tdB);
+  // Ligne capacité (tirets)
+  var capLine=document.createElement("div");
+  var capY=Math.round(totSals/maxH*BAR_H);
+  capLine.style.cssText="position:absolute;left:0;right:0;height:2px;border-top:2px dashed #374151;bottom:"+capY+"px;z-index:2;pointer-events:none";
+  barsWrap.appendChild(capLine);
+
+  barData.forEach(function(bd){
+    var col=document.createElement("div");
+    col.style.cssText="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:"+WW+"px;min-width:"+WW+"px;position:relative;height:100%;cursor:default";
+
+    if(bd.besoin>0){
+      var ecart=bd.besoin-totSals;
+      var couleur=ecart>0?"#dc2626":"#16a34a";
+      var hBar=Math.round(bd.besoin/maxH*BAR_H);
+
+      // Label au-dessus
+      var topLabel=document.createElement("div");
+      topLabel.style.cssText="position:absolute;bottom:"+(hBar+2)+"px;left:0;right:0;text-align:center;font-size:8px;font-weight:700;color:"+couleur+";line-height:1.2";
+      topLabel.innerHTML="✓"+bd.besoin+"<br><span style='color:#6b7c79;font-weight:400'>"+(ecart>0?"-dispo-":ecart===0?"=dispo":"+"+ Math.abs(ecart)+" dispo")+"</span>";
+      col.appendChild(topLabel);
+
+      // Barre
+      var bar=document.createElement("div");
+      bar.style.cssText="width:"+(WW-2)+"px;height:"+hBar+"px;background:"+couleur+";border-radius:2px 2px 0 0;position:absolute;bottom:0;"+(bd.isNow?"outline:2px solid #dc2626;":"");
+      col.appendChild(bar);
+    }
+
+    // Ligne aujourd'hui
+    if(bd.isNow){
+      var todayLine=document.createElement("div");
+      todayLine.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;z-index:3";
+      col.appendChild(todayLine);
+    }
+
+    // Label semaine en bas
+    var wkLbl=document.createElement("div");
+    wkLbl.style.cssText="position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:8px;color:"+(bd.isNow?"#dc2626;font-weight:700":"#6b7c79")+";white-space:nowrap";
+    wkLbl.textContent="S"+getISOWeek(bd.w);
+    col.appendChild(wkLbl);
+
+    col.title="S"+getISOWeek(bd.w)+" — Besoin: "+bd.besoin+" / Capacité: "+totSals+(bd.besoin>totSals?" ⚠️ Manque "+(bd.besoin-totSals):bd.besoin===totSals?" 🟡 Saturé":" ✅ +"+(totSals-bd.besoin)+" dispo");
+    barsWrap.appendChild(col);
   });
 
-  tfoot.appendChild(trEff);tfoot.appendChild(trBesoin);
-  tbl.appendChild(tfoot);
+  chartWrap.appendChild(barsWrap);
 
-  wrap.appendChild(tbl);gWrap.appendChild(wrap);
+  // Légende
+  var leg=document.createElement("div");
+  leg.style.cssText="display:flex;gap:16px;margin-top:26px;font-size:11px;flex-wrap:wrap;align-items:center";
+  leg.innerHTML="<span><span style='display:inline-block;width:12px;height:12px;background:#16a34a;border-radius:2px;vertical-align:middle;margin-right:4px'></span>Effectif suffisant</span>"+
+    "<span><span style='display:inline-block;width:12px;height:12px;background:#dc2626;border-radius:2px;vertical-align:middle;margin-right:4px'></span>Manque de personnel</span>"+
+    "<span><span style='display:inline-block;width:20px;height:2px;border-top:2px dashed #374151;vertical-align:middle;margin-right:4px'></span>Capacité totale ("+totSals+")</span>"+
+    "<span style='color:#dc2626;font-weight:700'>| Aujourd'hui</span>";
+  chartWrap.appendChild(leg);
+  gWrap.appendChild(chartWrap);
 
   // Scroll automatique vers la semaine en cours
   setTimeout(function(){
