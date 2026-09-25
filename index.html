@@ -3629,8 +3629,7 @@ function RGANTT(){
     if(colSpan)th.colSpan=colSpan;
     return th;
   }
-  tr0.appendChild(mkTH("Chantier","#13201e","#fff",LW,true));
-  tr0.appendChild(mkTH("Periode","#13201e","#fff",DW));
+  tr0.appendChild(mkTH("Chantier (Période / Effectif)","#13201e","#fff",LW,true));
 
   // Group weeks by month
   var lastM=-1,lastY=-1,curTH=null;
@@ -3648,7 +3647,6 @@ function RGANTT(){
   // Row 2: week numbers
   var tr1=document.createElement("tr");
   tr1.appendChild(mkTH("","#e2e8f0","",LW,true));
-  tr1.appendChild(mkTH("","#e2e8f0","",DW));
   weeks.forEach(function(w){
     var wk=getISOWeek(w);
     var isNow=(w<=today&&today<new Date(w.getTime()+7*24*60*60*1000));
@@ -3676,25 +3674,34 @@ function RGANTT(){
     editBtn.title="Modifier ce chantier";
     editBtn.style.cssText="margin-left:6px;background:none;border:1px solid #dde5e4;border-radius:4px;cursor:pointer;font-size:11px;padding:1px 4px;vertical-align:middle;opacity:0.7";
     editBtn.onclick=(function(cid){return function(e){e.stopPropagation();editCh(cid);};})(ch.id);
+    // Période sous le nom (même cellule)
+    var fmt2=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"2-digit"}):""};
+    var periodeDiv=document.createElement("div");periodeDiv.style.cssText="font-size:9px;margin-top:2px;line-height:1.4";
+    if(ch.dateDebutPrev||ch.dateFinPrev){
+      periodeDiv.innerHTML="<span style='color:#7c3aed'>░ "+(ch.dateDebutPrev?fmt2(ch.dateDebutPrev):"?")+" → "+(ch.dateFinPrev?fmt2(ch.dateFinPrev):"?")+"</span>";
+    }
+    if(ch.dateDebut){periodeDiv.innerHTML+="<span style='color:"+ch.color+";font-weight:600;margin-left:6px'>▪ "+fmt2(ch.dateDebut)+"</span>";}
+    if(periodeDiv.innerHTML)tdN.appendChild(periodeDiv);
+
+    // Effectif nécessaire inline sous le nom
+    var effRow=document.createElement("div");effRow.style.cssText="display:flex;align-items:center;gap:4px;margin-top:3px";
+    var effLbl=document.createElement("span");effLbl.style.cssText="font-size:9px;color:#6b7c79";effLbl.textContent="👷 Effectif :";
+    var effInpG=document.createElement("input");effInpG.type="number";effInpG.min="0";effInpG.max="20";
+    effInpG.value=ch.effectifNecessaire||"";effInpG.placeholder="?";
+    effInpG.style.cssText="width:36px;height:18px;border:1px solid #5eead4;border-radius:4px;font-size:10px;font-weight:700;text-align:center;padding:0;color:#0d9488;background:#f0fdfa;outline:none";
+    effInpG.addEventListener("wheel",function(e){e.stopPropagation();},{passive:false});
+    effInpG.addEventListener("keydown",function(e){if(e.key==="ArrowUp"||e.key==="ArrowDown")e.stopPropagation();if(e.key==="Enter")this.blur();});
+    effInpG.addEventListener("click",function(e){e.stopPropagation();this.select();});
+    effInpG.addEventListener("blur",(function(cid,inp){return function(){
+      var v=parseInt(inp.value)||null;
+      var c2=D.chantiers.find(function(x){return x.id===cid;});
+      if(c2&&c2.effectifNecessaire!==v){c2.effectifNecessaire=v;save();showToast("✅ Effectif sauvegardé");}
+    };})(ch.id,effInpG));
+    effRow.appendChild(effLbl);effRow.appendChild(effInpG);
+    tdN.appendChild(effRow);
+    tdN.style.whiteSpace="normal";
     tdN.appendChild(editBtn);
     tr.appendChild(tdN);
-
-    // Dates cell
-    var tdD=document.createElement("td");
-    tdD.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;min-width:"+DW+"px";
-    var fmt2=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"2-digit"}):"?";};
-    var hh="";
-    if(ch.dateDebutPrev&&ch.dateFinPrev){
-      hh+="<div style='color:#7c3aed'>&#9633; "+fmt2(ch.dateDebutPrev)+" &#8594; "+fmt2(ch.dateFinPrev)+"</div>";
-    } else if(ch.dateDebutPrev){
-      hh+="<div style='color:#7c3aed'>&#9633; D&#233;but pr&#233;v: "+fmt2(ch.dateDebutPrev)+"</div>";
-    }
-    if(ch.dateDebut){
-      hh+="<div style='color:"+ch.color+";font-weight:600'>&#9632; D&#233;but r&#233;el: "+fmt2(ch.dateDebut)+"</div>";
-    }
-    if(!hh)hh="<span style='color:#94a3b8;font-style:italic;font-size:10px'>Cliquer ✏️ pour saisir</span>";
-    tdD.innerHTML=hh;
-    tr.appendChild(tdD);
 
     var chS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
     var chE=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
@@ -3762,13 +3769,13 @@ function RGANTT(){
 
   // Ligne 1 : Affectés / total salariés
   var trEff=document.createElement("tr");
-  var tdEffLbl=document.createElement("td");tdEffLbl.colSpan=3;
+  var tdEffLbl=document.createElement("td");tdEffLbl.colSpan=1;
   tdEffLbl.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;font-size:10px;position:sticky;left:0;background:#1e3a5f;color:#fff;z-index:2;white-space:nowrap";
   tdEffLbl.textContent="👷 Affectés / "+totSals+" sal.";trEff.appendChild(tdEffLbl);
 
   // Ligne 2 : Besoin / Écart
   var trBesoin=document.createElement("tr");
-  var tdBesoinLbl=document.createElement("td");tdBesoinLbl.colSpan=3;
+  var tdBesoinLbl=document.createElement("td");tdBesoinLbl.colSpan=1;
   tdBesoinLbl.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;font-size:10px;position:sticky;left:0;background:#374151;color:#fff;z-index:2;white-space:nowrap";
   tdBesoinLbl.textContent="🎯 Besoin / Écart";trBesoin.appendChild(tdBesoinLbl);
 
