@@ -1730,12 +1730,54 @@ function editCh(id){
   var fFinPrev=mkRow("📅 Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateFinPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fHEst=mkRow("⏱ Heures estimées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresEst||"",min:0,placeholder:"ex: 120",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fHReal=mkRow("⏱ Heures réalisées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresReal||"",min:0,placeholder:"ex: 98",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+
+  // ── PHASES ──
+  var phasesSep=document.createElement("div");phasesSep.style.cssText="font-size:11px;font-weight:700;color:#7c3aed;margin:10px 0 6px;padding:4px 8px;background:#ede9fe;border-radius:5px;display:flex;align-items:center;justify-content:space-between";
+  var phasesLabel=document.createElement("span");phasesLabel.textContent="📐 Phases du chantier";phasesSep.appendChild(phasesLabel);
+  var cbPhases=document.createElement("input");cbPhases.type="checkbox";cbPhases.checked=!!(ch.phases&&ch.phases.length);cbPhases.style.cssText="width:16px;height:16px;accent-color:#7c3aed;cursor:pointer";
+  var cbLabel=document.createElement("label");cbLabel.style.cssText="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#7c3aed;cursor:pointer";
+  cbLabel.textContent="Activer les phases";cbLabel.appendChild(cbPhases);phasesSep.appendChild(cbLabel);
+  box.appendChild(phasesSep);
+
+  var phasesWrap=document.createElement("div");phasesWrap.id="phases-wrap-"+ch.id;
+  phasesWrap.style.display=cbPhases.checked?"block":"none";
+  box.appendChild(phasesWrap);
+
+  var phases=JSON.parse(JSON.stringify(ch.phases||[]));
+
+  function renderPhases(){
+    phasesWrap.innerHTML="";
+    var dstyle="height:28px;border:1px solid #c4b5fd;border-radius:5px;padding:0 6px;font-size:11px;outline:none;box-sizing:border-box";
+    phases.forEach(function(ph,i){
+      var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:6px;margin-bottom:6px;background:#f5f3ff;border-radius:6px;padding:6px 8px;flex-wrap:wrap";
+      var nomInp=document.createElement("input");nomInp.type="text";nomInp.value=ph.nom||"";nomInp.placeholder="Nom phase";nomInp.style.cssText=dstyle+";flex:1;min-width:80px";
+      nomInp.oninput=function(){phases[i].nom=this.value;};
+      var debInp=document.createElement("input");debInp.type="date";debInp.value=ph.debut||"";debInp.style.cssText=dstyle+";width:130px";
+      debInp.onchange=function(){phases[i].debut=this.value;};
+      var finInp=document.createElement("input");finInp.type="date";finInp.value=ph.fin||"";finInp.style.cssText=dstyle+";width:130px";
+      finInp.onchange=function(){phases[i].fin=this.value;};
+      var effInp=document.createElement("input");effInp.type="number";effInp.min="0";effInp.max="20";effInp.value=ph.effectif||"";effInp.placeholder="👷";effInp.title="Effectif";effInp.style.cssText=dstyle+";width:50px;text-align:center";
+      effInp.oninput=function(){phases[i].effectif=parseInt(this.value)||null;};
+      var delBtn=document.createElement("button");delBtn.textContent="×";delBtn.style.cssText="height:28px;width:28px;background:#dc2626;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:14px;flex-shrink:0";
+      delBtn.onclick=function(){phases.splice(i,1);renderPhases();};
+      row.appendChild(nomInp);row.appendChild(debInp);row.appendChild(finInp);row.appendChild(effInp);row.appendChild(delBtn);
+      phasesWrap.appendChild(row);
+    });
+    var addBtn=document.createElement("button");addBtn.textContent="+ Ajouter une phase";addBtn.style.cssText="width:100%;height:30px;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-top:2px";
+    addBtn.onclick=function(){phases.push({nom:"",debut:"",fin:"",effectif:null});renderPhases();};
+    phasesWrap.appendChild(addBtn);
+  }
+
+  cbPhases.onchange=function(){phasesWrap.style.display=this.checked?"block":"none";if(this.checked&&!phases.length){phases.push({nom:"",debut:"",fin:"",effectif:null});renderPhases();}};
+  if(cbPhases.checked)renderPhases();
+
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:6px";
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
     if(!fNom.value.trim()){alert("Nom requis");return;}
     ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;
-    saveNow();modal.remove();RC();
+    ch.phases=cbPhases.checked?phases.filter(function(p){return p.nom||p.debut;}):[]; 
+    saveNow();modal.remove();RC();RGANTT();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
@@ -3661,6 +3703,7 @@ function RGANTT(){
       var td=document.createElement("td");
       var isNow2=(w<=today&&today<wE);
       td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:36px;position:relative;background:"+(isNow2?"#fffde7":bg);
+      if(isNow2)td.dataset.now="1";
 
       if(chS&&chE&&w<chE&&wE>chS){
         var b=document.createElement("div");
@@ -3683,8 +3726,98 @@ function RGANTT(){
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
+
+    // Sous-lignes phases
+    if(ch.phases&&ch.phases.length){
+      ch.phases.forEach(function(ph){
+        if(!ph.nom&&!ph.debut)return;
+        var trPh=document.createElement("tr");trPh.style.background="#f9f7ff";
+        var tdNPh=document.createElement("td");
+        tdNPh.style.cssText="border:1px solid #e2e8f0;padding:2px 8px 2px 24px;font-size:10px;white-space:nowrap;position:sticky;left:0;background:#f9f7ff;z-index:1;min-width:"+LW+"px;color:#7c3aed";
+        tdNPh.innerHTML="↳ <b>"+(ph.nom||"Phase")+"</b>"+(ph.effectif?" <span style='font-size:9px;background:#ede9fe;border-radius:3px;padding:1px 4px'>👷"+ph.effectif+"</span>":"");
+        trPh.appendChild(tdNPh);
+        var tdDPh=document.createElement("td");tdDPh.style.cssText="border:1px solid #e2e8f0;padding:2px 6px;font-size:9px;color:#7c3aed;min-width:"+DW+"px";
+        if(ph.debut||ph.fin){var f2=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):""};tdDPh.textContent=(ph.debut?f2(ph.debut):"")+(ph.debut&&ph.fin?" → ":"")+(ph.fin?f2(ph.fin):"");}
+        trPh.appendChild(tdDPh);
+        var tdEPh=document.createElement("td");tdEPh.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;width:36px;font-size:10px;color:#7c3aed;font-weight:700";tdEPh.textContent=ph.effectif||"";trPh.appendChild(tdEPh);
+        var phS=ph.debut?new Date(ph.debut):null;if(phS)phS.setHours(0,0,0,0);
+        var phE=ph.fin?new Date(ph.fin):null;if(phE)phE.setHours(23,59,59,999);
+        weeks.forEach(function(w){
+          var wE2=new Date(w.getTime()+7*24*60*60*1000);
+          var tdPh=document.createElement("td");tdPh.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:16px;position:relative;background:#f9f7ff";
+          if(phS&&phE&&w<phE&&wE2>phS){var b=document.createElement("div");b.style.cssText="position:absolute;top:3px;bottom:3px;left:1px;right:1px;background:"+ch.color+";opacity:0.35;border-radius:2px";tdPh.appendChild(b);}
+          trPh.appendChild(tdPh);
+        });
+        tbody.appendChild(trPh);
+      });
+    }
   });
-  tbl.appendChild(tbody);wrap.appendChild(tbl);gWrap.appendChild(wrap);
+  tbl.appendChild(tbody);
+
+  // ── LIGNES DE CHARGE EN BAS DU TABLEAU ──
+  var totSals=D.salaries.filter(function(s){return s.prenom&&s.prenom.trim()&&!s.isBureau;}).length;
+  var tfoot=document.createElement("tfoot");
+
+  // Ligne 1 : Affectés / total salariés
+  var trEff=document.createElement("tr");
+  var tdEffLbl=document.createElement("td");tdEffLbl.colSpan=3;
+  tdEffLbl.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;font-size:10px;position:sticky;left:0;background:#1e3a5f;color:#fff;z-index:2;white-space:nowrap";
+  tdEffLbl.textContent="👷 Affectés / "+totSals+" sal.";trEff.appendChild(tdEffLbl);
+
+  // Ligne 2 : Besoin / Écart
+  var trBesoin=document.createElement("tr");
+  var tdBesoinLbl=document.createElement("td");tdBesoinLbl.colSpan=3;
+  tdBesoinLbl.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;font-size:10px;position:sticky;left:0;background:#374151;color:#fff;z-index:2;white-space:nowrap";
+  tdBesoinLbl.textContent="🎯 Besoin / Écart";trBesoin.appendChild(tdBesoinLbl);
+
+  weeks.forEach(function(w){
+    var wE=new Date(w.getTime()+7*24*60*60*1000);
+    var isNow=(w<=today&&today<wE);
+
+    // Compter affectés cette semaine
+    var cwMon=w.getFullYear()+"-"+("0"+(w.getMonth()+1)).slice(-2)+"-"+("0"+w.getDate()).slice(-2);
+    var salAff=new Set();
+    for(var r=0;r<20;r++){for(var di=0;di<5;di++){(D.cells[cwMon+"|"+r+"|"+di]||[]).forEach(function(sid){salAff.add(sid);});}}
+    var nbAff=salAff.size;
+
+    // Besoin total chantiers actifs
+    var besoin=0;
+    chantiers.forEach(function(ch){
+      if(!ch.effectifNecessaire)return;
+      var chS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;if(chS)chS.setHours(0,0,0,0);
+      var chE=ch.dateFinPrev?new Date(ch.dateFinPrev):null;if(chE)chE.setHours(23,59,59,999);
+      if(chS&&chE&&w<chE&&wE>chS)besoin+=ch.effectifNecessaire;
+    });
+
+    // Cellule affectés
+    var tdAff=document.createElement("td");
+    tdAff.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;width:"+WW+"px;background:"+(isNow?"#fffde7":"#f0fdfa")+";color:#0d9488";
+    tdAff.textContent=nbAff>0?nbAff+"/"+totSals:"";
+    trEff.appendChild(tdAff);
+
+    // Cellule besoin/écart
+    var tdB=document.createElement("td");
+    var ecart=besoin-nbAff;
+    var couleurB=besoin===0?"":ecart>0?"#dc2626":ecart===0?"#f97316":"#16a34a";
+    tdB.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;font-size:10px;font-weight:700;width:"+WW+"px;background:"+(isNow?"#fef9c3":"#fff")+";color:"+couleurB;
+    if(besoin>0)tdB.textContent=besoin+(ecart>0?" ⚠️":ecart===0?" 🟡":" ✅");
+    trBesoin.appendChild(tdB);
+  });
+
+  tfoot.appendChild(trEff);tfoot.appendChild(trBesoin);
+  tbl.appendChild(tfoot);
+
+  wrap.appendChild(tbl);gWrap.appendChild(wrap);
+
+  // Scroll automatique vers la semaine en cours
+  setTimeout(function(){
+    var nowCell=wrap.querySelector("td[data-now='1']");
+    if(nowCell){
+      var cellLeft=nowCell.offsetLeft;
+      var wrapWidth=wrap.clientWidth;
+      wrap.scrollLeft=Math.max(0,cellLeft-wrapWidth/2+LW);
+    }
+  },50);
 
   // ── CARTE DE CHALEUR MENSUELLE ──
   var MOIS_C=["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
@@ -3697,9 +3830,41 @@ function RGANTT(){
     var hDiv=document.createElement("div");
     hDiv.style.cssText="margin-top:16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;overflow-x:auto";
     var hTitle=document.createElement("div");hTitle.style.cssText="font-size:12px;font-weight:700;color:#13201e;margin-bottom:12px";
-    hTitle.textContent="🌡️ Carte de charge mensuelle";hDiv.appendChild(hTitle);
+    hTitle.textContent="🌡️ Carte de charge mensuelle";
 
-    var htbl=document.createElement("table");htbl.style.cssText="border-collapse:collapse;font-size:11px;min-width:100%";
+    // Sélecteur année + mois pour la carte de chaleur
+    var hCtrl=document.createElement("div");hCtrl.style.cssText="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap";
+    var hYearSel=document.createElement("select");hYearSel.style.cssText="height:30px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none";
+    var curY=today.getFullYear();
+    [curY-1,curY,curY+1].forEach(function(y){var o=document.createElement("option");o.value=y;o.textContent=y;if(y===curY)o.selected=true;hYearSel.appendChild(o);});
+    var hMonDe=document.createElement("select");hMonDe.style.cssText="height:30px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none";
+    var hMonFi=document.createElement("select");hMonFi.style.cssText="height:30px;border:1px solid var(--brd2);border-radius:6px;padding:0 8px;font-size:12px;outline:none";
+    var MOIS_NM=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+    MOIS_NM.forEach(function(m,i){
+      var o1=document.createElement("option");o1.value=i;o1.textContent=m;if(i===0)o1.selected=true;hMonDe.appendChild(o1);
+      var o2=document.createElement("option");o2.value=i;o2.textContent=m;if(i===11)o2.selected=true;hMonFi.appendChild(o2);
+    });
+    var hLabel1=document.createElement("span");hLabel1.style.cssText="font-size:11px;color:#6b7c79";hLabel1.textContent="De";
+    var hLabel2=document.createElement("span");hLabel2.style.cssText="font-size:11px;color:#6b7c79";hLabel2.textContent="à";
+    hCtrl.appendChild(hYearSel);hCtrl.appendChild(hLabel1);hCtrl.appendChild(hMonDe);hCtrl.appendChild(hLabel2);hCtrl.appendChild(hMonFi);
+    hDiv.appendChild(hCtrl);
+
+    // Recalculer moisList selon sélection
+    function getMoisList(){
+      var y=parseInt(hYearSel.value);var mDe=parseInt(hMonDe.value);var mFi=parseInt(hMonFi.value);
+      var ml=[];for(var m2=mDe;m2<=mFi;m2++)ml.push({year:y,month:m2});return ml;
+    }
+    moisList=getMoisList();
+    function rebuildHeat(){moisList=getMoisList();renderHeatTable();}
+    hYearSel.onchange=rebuildHeat;hMonDe.onchange=rebuildHeat;hMonFi.onchange=rebuildHeat;
+
+    hDiv.appendChild(hTitle);
+
+    var hTableWrap=document.createElement("div");hTableWrap.id="heat-table-wrap";hDiv.appendChild(hTableWrap);
+
+    function renderHeatTable(){
+      hTableWrap.innerHTML="";
+      var htbl=document.createElement("table");htbl.style.cssText="border-collapse:collapse;font-size:11px;min-width:100%";
     var hthead=document.createElement("thead");var htrH=document.createElement("tr");
     var hth0=document.createElement("th");hth0.style.cssText="padding:4px 10px;text-align:left;font-size:11px;color:#6b7c79;font-weight:600;white-space:nowrap;min-width:140px;position:sticky;left:0;background:#fff;z-index:2";hth0.textContent="Chantier";htrH.appendChild(hth0);
     moisList.forEach(function(mo){
@@ -3765,7 +3930,9 @@ function RGANTT(){
     htbl.appendChild(htbody);
     var leg2=document.createElement("div");leg2.style.cssText="display:flex;gap:14px;margin-top:10px;font-size:10px;color:#6b7c79;flex-wrap:wrap";
     leg2.innerHTML="<span><span style='background:#16a34a;border-radius:3px;padding:1px 6px;color:#fff;font-size:9px'>✅ x/y</span> Suffisant</span><span><span style='background:#f97316;border-radius:3px;padding:1px 6px;color:#fff;font-size:9px'>🟡 x/y</span> Saturé</span><span><span style='background:#dc2626;border-radius:3px;padding:1px 6px;color:#fff;font-size:9px'>⚠️ x/y</span> Surcharge</span><span style='color:#94a3b8'>x=besoin · y=dispo</span>";
-    hDiv.appendChild(htbl);hDiv.appendChild(leg2);
+      hTableWrap.appendChild(htbl);hTableWrap.appendChild(leg2);
+    } // end renderHeatTable
+    renderHeatTable();
     gWrap.appendChild(hDiv);
   }
   if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Pr&#233;visionnel (hachuré)</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> R&#233;el (plein)</span><span style='color:#dc2626'>| Aujourd&#39;hui</span>";
