@@ -3743,14 +3743,16 @@ function RGANTT(){
       ch.phases.forEach(function(ph){
         if(!ph.nom&&!ph.debut)return;
         var trPh=document.createElement("tr");trPh.style.background="#f9f7ff";
+        // Cellule nom phase (collée à gauche, même colonne que le chantier)
         var tdNPh=document.createElement("td");
-        tdNPh.style.cssText="border:1px solid #e2e8f0;padding:2px 8px 2px 24px;font-size:10px;white-space:nowrap;position:sticky;left:0;background:#f9f7ff;z-index:1;min-width:"+LW+"px;color:#7c3aed";
-        tdNPh.innerHTML="↳ <b>"+(ph.nom||"Phase")+"</b>"+(ph.effectif?" <span style='font-size:9px;background:#ede9fe;border-radius:3px;padding:1px 4px'>👷"+ph.effectif+"</span>":"");
+        tdNPh.style.cssText="border:1px solid #e2e8f0;padding:4px 8px 4px 20px;font-size:10px;position:sticky;left:0;background:#f9f7ff;z-index:1;min-width:"+LW+"px;color:#7c3aed;white-space:normal";
+        var f2ph=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):""};
+        var phLabel="↳ <b>"+(ph.nom||"Phase")+"</b>";
+        if(ph.debut||ph.fin)phLabel+="<span style='font-size:9px;color:#94a3b8;margin-left:6px'>"+f2ph(ph.debut)+(ph.debut&&ph.fin?" → ":"")+f2ph(ph.fin)+"</span>";
+        if(ph.effectif)phLabel+="<span style='font-size:9px;background:#ede9fe;border-radius:3px;padding:1px 4px;margin-left:4px'>👷"+ph.effectif+"</span>";
+        tdNPh.innerHTML=phLabel;
         trPh.appendChild(tdNPh);
-        var tdDPh=document.createElement("td");tdDPh.style.cssText="border:1px solid #e2e8f0;padding:2px 6px;font-size:9px;color:#7c3aed;min-width:"+DW+"px";
-        if(ph.debut||ph.fin){var f2=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):""};tdDPh.textContent=(ph.debut?f2(ph.debut):"")+(ph.debut&&ph.fin?" → ":"")+(ph.fin?f2(ph.fin):"");}
-        trPh.appendChild(tdDPh);
-        var tdEPh=document.createElement("td");tdEPh.style.cssText="border:1px solid #e2e8f0;padding:2px;text-align:center;width:36px;font-size:10px;color:#7c3aed;font-weight:700";tdEPh.textContent=ph.effectif||"";trPh.appendChild(tdEPh);
+        // Barres semaines
         var phS=ph.debut?new Date(ph.debut):null;if(phS)phS.setHours(0,0,0,0);
         var phE=ph.fin?new Date(ph.fin):null;if(phE)phE.setHours(23,59,59,999);
         weeks.forEach(function(w){
