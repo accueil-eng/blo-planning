@@ -3731,6 +3731,21 @@ function RGANTT(){
     };})(ch.id,effInpG));
     effRow.appendChild(effLbl);effRow.appendChild(effInpG);
     tdN.appendChild(effRow);
+    // Liste des phases dans la colonne nom
+    if(ch.phases&&ch.phases.length){
+      var phListDiv=document.createElement("div");phListDiv.style.cssText="margin-top:4px;border-top:1px dashed #e2e8f0;padding-top:3px";
+      ch.phases.forEach(function(ph,phi){
+        if(!ph.nom&&!ph.debut)return;
+        var f3=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):""};
+        var phItem=document.createElement("div");phItem.style.cssText="font-size:9px;color:#13201e;display:flex;align-items:center;gap:4px;margin-bottom:1px";
+        var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:8px;height:3px;background:"+ch.color+";border-radius:2px;flex-shrink:0";
+        var txt=document.createElement("span");txt.style.cssText="font-weight:600";
+        txt.textContent=(ph.nom||"Phase "+(phi+1))+(ph.debut?" · "+f3(ph.debut)+(ph.fin?" → "+f3(ph.fin):""):"");
+        phItem.appendChild(dot);phItem.appendChild(txt);
+        phListDiv.appendChild(phItem);
+      });
+      tdN.appendChild(phListDiv);
+    }
     tdN.style.whiteSpace="normal";
     tdN.appendChild(editBtn);
     tr.appendChild(tdN);
@@ -3765,7 +3780,7 @@ function RGANTT(){
       }
       if(isNow2){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5";td.appendChild(tl);}
 
-      // Phases dans la même cellule — sous la barre principale
+      // Barres de phases dans les cellules semaines (sans texte)
       if(ch.phases&&ch.phases.length){
         ch.phases.forEach(function(ph,phi){
           if(!ph.debut&&!ph.fin)return;
@@ -3776,22 +3791,16 @@ function RGANTT(){
           if(!(w<phE3&&wE>phS3))return;
           var isFph=w<=phS3&&wE>phS3;var isLph=w<phE3&&wE>=phE3;
           var barPh=document.createElement("div");
-          barPh.style.cssText="position:absolute;height:8px;background:"+ch.color+";opacity:0.45;"
-            +"top:"+(22+phi*10)+"px;"
-            +"left:"+(isFph?"3":"0")+"px;right:"+(isLph?"3":"0")+"px;"
+          var colors=["rgba(0,0,0,0.55)","rgba(0,0,0,0.35)","rgba(0,0,0,0.2)"];
+          barPh.style.cssText="position:absolute;height:5px;"
+            +"background:"+ch.color+";opacity:0.8;"
+            +"top:"+(24+phi*7)+"px;"
+            +"left:"+(isFph?"4":"0")+"px;right:"+(isLph?"4":"0")+"px;"
             +"border-radius:"+(isFph?"3px 0 0 3px":"")+(isLph?" 0 3px 3px 0":"")+";"
-            +"border:1px solid "+ch.color+";box-sizing:border-box";
+            +"box-shadow:0 1px 2px rgba(0,0,0,0.3)";
           td.appendChild(barPh);
-          // Nom de la phase sur la première cellule visible
-          if(isFph&&ph.nom){
-            var namePh=document.createElement("div");
-            namePh.style.cssText="position:absolute;font-size:7px;font-weight:700;color:"+ch.color+";"
-              +"top:"+(23+phi*10)+"px;left:5px;white-space:nowrap;overflow:hidden;max-width:"+(WW-6)+"px;pointer-events:none";
-            namePh.textContent=ph.nom;
-            td.appendChild(namePh);
-          }
         });
-        td.style.height=(36+ch.phases.length*10)+"px";
+        td.style.height=(36+ch.phases.length*7)+"px";
       }
 
       tr.appendChild(td);
