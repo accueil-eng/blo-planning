@@ -3788,8 +3788,10 @@ function RGANTT(){
           var phS3=parseLD3(ph.debut);
           var phE3=ph.fin?new Date(parseLD3(ph.fin).getTime()+86400000):null;
           if(!phS3||!phE3)return;
-          if(!(w<phE3&&wE>phS3))return;
-          var isFph=w<=phS3&&wE>phS3;var isLph=w<phE3&&wE>=phE3;
+          // Comparaison en jours locaux — évite tout décalage UTC/timezone
+          var wNextMon=new Date(w.getFullYear(),w.getMonth(),w.getDate()+7);
+          if(!(w<phE3&&wNextMon>phS3))return;
+          var isFph=w<=phS3&&wNextMon>phS3;var isLph=w<phE3&&wNextMon>=phE3;
           // Barre phase — décalage vertical uniquement si superposition dans la même semaine
           var barPh=document.createElement("div");
           barPh.style.cssText="position:absolute;height:6px;"
