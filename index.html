@@ -3795,14 +3795,16 @@ function RGANTT(){
           // Barre phase large avec nom dedans
           var barPh=document.createElement("div");
           barPh.style.cssText="position:absolute;height:16px;"
-            +"background:"+ch.color+";opacity:0.7;"
+            +"background:transparent;"
+            +"border:2px dashed "+ch.color+";"
             +"top:"+(20+phi*19)+"px;"
             +"left:"+(isFph?"3":"0")+"px;right:"+(isLph?"3":"0")+"px;"
-            +"border-radius:"+(isFph?"4px 0 0 4px":"")+(isLph?" 0 4px 4px 0":"")+";"
-            +"overflow:hidden;display:flex;align-items:center";
+            +"border-radius:3px;"
+            +"overflow:hidden;display:flex;align-items:center;"
+            +"box-sizing:border-box";
           if(isFph&&ph.nom){
             var namePh=document.createElement("span");
-            namePh.style.cssText="font-size:9px;font-weight:700;color:#000;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:16px";
+            namePh.style.cssText="font-size:9px;font-weight:700;color:#000;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:14px";
             namePh.textContent=ph.nom;
             barPh.appendChild(namePh);
           }
