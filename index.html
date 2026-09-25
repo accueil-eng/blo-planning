@@ -1750,6 +1750,7 @@ function editCh(id){
     var dstyle="height:28px;border:1px solid #c4b5fd;border-radius:5px;padding:0 6px;font-size:11px;outline:none;box-sizing:border-box";
     phases.forEach(function(ph,i){
       var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:6px;margin-bottom:6px;background:#f5f3ff;border-radius:6px;padding:6px 8px;flex-wrap:wrap";
+      row.dataset.phaseIdx=i;
       var nomInp=document.createElement("input");nomInp.type="text";nomInp.value=ph.nom||"";nomInp.placeholder="Nom phase";nomInp.style.cssText=dstyle+";flex:1;min-width:80px";
       nomInp.oninput=function(){phases[i].nom=this.value;};
       var debInp=document.createElement("input");debInp.type="date";debInp.value=ph.debut||"";debInp.style.cssText=dstyle+";width:130px";
@@ -1777,7 +1778,24 @@ function editCh(id){
     if(!fNom.value.trim()){alert("Nom requis");return;}
     ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;
     ch.effectifNecessaire=fEff.value?parseInt(fEff.value):null;
-    ch.phases=cbPhases.checked?phases.filter(function(p){return p.nom||p.debut;}):[]; 
+    // Lire les phases directement depuis les inputs du DOM (évite les problèmes de focus)
+    if(cbPhases.checked){
+      var phRows=phasesWrap.querySelectorAll("div[data-phase-idx]");
+      var savedPhases=[];
+      phRows.forEach(function(row){
+        var inputs=row.querySelectorAll("input");
+        if(inputs.length>=3){
+          var nom=inputs[0].value.trim();
+          var debut=inputs[1].value;
+          var fin=inputs[2].value;
+          var eff=inputs[3]?parseInt(inputs[3].value)||null:null;
+          if(nom||debut)savedPhases.push({nom:nom,debut:debut,fin:fin,effectif:eff});
+        }
+      });
+      ch.phases=savedPhases.length?savedPhases:phases.filter(function(p){return p.nom||p.debut;});
+    } else {
+      ch.phases=[];
+    }
     saveNow();modal.remove();RC();RGANTT();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
