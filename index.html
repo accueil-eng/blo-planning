@@ -3742,8 +3742,12 @@ function getWeeksOfMonth(mois,annee){
   return weeks;
 }
 function getDatesOfWeek(wk,annee){
-  var s=new Date(annee,0,1+((wk-1)*7)),dow=s.getDay(),mon=new Date(s);
-  if(dow<=4)mon.setDate(s.getDate()-s.getDay()+1);else mon.setDate(s.getDate()+8-s.getDay());
+  // Formule ISO correcte : Jan 4 est toujours dans la semaine 1 ISO
+  var jan4=new Date(annee,0,4);
+  var dow4=jan4.getDay()||7; // 1=Lun ... 7=Dim
+  var week1Mon=new Date(annee,0,4-(dow4-1)); // Lundi de la semaine ISO 1
+  var mon=new Date(week1Mon);
+  mon.setDate(week1Mon.getDate()+(wk-1)*7);
   var days=[];
   for(var i=0;i<5;i++){var d=new Date(mon);d.setDate(mon.getDate()+i);days.push(d);}
   return days;
@@ -4372,17 +4376,12 @@ function cleanPointageForFullDayAbsences(mois,annee){
 }
 
 function RPOINTAGE(){
-  // Initialiser le mois/année au mois courant si pas encore défini par l'utilisateur
-  (function initPtMoisAnnee(){
-    var mEl=document.getElementById("pt-mois"),aEl=document.getElementById("pt-annee");
-    if(mEl&&!mEl.dataset.userSet){
-      var now=new Date();
-      mEl.value=String(now.getMonth()+1);
-      aEl&&(aEl.value=String(now.getFullYear()));
-      mEl.dataset.userSet="auto";
-    }
-    if(mEl)mEl.addEventListener("change",function(){mEl.dataset.userSet="manual";},{once:false});
-  })();
+  // Initialiser le mois/année au mois courant au premier appel uniquement
+  if(!RPOINTAGE._init){
+    RPOINTAGE._init=true;
+    var _mEl=document.getElementById("pt-mois"),_aEl=document.getElementById("pt-annee");
+    if(_mEl){var _now=new Date();_mEl.value=String(_now.getMonth()+1);if(_aEl)_aEl.value=String(_now.getFullYear());}
+  }
 
   var isSalMode=(_currentProfile==="salarie");
   if(isSalMode&&_salLockedId===null){
