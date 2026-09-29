@@ -3730,22 +3730,30 @@ function _renderChargeCard(gWrap, chantiers, startDate, endDate){
   var mColors=["#7c3aed","#0891b2","#16a34a","#d97706","#db2777","#dc2626","#0d9488","#4338ca","#b45309","#0f766e","#be185d","#65a30d"];
   var today=new Date();
 
-  // chargeByMonth[mi] = { total: N, detail: [{ch, eff}] }
+  // chargeByMonth[mi] = { total: N, detail: [{ch, eff, fromPhases}] }
   var chargeByMonth=months.map(function(mStart){
     var mEnd=new Date(mStart.getFullYear(),mStart.getMonth()+1,0); // dernier jour du mois
     var total=0;
     var detail=[];
     chantiers.forEach(function(ch){
-      var chEff=0;
-      (ch.phases||[]).forEach(function(ph){
-        if(!ph.debut||!ph.fin||!ph.effectif)return;
-        var pS=new Date(ph.debut),pE=new Date(ph.fin);
-        // Si la phase chevauche ce mois
-        if(pS<=mEnd&&pE>=mStart){
-          chEff+=Number(ph.effectif);
+      var hasPhasesWithEff=(ch.phases||[]).some(function(p){return p.effectif>0&&p.debut&&p.fin;});
+      if(hasPhasesWithEff){
+        // Sommer les effectifs des phases actives dans ce mois
+        var chEff=0;
+        (ch.phases||[]).forEach(function(ph){
+          if(!ph.debut||!ph.fin||!ph.effectif)return;
+          var pS=new Date(ph.debut),pE=new Date(ph.fin);
+          if(pS<=mEnd&&pE>=mStart) chEff+=Number(ph.effectif);
+        });
+        if(chEff>0){total+=chEff;detail.push({ch:ch,eff:chEff,fromPhases:true});}
+      } else {
+        // Pas de phases : utiliser dateDebutPrev/dateFinPrev avec effectif=1 par défaut
+        var pS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):ch.dateDebut?new Date(ch.dateDebut):null;
+        var pE=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
+        if(pS&&pE&&pS<=mEnd&&pE>=mStart){
+          total+=1;detail.push({ch:ch,eff:1,fromPhases:false});
         }
-      });
-      if(chEff>0){total+=chEff;detail.push({ch:ch,eff:chEff});}
+      }
     });
     return{total:total,detail:detail};
   });
@@ -3765,14 +3773,23 @@ function _renderChargeCard(gWrap, chantiers, startDate, endDate){
   var legWrap=document.createElement("div");
   legWrap.style.cssText="display:flex;flex-wrap:wrap;gap:8px 16px;margin:10px 0 18px";
   chantiers.forEach(function(ch){
-    var hasPhases=(ch.phases||[]).some(function(p){return p.effectif>0;});
-    if(!hasPhases)return;
+    var hasDates=ch.dateDebutPrev||ch.dateDebut;
+    if(!hasDates&&!(ch.phases||[]).length)return;
+    var hasPhases=(ch.phases||[]).some(function(p){return p.effectif>0&&p.debut&&p.fin;});
     var l=document.createElement("span");
     l.style.cssText="display:flex;align-items:center;gap:5px;font-size:11px;color:#374151";
-    l.innerHTML="<span style='display:inline-block;width:12px;height:12px;border-radius:3px;background:"+ch.color+"'></span>"+(ch.ref?ch.ref+" — ":"")+ch.nom;
+    var dot=hasPhases
+      ?"<span style='display:inline-block;width:12px;height:12px;border-radius:3px;background:"+ch.color+"'></span>"
+      :"<span style='display:inline-block;width:12px;height:12px;border-radius:3px;background:"+ch.color+";opacity:.4;border:1px dashed "+ch.color+"'></span>";
+    l.innerHTML=dot+(ch.ref?ch.ref+" — ":"")+ch.nom+(hasPhases?"":" <span style='color:#9ca3af;font-style:italic'>(sans phases)</span>");
     legWrap.appendChild(l);
   });
+  // Note de bas de légende
+  var legNote=document.createElement("div");
+  legNote.style.cssText="font-size:10px;color:#9ca3af;margin-top:2px;margin-bottom:12px";
+  legNote.textContent="Chantiers sans phases = présence dans le mois comptée comme 1 personne (approximatif). Saisissez des phases pour affiner.";
   card.appendChild(legWrap);
+  card.appendChild(legNote);
 
   // Chart area
   var chartArea=document.createElement("div");
