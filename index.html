@@ -4367,22 +4367,29 @@ function cleanPointageForDaySalarie(salId,mois,annee,wk,di){
 function cleanPointageForFullDayAbsences(mois,annee){
   var ck=mois+"|"+annee;
   if(_cleanedAbsenceMonths[ck])return; // already cleaned this session for this month
-  if(!D.absences||!D.absences.length)return;
-  var changed=false;
-  var weeks=getWeeksOfMonth(mois,annee);
-  D.salaries.forEach(function(sal){
-    if(!sal.prenom||!sal.prenom.trim())return;
-    weeks.forEach(function(wk){
-      getDatesOfWeek(wk,annee).forEach(function(dt,di){
-        var inM=(dt.getMonth()+1===mois&&dt.getFullYear()===annee);
-        if(!inM)return;
-        if(!hasFullDayBlockingAbsence(sal.id,dt))return;
-        if(cleanPointageForDaySalarie(sal.id,mois,annee,wk,di))changed=true;
+  if(!D.absences||!D.absences.length){_cleanedAbsenceMonths[ck]=true;return;}
+  try{
+    var changed=false;
+    var weeks=getWeeksOfMonth(mois,annee);
+    D.salaries.forEach(function(sal){
+      if(!sal.prenom||!sal.prenom.trim())return;
+      weeks.forEach(function(wk){
+        getDatesOfWeek(wk,annee).forEach(function(dt,di){
+          var inM=(dt.getMonth()+1===mois&&dt.getFullYear()===annee);
+          if(!inM)return;
+          try{
+            if(!hasFullDayBlockingAbsence(sal.id,dt))return;
+            if(cleanPointageForDaySalarie(sal.id,mois,annee,wk,di))changed=true;
+          }catch(e2){console.warn("cleanPointage day error",e2);}
+        });
       });
     });
-  });
-  _cleanedAbsenceMonths[ck]=true;
-  if(changed)save();
+    _cleanedAbsenceMonths[ck]=true;
+    if(changed)save();
+  }catch(e){
+    console.error("cleanPointageForFullDayAbsences error",mois,annee,e);
+    _cleanedAbsenceMonths[ck]=true; // éviter boucle infinie
+  }
 }
 
 function RPOINTAGE(){
@@ -4457,9 +4464,11 @@ function RPOINTAGE(){
   var _activePt=_ptLastEditedKey;
   var mois=parseInt(document.getElementById("pt-mois").value);
   var annee=parseInt(document.getElementById("pt-annee").value);
-  cleanPointageForFullDayAbsences(mois,annee);
+  try{cleanPointageForFullDayAbsences(mois,annee);}catch(e){console.error("cleanPointage err",e);}
   var filterId=isSalMode?_salLockedId:(ptSal?ptSal.value:"");
-  var weeks=getWeeksOfMonth(mois,annee);
+  var weeks=[];
+  try{weeks=getWeeksOfMonth(mois,annee);}catch(e){console.error("getWeeksOfMonth err",mois,annee,e);}
+  console.log("[RPOINTAGE] mois="+mois+" annee="+annee+" weeks=",weeks);
   var sals=D.salaries.filter(function(s){
     if(!s.prenom||!s.prenom.trim())return false;
     if(filterId&&s.id!==filterId)return false;
