@@ -3734,9 +3734,19 @@ function getISOWeek(d){
   return Math.ceil((((dt-ys)/86400000)+1)/7);
 }
 function getWeeksOfMonth(mois,annee){
+  // Règle du jeudi : une semaine appartient au mois qui contient son jeudi (norme ISO)
+  // Ainsi chaque semaine n'apparaît que dans UN seul mois, sans chevauchement
   var weeks=[],seen={},d=new Date(annee,mois-1,1);
   while(d.getMonth()===mois-1){
-    if(d.getDay()>=1&&d.getDay()<=5){var wk=getISOWeek(d);if(!seen[wk]){seen[wk]=1;weeks.push(wk);}}
+    if(d.getDay()>=1&&d.getDay()<=5){
+      var wk=getISOWeek(d);
+      if(!seen[wk]){
+        seen[wk]=1;
+        var dates=getDatesOfWeek(wk,annee);
+        var thu=dates[3]; // jeudi = index 3
+        if(thu.getMonth()+1===mois&&thu.getFullYear()===annee)weeks.push(wk);
+      }
+    }
     d.setDate(d.getDate()+1);
   }
   return weeks;
