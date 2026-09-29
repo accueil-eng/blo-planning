@@ -3673,39 +3673,42 @@ function RGANTT(){
   });
 
   // ── Ligne charge effectifs (barres hebdomadaires) ──
-  var chargeVals=Object.values(chargeMap).concat([0]);
-  var maxCharge=Math.max(1,Math.max.apply(null,chargeVals));
-  var ROW_H=52;
-  var BAR_MAX=40;
+  var cap=Math.max(1,(D.salaries||[]).filter(function(s){return !s.quitte;}).length||5);
+  var ROW_H=80;var BAR_MAX=64;
   var trC=document.createElement("tr");
   var tdCN=document.createElement("td");
-  tdCN.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;position:sticky;left:0;background:#ecfdf5;z-index:1;font-size:11px;color:#065f46;white-space:nowrap";
-  tdCN.innerHTML="👷 Charge<br><span style='font-size:9px;font-weight:400'>effectifs / sem.</span>";
+  tdCN.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;position:sticky;left:0;background:#f0fdf4;z-index:1;font-size:11px;color:#065f46;white-space:nowrap";
+  tdCN.innerHTML="👷 Charge<br><span style='font-size:9px;font-weight:400'>effectifs / sem.</span><br><span style='font-size:9px;color:#94a3b8'>cap: "+cap+" sal.</span>";
   trC.appendChild(tdCN);
   var tdCDet=document.createElement("td");
-  tdCDet.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;background:#ecfdf5;font-size:10px;color:#065f46;vertical-align:middle;text-align:center";
-  tdCDet.innerHTML="<b>max "+maxCharge+"</b><br>pers.";
+  tdCDet.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;background:#f0fdf4;font-size:10px;color:#065f46;vertical-align:middle;text-align:center";
+  tdCDet.innerHTML="charge<br>/ capacité";
   trC.appendChild(tdCDet);
   weeks.forEach(function(w,wi){
     var val=chargeMap[wi]||0;
+    var dispo=cap-val;
+    var pctCap=val/cap;
     var td=document.createElement("td");
     var isNowC=(w<=today&&today<new Date(w.getTime()+7*24*60*60*1000));
-    td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;background:"+(isNowC?"#d1fae5":"#ecfdf5")+";position:relative;height:"+ROW_H+"px;overflow:hidden";
+    td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;background:"+(isNowC?"#fef9c3":"#f0fdf4")+";position:relative;height:"+ROW_H+"px;overflow:hidden;vertical-align:bottom";
+    // Barre
+    var barColor=pctCap>1?"#ef4444":pctCap>=0.8?"#f97316":pctCap>=0.5?"#eab308":"#22c55e";
+    var barH=val>0?Math.max(6,Math.round(Math.min(pctCap,1)*BAR_MAX)):0;
     if(val>0){
-      var barH=Math.max(4,Math.round((val/maxCharge)*BAR_MAX));
-      var pct=Math.round(val/maxCharge*100);
-      // Couleur selon charge : vert→orange→rouge
-      var barColor= pct>80?"#ef4444":pct>50?"#f59e0b":"#10b981";
       var bar=document.createElement("div");
-      bar.style.cssText="position:absolute;bottom:0;left:1px;right:1px;height:"+barH+"px;background:"+barColor+";border-radius:2px 2px 0 0;opacity:.85;transition:height .2s";
-      bar.title=val+" pers. S"+getISOWeek(w);
+      bar.style.cssText="position:absolute;bottom:0;left:1px;right:1px;height:"+barH+"px;background:"+barColor+";border-radius:2px 2px 0 0";
+      bar.title=val+"/"+cap+" S"+getISOWeek(w);
       td.appendChild(bar);
-      var lbl=document.createElement("div");
-      lbl.style.cssText="position:absolute;bottom:"+(barH+2)+"px;left:0;right:0;text-align:center;font-size:9px;font-weight:800;color:"+barColor;
-      lbl.textContent=val;
-      td.appendChild(lbl);
     }
-    if(isNowC){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.35;z-index:2";td.appendChild(tl);}
+    // Label haut : dispo ou saturé
+    var topLbl=document.createElement("div");
+    topLbl.style.cssText="position:absolute;top:3px;left:0;right:0;text-align:center;font-size:8px;line-height:1.2;color:"+(pctCap>1?"#dc2626":pctCap>=0.8?"#ea580c":"#15803d")+";font-weight:700";
+    if(val===0){topLbl.innerHTML="<span style='font-size:9px'>✓ "+cap+"</span><br><span style='color:#86efac;font-weight:400'>-dispo-</span>";}
+    else if(pctCap>1){topLbl.innerHTML="<span>▲ "+val+"/"+cap+"</span><br><span style='font-size:7px'>surcharge</span>";}
+    else if(pctCap>=0.8){topLbl.innerHTML="<span>● "+val+"/"+cap+"</span><br><span style='font-size:7px'>saturé</span>";}
+    else{topLbl.innerHTML="<span>✓ "+val+"/"+cap+"</span><br><span style='font-size:7px;color:#86efac'>-dispo-</span>";}
+    td.appendChild(topLbl);
+    if(isNowC){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5;z-index:2";td.appendChild(tl);}
     trC.appendChild(td);
   });
   tbody.appendChild(trC);
@@ -3718,155 +3721,157 @@ function RGANTT(){
 }
 
 function _renderChargeCard(gWrap, chantiers, startDate, endDate){
-  // Calculer les mois entre startDate et endDate
   var months=[];
   var cur=new Date(startDate.getFullYear(),startDate.getMonth(),1);
-  var end=new Date(endDate.getFullYear(),endDate.getMonth(),1);
-  while(cur<=end){months.push(new Date(cur));cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);}
+  var end2=new Date(endDate.getFullYear(),endDate.getMonth(),1);
+  while(cur<=end2){months.push(new Date(cur));cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);}
   if(!months.length)return;
 
-  // Pour chaque mois, calculer la charge par chantier (somme eff * jours_ouvres_phase_dans_mois / jours_ouvres_mois)
-  var mNames=["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
-  var mColors=["#7c3aed","#0891b2","#16a34a","#d97706","#db2777","#dc2626","#0d9488","#4338ca","#b45309","#0f766e","#be185d","#65a30d"];
+  var mNames=["Jan.","Fév.","Mars","Avr.","Mai","Juin","Juil.","Août","Sept.","Oct.","Nov.","Déc."];
   var today=new Date();
+  var cap=Math.max(1,(D.salaries||[]).filter(function(s){return !s.quitte;}).length||5);
 
-  // chargeByMonth[mi] = { total: N, detail: [{ch, eff, fromPhases}] }
-  var chargeByMonth=months.map(function(mStart){
-    var mEnd=new Date(mStart.getFullYear(),mStart.getMonth()+1,0); // dernier jour du mois
-    var total=0;
-    var detail=[];
-    chantiers.forEach(function(ch){
+  // Calcul effectif par chantier par mois
+  // chData[chi][mi] = effectif (ou 0)
+  var chData=chantiers.map(function(ch){
+    return months.map(function(mStart){
+      var mEnd=new Date(mStart.getFullYear(),mStart.getMonth()+1,0);
       var hasPhasesWithEff=(ch.phases||[]).some(function(p){return p.effectif>0&&p.debut&&p.fin;});
       if(hasPhasesWithEff){
-        // Sommer les effectifs des phases actives dans ce mois
-        var chEff=0;
+        var eff=0;
         (ch.phases||[]).forEach(function(ph){
           if(!ph.debut||!ph.fin||!ph.effectif)return;
           var pS=new Date(ph.debut),pE=new Date(ph.fin);
-          if(pS<=mEnd&&pE>=mStart) chEff+=Number(ph.effectif);
+          if(pS<=mEnd&&pE>=mStart)eff+=Number(ph.effectif);
         });
-        if(chEff>0){total+=chEff;detail.push({ch:ch,eff:chEff,fromPhases:true});}
+        return eff;
       } else {
-        // Pas de phases : utiliser dateDebutPrev/dateFinPrev avec effectif=1 par défaut
-        var pS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):ch.dateDebut?new Date(ch.dateDebut):null;
-        var pE=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
-        if(pS&&pE&&pS<=mEnd&&pE>=mStart){
-          total+=1;detail.push({ch:ch,eff:1,fromPhases:false});
-        }
+        var pS2=ch.dateDebutPrev?new Date(ch.dateDebutPrev):ch.dateDebut?new Date(ch.dateDebut):null;
+        var pE2=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
+        return (pS2&&pE2&&pS2<=mEnd&&pE2>=mStart)?1:0;
       }
     });
-    return{total:total,detail:detail};
   });
 
-  var maxTotal=Math.max(1,Math.max.apply(null,chargeByMonth.map(function(m){return m.total;})));
+  // Totaux par mois
+  var totals=months.map(function(_,mi){
+    return chantiers.reduce(function(s,_,chi){return s+(chData[chi][mi]||0);},0);
+  });
 
-  // Card container
+  // Filtrer chantiers qui ont au moins un mois actif
+  var activeChantiers=chantiers.filter(function(_,chi){
+    return chData[chi].some(function(v){return v>0;});
+  });
+  var activeData=activeChantiers.map(function(ch){
+    return chData[chantiers.indexOf(ch)];
+  });
+
+  // Card
   var card=document.createElement("div");
-  card.style.cssText="margin-top:24px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid #e2e8f0;padding:20px 24px;font-family:DM Sans,sans-serif";
+  card.style.cssText="margin-top:24px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid #e2e8f0;font-family:DM Sans,sans-serif;overflow:hidden";
 
-  var cardTitle=document.createElement("div");
-  cardTitle.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:15px;color:#13201e;margin-bottom:4px;display:flex;align-items:center;gap:8px";
-  cardTitle.innerHTML="📊 Carte de charge mensuelle <span style='font-size:11px;font-weight:400;color:#6b7280;font-family:DM Sans,sans-serif'>— effectifs engagés par mois</span>";
-  card.appendChild(cardTitle);
+  var cardHead=document.createElement("div");
+  cardHead.style.cssText="padding:16px 20px 10px;border-bottom:1px solid #f1f5f9";
+  cardHead.innerHTML="<div style='font-family:Syne,sans-serif;font-weight:800;font-size:15px;color:#13201e'>🔥 Carte de charge mensuelle</div>"
+    +"<div style='font-size:11px;color:#64748b;margin-top:2px'>Effectif prévu par chantier et par mois, comparé à l'effectif disponible ("+cap+" salariés).</div>";
+  card.appendChild(cardHead);
 
-  // Légende chantiers
-  var legWrap=document.createElement("div");
-  legWrap.style.cssText="display:flex;flex-wrap:wrap;gap:8px 16px;margin:10px 0 18px";
-  chantiers.forEach(function(ch){
-    var hasDates=ch.dateDebutPrev||ch.dateDebut;
-    if(!hasDates&&!(ch.phases||[]).length)return;
+  // Table
+  var tWrap=document.createElement("div");tWrap.style.cssText="overflow-x:auto";
+  var tbl=document.createElement("table");
+  tbl.style.cssText="border-collapse:collapse;width:100%;font-size:11px;min-width:600px";
+
+  // Header
+  var thead=document.createElement("thead");
+  var trH=document.createElement("tr");
+  var thCh=document.createElement("th");
+  thCh.style.cssText="padding:8px 14px;text-align:left;font-weight:700;color:#374151;background:#f8fafc;border-bottom:2px solid #e2e8f0;position:sticky;left:0;z-index:2;white-space:nowrap;min-width:160px";
+  thCh.textContent="Chantier";
+  trH.appendChild(thCh);
+  months.forEach(function(mS,mi){
+    var isNow=(mS.getFullYear()===today.getFullYear()&&mS.getMonth()===today.getMonth());
+    var th=document.createElement("th");
+    th.style.cssText="padding:8px 4px;text-align:center;font-weight:600;font-size:10px;background:"+(isNow?"#fef9c3":"#f8fafc")+";border-bottom:2px solid "+(isNow?"#fbbf24":"#e2e8f0")+";color:"+(isNow?"#92400e":"#64748b")+";white-space:nowrap;min-width:54px";
+    th.textContent=mNames[mS.getMonth()]+" "+String(mS.getFullYear()).slice(2);
+    trH.appendChild(th);
+  });
+  thead.appendChild(trH);
+  tbl.appendChild(thead);
+
+  // Body
+  var tbody=document.createElement("tbody");
+  activeChantiers.forEach(function(ch,chi){
+    var tr=document.createElement("tr");
     var hasPhases=(ch.phases||[]).some(function(p){return p.effectif>0&&p.debut&&p.fin;});
-    var l=document.createElement("span");
-    l.style.cssText="display:flex;align-items:center;gap:5px;font-size:11px;color:#374151";
-    var dot=hasPhases
-      ?"<span style='display:inline-block;width:12px;height:12px;border-radius:3px;background:"+ch.color+"'></span>"
-      :"<span style='display:inline-block;width:12px;height:12px;border-radius:3px;background:"+ch.color+";opacity:.4;border:1px dashed "+ch.color+"'></span>";
-    l.innerHTML=dot+(ch.ref?ch.ref+" — ":"")+ch.nom+(hasPhases?"":" <span style='color:#9ca3af;font-style:italic'>(sans phases)</span>");
-    legWrap.appendChild(l);
+    // Nom chantier
+    var tdN=document.createElement("td");
+    tdN.style.cssText="padding:7px 14px;font-weight:600;font-size:11px;color:#1e293b;border-bottom:1px solid #f1f5f9;position:sticky;left:0;background:#fff;z-index:1;white-space:nowrap";
+    tdN.innerHTML="<span style='display:inline-block;width:10px;height:10px;border-radius:50%;background:"+ch.color+";margin-right:6px;vertical-align:middle'></span>"
+      +(ch.ref?ch.ref+" — ":"")+ch.nom
+      +(hasPhases?"":" <span style='font-size:9px;color:#94a3b8;font-weight:400;font-style:italic'>(sans phases)</span>");
+    tr.appendChild(tdN);
+    // Cellules mois
+    activeData[chi].forEach(function(eff,mi){
+      var isNow=(months[mi].getFullYear()===today.getFullYear()&&months[mi].getMonth()===today.getMonth());
+      var td=document.createElement("td");
+      if(eff>0){
+        // fond teinté couleur chantier
+        td.style.cssText="padding:6px 4px;text-align:center;font-weight:700;font-size:12px;color:"+ch.color+";border-bottom:1px solid #f1f5f9;background:"+(isNow?"rgba(254,249,195,.6)":"")+"rgba(0,0,0,.03)";
+        td.style.background=(isNow?"#fffde7":"")+";position:relative";
+        var inner=document.createElement("div");
+        inner.style.cssText="display:inline-flex;align-items:center;justify-content:center;width:30px;height:26px;border-radius:6px;background:"+ch.color+"22;font-weight:800;color:"+ch.color+";font-size:12px";
+        inner.textContent=eff;
+        inner.title=(hasPhases?"Phases":"Prévisionnel")+" : "+eff+" pers.";
+        td.appendChild(inner);
+      } else {
+        td.style.cssText="padding:6px 4px;text-align:center;color:#cbd5e1;font-size:11px;border-bottom:1px solid #f1f5f9;background:"+(isNow?"#fffde7":"");
+        td.textContent="—";
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
   });
-  // Note de bas de légende
-  var legNote=document.createElement("div");
-  legNote.style.cssText="font-size:10px;color:#9ca3af;margin-top:2px;margin-bottom:12px";
-  legNote.textContent="Chantiers sans phases = présence dans le mois comptée comme 1 personne (approximatif). Saisissez des phases pour affiner.";
-  card.appendChild(legWrap);
-  card.appendChild(legNote);
 
-  // Chart area
-  var chartArea=document.createElement("div");
-  chartArea.style.cssText="display:flex;align-items:flex-end;gap:6px;height:160px;padding-bottom:0;overflow-x:auto;padding:0 4px 0 0";
-
-  var CHART_H=130;
-  months.forEach(function(mStart,mi){
-    var data=chargeByMonth[mi];
-    var total=data.total;
-    var isNowM=(mStart.getFullYear()===today.getFullYear()&&mStart.getMonth()===today.getMonth());
-    var col=document.createElement("div");
-    col.style.cssText="display:flex;flex-direction:column;align-items:center;flex:1;min-width:52px;max-width:80px;position:relative";
-
-    // Barre empilée par chantier
-    var barWrap=document.createElement("div");
-    barWrap.style.cssText="display:flex;flex-direction:column-reverse;width:100%;height:"+CHART_H+"px;justify-content:flex-start;align-items:center;position:relative";
-
-    if(total>0){
-      var barInner=document.createElement("div");
-      barInner.style.cssText="display:flex;flex-direction:column-reverse;width:80%;border-radius:4px 4px 0 0;overflow:hidden;position:absolute;bottom:0";
-      var totalH=Math.round((total/maxTotal)*CHART_H);
-      barInner.style.height=totalH+"px";
-
-      // Empiler les chantiers (couleurs)
-      var usedH=0;
-      data.detail.forEach(function(d,di){
-        var segH=Math.round((d.eff/total)*totalH);
-        if(di===data.detail.length-1)segH=totalH-usedH; // dernier = reste
-        var seg=document.createElement("div");
-        seg.style.cssText="width:100%;height:"+segH+"px;background:"+d.ch.color+";opacity:.85";
-        seg.title=(d.ch.ref?d.ch.ref+" — ":"")+d.ch.nom+": "+d.eff+" pers.";
-        barInner.appendChild(seg);
-        usedH+=segH;
-      });
-      barWrap.appendChild(barInner);
-
-      // Valeur au-dessus
-      var valLbl=document.createElement("div");
-      valLbl.style.cssText="position:absolute;bottom:"+(totalH+4)+"px;left:0;right:0;text-align:center;font-size:11px;font-weight:800;color:"+(total/maxTotal>.7?"#ef4444":total/maxTotal>.4?"#f59e0b":"#10b981");
-      valLbl.textContent=total;
-      barWrap.appendChild(valLbl);
+  // Ligne Charge globale
+  var trTot=document.createElement("tr");
+  trTot.style.cssText="background:#1e293b";
+  var tdTN=document.createElement("td");
+  tdTN.style.cssText="padding:8px 14px;font-weight:800;font-size:11px;color:#f1f5f9;position:sticky;left:0;background:#1e293b;z-index:1;white-space:nowrap";
+  tdTN.innerHTML="⚡ Charge globale";
+  trTot.appendChild(tdTN);
+  totals.forEach(function(tot,mi){
+    var isNow=(months[mi].getFullYear()===today.getFullYear()&&months[mi].getMonth()===today.getMonth());
+    var td=document.createElement("td");
+    var pct=tot/cap;
+    var dot,dotColor,bgColor;
+    if(tot===0){dot="";bgColor=isNow?"#334155":"#334155";}
+    else if(pct>1){dot="▲";dotColor="#ef4444";bgColor=isNow?"#7f1d1d":"#450a0a";}
+    else if(pct>=0.8){dot="●";dotColor="#fb923c";bgColor=isNow?"#431407":"#1c0a00";}
+    else{dot="✓";dotColor="#4ade80";bgColor=isNow?"#14532d":"#052e16";}
+    td.style.cssText="padding:6px 4px;text-align:center;background:"+bgColor+";border-bottom:1px solid #334155";
+    if(tot>0){
+      td.innerHTML="<div style='display:inline-flex;flex-direction:column;align-items:center;gap:1px'>"
+        +"<span style='font-size:12px;color:"+dotColor+"'>"+dot+"</span>"
+        +"<span style='font-size:10px;font-weight:700;color:#f8fafc'>"+tot+"/"+cap+"</span>"
+        +"</div>";
+    } else {
+      td.innerHTML="<span style='color:#475569;font-size:11px'>—</span>";
     }
-    col.appendChild(barWrap);
-
-    // Label mois
-    var mLabel=document.createElement("div");
-    mLabel.style.cssText="font-size:10px;font-weight:"+(isNowM?"800":"500")+";color:"+(isNowM?"#dc2626":"#64748b")+";text-align:center;margin-top:4px;white-space:nowrap;border-top:2px solid "+(isNowM?"#dc2626":"transparent")+";padding-top:2px;width:100%";
-    mLabel.textContent=mNames[mStart.getMonth()]+" "+String(mStart.getFullYear()).slice(2);
-    col.appendChild(mLabel);
-
-    chartArea.appendChild(col);
+    trTot.appendChild(td);
   });
+  tbody.appendChild(trTot);
+  tbl.appendChild(tbody);
+  tWrap.appendChild(tbl);
+  card.appendChild(tWrap);
 
-  // Axe Y (optionnel, ligne de max)
-  var chartWrap=document.createElement("div");chartWrap.style.cssText="position:relative;display:flex;flex-direction:column";
-  // Lignes de grille
-  var gridWrap=document.createElement("div");
-  gridWrap.style.cssText="position:relative";
-
-  var yAxis=document.createElement("div");
-  yAxis.style.cssText="display:flex;flex-direction:column;justify-content:space-between;height:"+CHART_H+"px;padding-right:6px;align-items:flex-end;flex-shrink:0";
-  [maxTotal,Math.round(maxTotal/2),0].forEach(function(v){
-    var y=document.createElement("div");y.style.cssText="font-size:9px;color:#94a3b8;white-space:nowrap";y.textContent=v+" p.";
-    yAxis.appendChild(y);
-  });
-
-  var areaRow=document.createElement("div");areaRow.style.cssText="display:flex;align-items:flex-end";
-  areaRow.appendChild(yAxis);
-  areaRow.appendChild(chartArea);
-  card.appendChild(areaRow);
-
-  // Grille horizontale en SVG overlay (simplifié — on utilise des lignes CSS)
-  // Juste une ligne de fond
-  var footnote=document.createElement("div");
-  footnote.style.cssText="margin-top:8px;font-size:10px;color:#9ca3af;font-style:italic";
-  footnote.textContent="Effectifs = somme des personnes engagées sur des phases actives dans le mois. Barre colorée = contribution par chantier.";
-  card.appendChild(footnote);
+  // Légende
+  var legDiv=document.createElement("div");
+  legDiv.style.cssText="display:flex;gap:16px;padding:10px 20px;border-top:1px solid #f1f5f9;font-size:10px;color:#64748b;flex-wrap:wrap";
+  legDiv.innerHTML="<span style='display:flex;align-items:center;gap:4px'><span style='color:#4ade80;font-weight:700'>✓</span> x/y Suffisant</span>"
+    +"<span style='display:flex;align-items:center;gap:4px'><span style='color:#fb923c;font-weight:700'>●</span> x/y Saturé</span>"
+    +"<span style='display:flex;align-items:center;gap:4px'><span style='color:#ef4444;font-weight:700'>▲</span> x/y Surcharge</span>"
+    +"<span style='color:#94a3b8;font-style:italic'>Chantiers sans phases = 1 pers./mois (approximatif)</span>";
+  card.appendChild(legDiv);
 
   gWrap.appendChild(card);
 }
