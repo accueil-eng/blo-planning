@@ -27,6 +27,9 @@ body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--txt);min-
 body.profile-salarie .tabs{display:none}
 .tb{background:none;border:none;border-bottom:2px solid transparent;padding:14px 12px 12px;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tb:hover{color:var(--txt)}.tb.on{color:var(--acc);border-bottom-color:var(--acc)}
+/* Onglets en lecture seule — désactive les contrôles via CSS (fonctionne aussi sur contenu dynamique) */
+.pg[data-readonly] input,.pg[data-readonly] select,.pg[data-readonly] textarea{pointer-events:none!important;opacity:.6!important;cursor:default!important;background:#f3f4f6!important}
+.pg[data-readonly] button:not([onclick*="TAB("]){pointer-events:none!important;opacity:.5!important;cursor:default!important}
 .sind{font-size:11px;color:var(--green);padding:0 6px;opacity:0;transition:opacity .4s;flex-shrink:0}
 .pg{display:none;padding:16px}.pg.on{display:block}
 .stitle{font-family:"Syne",sans-serif;font-weight:700;font-size:18px;margin-bottom:16px}
@@ -589,7 +592,7 @@ if(!D.grille)D.grille={
 ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
 if(!D.absDemandes)D.absDemandes=[];
 
-// Auto-reload every 60s
+// Auto-reload every 60s (sync temps réel entre utilisateurs)
 setInterval(function(){
   // Ne pas recharger si une sauvegarde est en cours ou vient d'avoir lieu (< 10s)
   if(_pendingSaveCount > 0) return;
@@ -598,8 +601,18 @@ setInterval(function(){
     RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
     if(_currentProfile==="bureau"){renderPtValidationsList();autoArchiveOldAbsDemandesSilent();}
     if(_currentProfile==="salarie"){renderMesDemandes();}
-    var ptPg=document.getElementById("pg-pointage");
-    if(ptPg&&ptPg.classList.contains("on"))RPOINTAGE();
+    // Re-rendre l'onglet actif
+    var activePg=document.querySelector(".pg.on");
+    var activeTab=activePg?activePg.id.replace("pg-",""):"";
+    if(activeTab==="pointage")RPOINTAGE();
+    else if(activeTab==="rdv")RRDV();
+    else if(activeTab==="indemnites")RINDEM();
+    else if(activeTab==="formation")RF();
+    else if(activeTab==="gantt")RGANTT();
+    else if(activeTab==="salaries")RS();
+    else if(activeTab==="absences")RA();
+    // Ré-appliquer les permissions lecture seule après re-rendu
+    if(_currentProfile)applyProfile(_currentProfile);
   });
 }, 60000);
 
@@ -2114,10 +2127,21 @@ function XCSV(){
 
 // ── PROFILS ──
 var PROFILES = {
-  bureau: { name: "Bureau", pin: "@@@@", color: "#db2777", tabs: ["planning","rdv","chantiers","salaries","absences","formation","pointage","indemnites"], readOnly: false },
-  analyse: { name: "Analyse", pin: "@@@@", color: "#0891b2", tabs: ["gantt","bilan"], readOnly: false },
-  salarie: { name: "Salarié", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnly: true },
-  planningpublic: { name: "Planning (lecture seule)", pin: null, color: "#0891b2", tabs: ["planning"], readOnly: true }
+  quentin: { name: "Quentin", initiale: "Q", color: "#1d4ed8",
+    tabs: ["planning","rdv","chantiers","salaries","absences","pointage","gantt","bilan"],
+    readOnlyTabs: ["rdv","salaries","absences","pointage"],
+    readOnly: false },
+  alexis: { name: "Alexis", initiale: "A", color: "#7c3aed",
+    tabs: ["planning","rdv","chantiers","salaries","absences","pointage","gantt","bilan"],
+    readOnlyTabs: ["rdv"],
+    readOnly: false },
+  valerie: { name: "Valérie", initiale: "V", color: "#db2777",
+    tabs: ["planning","rdv","chantiers","salaries","absences","indemnites","pointage","formation"],
+    readOnlyTabs: ["pointage"],
+    readOnly: false },
+  // Profils techniques conservés
+  salarie: { name: "Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnlyTabs: [], readOnly: true },
+  planningpublic: { name: "Planning (lecture seule)", initiale: "P", pin: null, color: "#0891b2", tabs: ["planning"], readOnlyTabs: [], readOnly: true }
 };
 var _currentProfile = null;
 
@@ -2135,7 +2159,7 @@ function applyProfile(key) {
   // Update avatar button
   var av = document.getElementById("profile-avatar");
   var nm = document.getElementById("profile-name");
-  if(av){ av.textContent = p.name[0]; av.style.background = p.color; }
+  if(av){ av.textContent = p.initiale||p.name[0]; av.style.background = p.color; }
   if(nm) nm.textContent = p.name;
 
   // Show/hide tabs
@@ -2156,26 +2180,31 @@ function applyProfile(key) {
     if(p.tabs.indexOf(pgName) < 0) TAB(p.tabs[0]);
   }
 
-  // Lock/unlock planning for Chantier (read-only)
+  // Appliquer lecture seule globale (profil salarie/planningpublic) ou par onglet
   var isReadOnly = p.readOnly;
-  var planningPg = document.getElementById("pg-planning");
-  if(planningPg){
-    var inputs = planningPg.querySelectorAll("input,select,button:not([onclick*='TAB'])");
-    inputs.forEach(function(el){ el.disabled = isReadOnly; });
-    // Disable drag on cells
-    planningPg.style.pointerEvents = isReadOnly ? "none" : "";
-    // Re-enable navigation buttons
-    var navBtns = planningPg.querySelectorAll("button");
-    navBtns.forEach(function(el){ el.disabled = false; });
-  }
-
-  // Lock management tabs for Chantier
-  ["chantiers","salaries","absences","vehicules"].forEach(function(tab){
+  var roTabs = p.readOnlyTabs || [];
+  var allTabs = ["planning","rdv","chantiers","salaries","absences","formation","pointage","indemnites","gantt","bilan","absdemande","urgence","vehicules"];
+  allTabs.forEach(function(tab){
     var pg = document.getElementById("pg-"+tab);
     if(!pg) return;
-    var inputs = pg.querySelectorAll("input,select,button");
-    inputs.forEach(function(el){ el.disabled = isReadOnly; });
+    var tabRO = isReadOnly || roTabs.indexOf(tab) >= 0;
+    if(tabRO){
+      pg.setAttribute("data-readonly","1");
+      // Bannière lecture seule
+      if(!pg.querySelector(".ro-banner")){
+        var b=document.createElement("div");b.className="ro-banner";
+        b.style.cssText="background:#fff7ed;border-bottom:1px solid #fed7aa;color:#9a3412;font-size:12px;font-weight:600;padding:6px 16px;text-align:center;position:sticky;top:0;z-index:5";
+        b.textContent="👁️ Consultation uniquement — modifications non autorisées";
+        pg.insertBefore(b,pg.firstChild);
+      }
+    } else {
+      pg.removeAttribute("data-readonly");
+      var rb=pg.querySelector(".ro-banner");if(rb)rb.remove();
+    }
   });
+  // Désactiver le drag sur planning si lecture seule
+  var planningPg = document.getElementById("pg-planning");
+  if(planningPg) planningPg.style.pointerEvents = (isReadOnly||roTabs.indexOf("planning")>=0) ? "none" : "";
 
   // WhatsApp button visible only for Bureau (sending planning to team)
   var waBtn = document.querySelector("[onclick='showWhatsAppModal()']");
@@ -2245,94 +2274,53 @@ function showProfileModal() {
   sub.textContent = "Cliquez sur votre profil pour accéder à votre espace.";
   box.appendChild(sub);
 
-  Object.keys(PROFILES).forEach(function(key){
-    if(key==="planningpublic")return; // accessible uniquement via le lien dédié, pas au choix manuel
-    var p = PROFILES[key];
+  // Utilisateurs principaux
+  var mainUsers = ["quentin","alexis","valerie"];
+  var descriptions = {
+    quentin: "Planning · Chantiers · Prévisionnel",
+    alexis: "Planning · Pointage · Chantiers · Salariés",
+    valerie: "Planning · RDV · Indemnités · Formation",
+    salarie: "Planning · Pointage personnel · Absences"
+  };
+
+  mainUsers.forEach(function(key){
+    var p = PROFILES[key]; if(!p) return;
+    var isActive = key === _currentProfile;
     var btn = document.createElement("div");
-    btn.style.cssText = "display:flex;align-items:center;gap:12px;padding:14px 16px;border:2px solid " + (key===_currentProfile ? p.color : "#dde5e4") + ";border-radius:10px;cursor:pointer;margin-bottom:10px;transition:border-color .15s";
-    btn.onmouseover = function(){ btn.style.borderColor = p.color; };
-    btn.onmouseout = function(){ btn.style.borderColor = key===_currentProfile ? p.color : "#dde5e4"; };
+    btn.style.cssText = "display:flex;align-items:center;gap:14px;padding:16px 18px;border:2px solid "+(isActive?p.color:"#dde5e4")+";border-radius:12px;cursor:pointer;margin-bottom:10px;transition:border-color .15s"+(isActive?";background:#f8f9ff":"");
+    btn.onmouseover = function(){ btn.style.borderColor = p.color; btn.style.background="#f8f9ff"; };
+    btn.onmouseout = function(){ btn.style.borderColor = isActive?p.color:"#dde5e4"; btn.style.background=isActive?"#f8f9ff":""; };
     btn.onclick = function(){
-      if(p.pin){
-        // Ask PIN
-        var pinBox = document.createElement("div");
-        pinBox.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center";
-        var pb = document.createElement("div");
-        pb.style.cssText = "background:#fff;border-radius:12px;padding:24px;max-width:300px;width:92%;box-shadow:0 12px 40px rgba(0,0,0,.2);font-family:DM Sans,sans-serif";
-        var ptitle = document.createElement("div");
-        ptitle.style.cssText = "font-weight:700;font-size:15px;margin-bottom:12px;color:#13201e";
-        ptitle.textContent = "🔒 Code PIN — " + p.name;
-        pb.appendChild(ptitle);
-        var pinRow = document.createElement("div");
-        pinRow.style.cssText = "display:flex;gap:8px";
-        var pinInp = document.createElement("input");
-        pinInp.type = "password"; pinInp.maxLength = 8; pinInp.placeholder = "••••";
-        pinInp.style.cssText = "flex:1;height:38px;border:1px solid #c0cccb;border-radius:8px;padding:0 12px;font-size:18px;outline:none;letter-spacing:6px";
-        var pinOk = document.createElement("button");
-        pinOk.textContent = "OK";
-        pinOk.style.cssText = "height:38px;padding:0 16px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";
-        var pinErr = document.createElement("div");
-        pinErr.style.cssText = "color:#dc2626;font-size:11px;margin-top:6px;display:none";
-        pinErr.textContent = "Code incorrect, réessayez.";
-        var doCheck = function(){
-          if(pinInp.value === p.pin){
-            pinBox.remove(); modal.remove();
-            applyProfile(key);
-            loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👤 Connecté : " + p.name);});
-          } else {
-            pinErr.style.display = "block";
-            pinInp.value = ""; pinInp.focus();
-          }
-        };
-        pinOk.onclick = doCheck;
-        pinInp.addEventListener("keydown", function(e){ if(e.key==="Enter") doCheck(); });
-        pinRow.appendChild(pinInp); pinRow.appendChild(pinOk);
-        pb.appendChild(pinRow); pb.appendChild(pinErr);
-        var cancelP = document.createElement("button");
-        cancelP.textContent = "Annuler";
-        cancelP.style.cssText = "margin-top:10px;width:100%;height:34px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:12px;cursor:pointer";
-        cancelP.onclick = function(){ pinBox.remove(); };
-        pb.appendChild(cancelP);
-        pinBox.appendChild(pb); document.body.appendChild(pinBox);
-        setTimeout(function(){ pinInp.focus(); }, 50);
-      } else {
-        modal.remove();
-        applyProfile(key);
-        loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👤 Connecté : " + p.name);});
-      }
+      modal.remove();
+      applyProfile(key);
+      loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👋 Bonjour "+p.name+" !");});
     };
-
     var av = document.createElement("div");
-    av.style.cssText = "width:40px;height:40px;border-radius:50%;background:"+p.color+";display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0";
-    av.textContent = p.name[0];
+    av.style.cssText = "width:46px;height:46px;border-radius:50%;background:"+p.color+";display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:#fff;flex-shrink:0";
+    av.textContent = p.initiale||p.name[0];
     btn.appendChild(av);
-
     var info = document.createElement("div");
     var nm = document.createElement("div");
-    nm.style.cssText = "font-weight:600;font-size:15px;color:#13201e";
+    nm.style.cssText = "font-weight:700;font-size:16px;color:#13201e";
     nm.textContent = p.name;
     info.appendChild(nm);
     var ds = document.createElement("div");
     ds.style.cssText = "font-size:11px;color:#6b7c79;margin-top:2px";
-    ds.textContent = key === "bureau" ? "Accès complet · Tout modifiable" : key === "salarie" ? "Planning · Pointage · Absences" : key === "analyse" ? "Prévisionnel · Bilans" : "";
+    ds.textContent = descriptions[key]||"";
     info.appendChild(ds);
-    if(key==="valerie"){
-      if(vCount>0){
-        var notifBadge=document.createElement("div");
-        notifBadge.style.cssText="font-size:11px;color:#7c3aed;font-weight:700;margin-top:3px;background:#f5f3ff;border-radius:4px;padding:2px 6px;display:inline-block";
-        notifBadge.textContent="🔔 "+vCount+" pointage(s) à consulter";
-        info.appendChild(notifBadge);
-      }
-    }
     btn.appendChild(info);
-
-    var arr = document.createElement("div");
-    arr.style.cssText = "margin-left:auto;color:#c0cccb;font-size:18px";
-    arr.textContent = "→";
-    btn.appendChild(arr);
-
+    if(isActive){var chk=document.createElement("div");chk.style.cssText="margin-left:auto;color:"+p.color+";font-size:18px";chk.textContent="✓";btn.appendChild(chk);}
     box.appendChild(btn);
   });
+
+  // Séparateur + profil salarié QR
+  var sep=document.createElement("div");sep.style.cssText="border-top:1px solid #e2e8f0;margin:10px 0 10px;font-size:10px;color:#9ca3af;text-align:center;padding-top:8px";sep.textContent="— Accès spéciaux —";
+  box.appendChild(sep);
+  var salBtn=document.createElement("div");
+  salBtn.style.cssText="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:12px;color:#6b7c79";
+  salBtn.innerHTML="<span style='font-size:16px'>📱</span> <span>Connexion salarié (QR code)</span>";
+  salBtn.onclick=function(){modal.remove();showToast("Scannez le QR code affiché en réunion.");};
+  box.appendChild(salBtn);
 
   modal.appendChild(box);
   document.body.appendChild(modal);
