@@ -404,7 +404,7 @@ body.profile-salarie .tabs{display:none}
   <div class="arow" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <select id="pt-mois" style="height:34px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 10px;font-size:13px;background:var(--bg);color:var(--txt);outline:none" onchange="RPOINTAGE()">
       <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
-      <option value="4">Avril</option><option value="5">Mai</option><option value="6" selected>Juin</option>
+      <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
       <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
       <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
     </select>
@@ -4372,6 +4372,18 @@ function cleanPointageForFullDayAbsences(mois,annee){
 }
 
 function RPOINTAGE(){
+  // Initialiser le mois/année au mois courant si pas encore défini par l'utilisateur
+  (function initPtMoisAnnee(){
+    var mEl=document.getElementById("pt-mois"),aEl=document.getElementById("pt-annee");
+    if(mEl&&!mEl.dataset.userSet){
+      var now=new Date();
+      mEl.value=String(now.getMonth()+1);
+      aEl&&(aEl.value=String(now.getFullYear()));
+      mEl.dataset.userSet="auto";
+    }
+    if(mEl)mEl.addEventListener("change",function(){mEl.dataset.userSet="manual";},{once:false});
+  })();
+
   var isSalMode=(_currentProfile==="salarie");
   if(isSalMode&&_salLockedId===null){
     var urlParams0=new URLSearchParams(window.location.search);
