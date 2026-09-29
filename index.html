@@ -621,9 +621,15 @@ var NETLIFY_DATA_URL = "https://accueil-eng.github.io/blo-planning/data.json";
 function loadFromCloud(cb){
   function applyRemote(remote){
     if(!remote)return;
-    // Ne pas écraser si les données locales sont plus récentes (Bureau uniquement)
-    // Sur le téléphone salarié _lastLocalSaveAt est toujours 0 donc on applique toujours
+    // Ne pas écraser si les données locales sont plus récentes
+    // Comparer _savedAt du remote avec celui du localStorage (plus fiable que _lastLocalSaveAt qui est 0 au démarrage)
+    var localSavedAt = D && D._savedAt ? D._savedAt : 0;
+    if(remote._savedAt && localSavedAt && remote._savedAt < localSavedAt){
+      console.log("[loadFromCloud] données locales plus récentes ("+localSavedAt+" > "+remote._savedAt+"), on garde le local");
+      return;
+    }
     if(_lastLocalSaveAt > 0 && remote._savedAt && remote._savedAt < _lastLocalSaveAt){
+      console.log("[loadFromCloud] _lastLocalSaveAt plus récent, on garde le local");
       return;
     }
     D=remote;
@@ -2136,7 +2142,7 @@ var PROFILES = {
     readOnlyTabs: ["rdv"],
     readOnly: false },
   valerie: { name: "Valérie", initiale: "V", color: "#db2777",
-    tabs: ["planning","rdv","chantiers","salaries","absences","indemnites","pointage","formation"],
+    tabs: ["planning","rdv","chantiers","salaries","absences","indemnites","pointage","formation","gantt","bilan"],
     readOnlyTabs: ["pointage"],
     readOnly: false },
   // Profils techniques conservés
@@ -2279,7 +2285,7 @@ function showProfileModal() {
   var descriptions = {
     quentin: "Planning · Chantiers · Prévisionnel",
     alexis: "Planning · Pointage · Chantiers · Salariés",
-    valerie: "Planning · RDV · Indemnités · Formation",
+    valerie: "Planning · RDV · Indemnités · Formation · Prévisionnel",
     salarie: "Planning · Pointage personnel · Absences"
   };
 
@@ -3489,19 +3495,15 @@ function RGANTT(){
     if(curVal)ganttSel.value=curVal;
   }
   var ganttFilter=ganttSel?ganttSel.value:"";
-  var chantiers=ganttFilter?D.chantiers.filter(function(c){return c.id===ganttFilter;}):D.chantiers;
-  // Show all non-finished chantiers
-  chantiers=D.chantiers.filter(function(c){return !c.done;});
+  var chantiers=D.chantiers.filter(function(c){return !c.done;});
+  if(ganttFilter)chantiers=chantiers.filter(function(c){return c.id===ganttFilter;});
   chantiers=chantiers.slice().sort(function(a,b){
     var ra=(a.ref||"").trim(),rb=(b.ref||"").trim();
-    if(!ra&&!rb)return 0;
-    if(!ra)return 1;
-    if(!rb)return -1;
+    if(!ra&&!rb)return 0;if(!ra)return 1;if(!rb)return -1;
     return ra.localeCompare(rb,undefined,{numeric:true});
   });
 
   function getMon(d){var dt=new Date(d);var day=dt.getDay()||7;dt.setDate(dt.getDate()-(day-1));dt.setHours(0,0,0,0);return dt;}
-
   var weeks=[];
   var cur2=getMon(startDate);
   while(cur2<=endDate){weeks.push(new Date(cur2));cur2=new Date(cur2.getTime()+7*24*60*60*1000);}
@@ -3513,32 +3515,29 @@ function RGANTT(){
   }
 
   var LW=180,DW=160,WW=28;
-  var wrap=document.createElement("div");wrap.style.cssText="overflow-x:auto;overflow-y:auto;max-height:75vh";
-  var tbl=document.createElement("table");
-  tbl.style.cssText="border-collapse:collapse;font-size:11px";
+  var wrap=document.createElement("div");wrap.style.cssText="overflow-x:auto;overflow-y:auto;max-height:80vh";
+  var tbl=document.createElement("table");tbl.style.cssText="border-collapse:collapse;font-size:11px";
   var thead=document.createElement("thead");
 
-  // Row 1: months
-  var tr0=document.createElement("tr");
   function mkTH(txt,bg,color,minW,sticky,colSpan){
     var th=document.createElement("th");th.textContent=txt;
     th.style.cssText="border:1px solid #cbd5e1;padding:5px 6px;background:"+(bg||"#e2e8f0")+";color:"+(color||"#13201e")+";min-width:"+(minW||0)+"px;font-weight:600;text-align:center;white-space:nowrap"+(sticky?";position:sticky;left:0;z-index:3":"");
-    if(colSpan)th.colSpan=colSpan;
-    return th;
+    if(colSpan)th.colSpan=colSpan;return th;
   }
-  tr0.appendChild(mkTH("Chantier","#13201e","#fff",LW,true));
-  tr0.appendChild(mkTH("Periode","#13201e","#fff",DW));
 
-  // Group weeks by month
+  // Row 1: months
+  var tr0=document.createElement("tr");
+  tr0.appendChild(mkTH("Chantier / Phase","#13201e","#fff",LW,true));
+  tr0.appendChild(mkTH("Détail","#13201e","#fff",DW));
   var lastM=-1,lastY=-1,curTH=null;
+  var mColors=["#7c3aed","#0891b2","#16a34a","#d97706","#db2777","#dc2626","#0d9488","#4338ca","#b45309","#0f766e","#be185d","#65a30d"];
   weeks.forEach(function(w){
     var m=w.getMonth(),y=w.getFullYear();
     if(m!==lastM||y!==lastY){
       lastM=m;lastY=y;
-      var colors=["#7c3aed","#0891b2","#16a34a","#d97706","#db2777","#dc2626","#0d9488","#4338ca","#b45309","#0f766e","#be185d","#65a30d"];
-      curTH=mkTH(w.toLocaleDateString("fr-FR",{month:"short",year:"numeric"}),colors[m],"#fff",0,false,1);
+      curTH=mkTH(w.toLocaleDateString("fr-FR",{month:"short",year:"numeric"}),mColors[m],"#fff",0,false,1);
       tr0.appendChild(curTH);
-    } else if(curTH){curTH.colSpan=(curTH.colSpan||1)+1;}
+    } else if(curTH)curTH.colSpan=(curTH.colSpan||1)+1;
   });
   thead.appendChild(tr0);
 
@@ -3558,35 +3557,48 @@ function RGANTT(){
   tbl.appendChild(thead);
 
   var tbody=document.createElement("tbody");
+  var fmt2=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"2-digit"}):"?";};
+
+  // Calcul charge par semaine (effectifs)
+  var chargeMap={};
+  chantiers.forEach(function(ch){
+    (ch.phases||[]).forEach(function(ph){
+      if(!ph.debut||!ph.fin||!ph.effectif)return;
+      var pS=new Date(ph.debut),pE=new Date(ph.fin);
+      weeks.forEach(function(w,wi){
+        var wE=new Date(w.getTime()+7*24*60*60*1000);
+        if(w<pE&&wE>pS)chargeMap[wi]=(chargeMap[wi]||0)+Number(ph.effectif);
+      });
+    });
+  });
+
   chantiers.forEach(function(ch,ri){
-    var tr=document.createElement("tr");
     var bg=ri%2===0?"#fff":"#f8f7f4";
 
-    // Name cell
+    // ── Ligne principale chantier ──
+    var tr=document.createElement("tr");
     var tdN=document.createElement("td");
-    tdN.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:"+bg+";z-index:1;min-width:"+LW+"px";
-    var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:8px;height:8px;border-radius:50%;background:"+ch.color+";margin-right:6px";
+    tdN.style.cssText="border:1px solid #e2e8f0;padding:5px 8px;font-weight:700;white-space:nowrap;position:sticky;left:0;background:"+bg+";z-index:1;min-width:"+LW+"px;font-size:12px";
+    var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:9px;height:9px;border-radius:50%;background:"+ch.color+";margin-right:6px;vertical-align:middle";
     tdN.appendChild(dot);
-    tdN.appendChild(document.createTextNode((ch.ref?ch.ref+" - ":"")+ch.nom+(ch.ville?" ("+ch.ville+")":"")));
+    tdN.appendChild(document.createTextNode((ch.ref?ch.ref+" - ":"")+ch.nom));
+    // Bouton + phase
+    var addPh=document.createElement("button");addPh.title="Ajouter une phase";
+    addPh.style.cssText="margin-left:8px;border:1px solid "+ch.color+";background:none;color:"+ch.color+";border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;vertical-align:middle";
+    addPh.textContent="+ phase";
+    addPh.onclick=(function(cid){return function(e){e.stopPropagation();editGanttPhase(cid,null);RGANTT();};})(ch.id);
+    tdN.appendChild(addPh);
     tr.appendChild(tdN);
 
-    // Dates cell
     var tdD=document.createElement("td");
-    tdD.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;min-width:"+DW+"px";
-    var fmt2=function(d){return d?new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"2-digit"}):"?";};
+    tdD.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;min-width:"+DW+"px;background:"+bg;
     var hh="";
-    if(ch.dateDebutPrev&&ch.dateFinPrev){
-      hh+="<div style='color:#7c3aed'>&#9633; "+fmt2(ch.dateDebutPrev)+" &#8594; "+fmt2(ch.dateFinPrev)+"</div>";
-    } else if(ch.dateDebutPrev){
-      hh+="<div style='color:#7c3aed'>&#9633; D&#233;but pr&#233;v: "+fmt2(ch.dateDebutPrev)+"</div>";
-    }
-    if(ch.dateDebut){
-      hh+="<div style='color:"+ch.color+";font-weight:600'>&#9632; D&#233;but r&#233;el: "+fmt2(ch.dateDebut)+"</div>";
-    }
-    if(!hh)hh="<span style='color:#94a3b8;font-style:italic;font-size:10px'>Cliquer &#9998; pour saisir</span>";
+    if(ch.dateDebutPrev&&ch.dateFinPrev)hh+="<div style='color:#7c3aed'>□ "+fmt2(ch.dateDebutPrev)+" → "+fmt2(ch.dateFinPrev)+"</div>";
+    else if(ch.dateDebutPrev)hh+="<div style='color:#7c3aed'>□ Début: "+fmt2(ch.dateDebutPrev)+"</div>";
+    if(ch.dateDebut)hh+="<div style='color:"+ch.color+";font-weight:600'>■ Réel: "+fmt2(ch.dateDebut)+"</div>";
+    if(!hh)hh="<span style='color:#94a3b8;font-style:italic'>— dates à saisir —</span>";
     tdD.innerHTML=hh;
-    // Edit button
-    var eb3=document.createElement("button");eb3.className="btn";eb3.style.cssText="font-size:10px;padding:1px 5px;margin-top:3px;display:block";eb3.textContent="✏️";
+    var eb3=document.createElement("button");eb3.className="btn";eb3.style.cssText="font-size:10px;padding:1px 5px;margin-top:2px;display:block";eb3.textContent="✏️ dates";
     eb3.onclick=(function(cid){return function(){editGanttDates(cid);};})(ch.id);
     tdD.appendChild(eb3);
     tr.appendChild(tdD);
@@ -3599,32 +3611,134 @@ function RGANTT(){
       var wE=new Date(w.getTime()+7*24*60*60*1000);
       var td=document.createElement("td");
       var isNow2=(w<=today&&today<wE);
-      td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:36px;position:relative;background:"+(isNow2?"#fffde7":bg);
-
+      td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:32px;position:relative;background:"+(isNow2?"#fffde7":bg);
       if(chS&&chE&&w<chE&&wE>chS){
         var b=document.createElement("div");
         var isFstP=w<=chS&&wE>chS;var isLstP=w<chE&&wE>=chE;
-        b.style.cssText="position:absolute;top:5px;height:11px;"+
-          "background:repeating-linear-gradient(45deg,"+ch.color+","+ch.color+" 3px,rgba(255,255,255,0.6) 3px,rgba(255,255,255,0.6) 6px);"+
-          "opacity:.85;border-radius:"+(isFstP?"5px 0 0 5px":isLstP?"0 5px 5px 0":"0")+
-          ";left:"+(isFstP?"3":"0")+"px;right:"+(isLstP?"3":"0")+"px;border:1px solid "+ch.color;
+        b.style.cssText="position:absolute;top:4px;height:10px;background:repeating-linear-gradient(45deg,"+ch.color+","+ch.color+" 3px,rgba(255,255,255,.55) 3px,rgba(255,255,255,.55) 6px);opacity:.85;border-radius:"+(isFstP?"5px 0 0 5px":isLstP?"0 5px 5px 0":"0")+";left:"+(isFstP?"3":"0")+"px;right:"+(isLstP?"3":"0")+"px;border:1px solid "+ch.color;
         td.appendChild(b);
       }
       if(chR&&w<(chE||new Date(9e12))&&wE>chR){
-        var bR=document.createElement("div");
-        var isFstR=w<=chR&&wE>chR;
-        bR.style.cssText="position:absolute;top:20px;height:11px;background:"+ch.color+
-          ";opacity:1;left:"+(isFstR?"3":"0")+"px;right:2px;border-radius:"+(isFstR?"5px 0 0 5px":"0")+
-          ";box-shadow:0 1px 3px rgba(0,0,0,.2)";
+        var bR=document.createElement("div");var isFstR=w<=chR&&wE>chR;
+        bR.style.cssText="position:absolute;top:18px;height:10px;background:"+ch.color+";opacity:1;left:"+(isFstR?"3":"0")+"px;right:2px;border-radius:"+(isFstR?"5px 0 0 5px":"0")+";box-shadow:0 1px 3px rgba(0,0,0,.2)";
         td.appendChild(bR);
       }
-      if(isNow2){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5";td.appendChild(tl);}
+      if(isNow2){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.4";td.appendChild(tl);}
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
+
+    // ── Lignes phases ──
+    (ch.phases||[]).forEach(function(ph,phi){
+      var trPh=document.createElement("tr");
+      var tdPName=document.createElement("td");
+      tdPName.style.cssText="border:1px solid #e2e8f0;padding:3px 8px 3px 22px;white-space:nowrap;position:sticky;left:0;background:#f0f4ff;z-index:1;min-width:"+LW+"px;font-size:11px;color:#3730a3";
+      tdPName.innerHTML="<span style='margin-right:5px;color:"+ch.color+"'>↳</span><b>"+ph.nom+"</b><span style='color:#6b7280;margin-left:6px;font-size:10px'>"+ph.effectif+" pers.</span>";
+      var delPh=document.createElement("button");delPh.title="Supprimer";
+      delPh.style.cssText="margin-left:6px;border:none;background:none;color:#dc2626;cursor:pointer;font-size:11px;padding:0 2px";
+      delPh.textContent="✕";
+      delPh.onclick=(function(cid,pidx){return function(e){e.stopPropagation();if(!confirm("Supprimer cette phase ?"))return;var c=D.chantiers.find(function(x){return x.id===cid;});if(c&&c.phases)c.phases.splice(pidx,1);save();RGANTT();};})(ch.id,phi);
+      tdPName.appendChild(delPh);
+      var editPh=document.createElement("button");editPh.title="Modifier";
+      editPh.style.cssText="margin-left:3px;border:none;background:none;color:#7c3aed;cursor:pointer;font-size:11px;padding:0 2px";
+      editPh.textContent="✏️";
+      editPh.onclick=(function(cid,pidx){return function(e){e.stopPropagation();editGanttPhase(cid,pidx);}})(ch.id,phi);
+      tdPName.appendChild(editPh);
+      trPh.appendChild(tdPName);
+
+      var tdPD=document.createElement("td");
+      tdPD.style.cssText="border:1px solid #e2e8f0;padding:3px 8px;font-size:10px;min-width:"+DW+"px;background:#f0f4ff;color:#4338ca";
+      tdPD.textContent=fmt2(ph.debut)+" → "+fmt2(ph.fin);
+      trPh.appendChild(tdPD);
+
+      var pS=ph.debut?new Date(ph.debut):null;
+      var pE=ph.fin?new Date(ph.fin):null;
+      weeks.forEach(function(w){
+        var wE=new Date(w.getTime()+7*24*60*60*1000);
+        var td=document.createElement("td");
+        var isNow3=(w<=today&&today<wE);
+        td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;height:22px;position:relative;background:"+(isNow3?"#fef9c3":"#f0f4ff");
+        if(pS&&pE&&w<pE&&wE>pS){
+          var bp=document.createElement("div");
+          var isFP=w<=pS&&wE>pS;var isLP=w<pE&&wE>=pE;
+          bp.style.cssText="position:absolute;top:5px;height:12px;background:"+ch.color+";opacity:.75;border-radius:"+(isFP?"5px 0 0 5px":isLP?"0 5px 5px 0":"0")+";left:"+(isFP?"3":"0")+"px;right:"+(isLP?"3":"0")+"px";
+          bp.title=ph.nom+" ("+ph.effectif+" pers.)";
+          td.appendChild(bp);
+        }
+        if(isNow3){var tl2=document.createElement("div");tl2.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.4";td.appendChild(tl2);}
+        trPh.appendChild(td);
+      });
+      tbody.appendChild(trPh);
+    });
   });
+
+  // ── Ligne charge effectifs ──
+  var maxCharge=Math.max(1,Math.max.apply(null,Object.values(chargeMap).concat([0])));
+  var trC=document.createElement("tr");
+  var tdCN=document.createElement("td");
+  tdCN.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;position:sticky;left:0;background:#ecfdf5;z-index:1;font-size:11px;color:#065f46;white-space:nowrap";
+  tdCN.textContent="👷 Charge (effectifs)";
+  trC.appendChild(tdCN);
+  var tdCDet=document.createElement("td");
+  tdCDet.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;background:#ecfdf5;font-size:10px;color:#065f46";
+  tdCDet.textContent="Total personnes / semaine";
+  trC.appendChild(tdCDet);
+  weeks.forEach(function(w,wi){
+    var val=chargeMap[wi]||0;
+    var td=document.createElement("td");
+    td.style.cssText="border:1px solid #e2e8f0;padding:2px 0;width:"+WW+"px;text-align:center;background:#ecfdf5;position:relative;height:40px";
+    if(val>0){
+      var barH=Math.round((val/maxCharge)*30);
+      var bar=document.createElement("div");
+      bar.style.cssText="position:absolute;bottom:2px;left:2px;right:2px;height:"+barH+"px;background:#10b981;border-radius:2px 2px 0 0;opacity:.8";
+      bar.title=val+" pers. S"+getISOWeek(w);
+      td.appendChild(bar);
+      var lbl=document.createElement("div");
+      lbl.style.cssText="position:absolute;bottom:"+(barH+3)+"px;left:0;right:0;text-align:center;font-size:9px;font-weight:700;color:#065f46";
+      lbl.textContent=val;
+      td.appendChild(lbl);
+    }
+    trC.appendChild(td);
+  });
+  tbody.appendChild(trC);
+
   tbl.appendChild(tbody);wrap.appendChild(tbl);gWrap.appendChild(wrap);
-  if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Pr&#233;visionnel (hachuré)</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> R&#233;el (plein)</span><span style='color:#dc2626'>| Aujourd&#39;hui</span>";
+  if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Prévisionnel</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> Réel</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#7c3aed;border-radius:3px;vertical-align:middle'></span> Phase</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#10b981;border-radius:3px;vertical-align:middle'></span> Charge effectifs</span><span style='color:#dc2626'>| Aujourd'hui</span>";
+}
+
+// Modale ajout/édition de phase
+function editGanttPhase(chId, phaseIdx){
+  var ch=D.chantiers.find(function(c){return c.id===chId;});if(!ch)return;
+  if(!ch.phases)ch.phases=[];
+  var isNew=(phaseIdx===null||phaseIdx===undefined);
+  var ph=isNew?{nom:"",debut:"",fin:"",effectif:1}:Object.assign({},ch.phases[phaseIdx]);
+  var existing=document.getElementById("gantt-phase-modal");if(existing)existing.remove();
+  var modal=document.createElement("div");modal.id="gantt-phase-modal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:380px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif";
+  var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:14px;color:#3730a3";
+  title.textContent=(isNew?"➕ Nouvelle phase — ":"✏️ Modifier phase — ")+(ch.ref?ch.ref+" ":"")+ch.nom;
+  box.appendChild(title);
+  function mkRow(label,inp){var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:10px";var lbl=document.createElement("label");lbl.style.cssText="font-size:12px;font-weight:500;width:130px;flex-shrink:0;color:#475569";lbl.textContent=label;row.appendChild(lbl);row.appendChild(inp);box.appendChild(row);return inp;}
+  var iNom=mkRow("Nom de la phase",Object.assign(document.createElement("input"),{type:"text",value:ph.nom,placeholder:"ex: Maçonnerie",style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var iDeb=mkRow("Date début",Object.assign(document.createElement("input"),{type:"date",value:ph.debut,style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var iFin=mkRow("Date fin",Object.assign(document.createElement("input"),{type:"date",value:ph.fin,style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var iEff=mkRow("Effectif (personnes)",Object.assign(document.createElement("input"),{type:"number",value:ph.effectif||1,min:1,max:20,style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:4px";
+  var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#3730a3;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
+  okBtn.onclick=function(){
+    var nph={nom:iNom.value.trim(),debut:iDeb.value,fin:iFin.value,effectif:parseInt(iEff.value)||1};
+    if(!nph.nom){alert("Saisissez un nom de phase.");return;}
+    if(isNew)ch.phases.push(nph);else ch.phases[phaseIdx]=nph;
+    save();modal.remove();RGANTT();
+  };
+  var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
+  cancelBtn.onclick=function(){modal.remove();};
+  btnRow.appendChild(okBtn);btnRow.appendChild(cancelBtn);box.appendChild(btnRow);
+  modal.appendChild(box);document.body.appendChild(modal);
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+  setTimeout(function(){iNom.focus();},50);
 }
 
 
