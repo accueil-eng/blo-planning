@@ -3672,38 +3672,186 @@ function RGANTT(){
     });
   });
 
-  // ── Ligne charge effectifs ──
-  var maxCharge=Math.max(1,Math.max.apply(null,Object.values(chargeMap).concat([0])));
+  // ── Ligne charge effectifs (barres hebdomadaires) ──
+  var chargeVals=Object.values(chargeMap).concat([0]);
+  var maxCharge=Math.max(1,Math.max.apply(null,chargeVals));
+  var ROW_H=52;
+  var BAR_MAX=40;
   var trC=document.createElement("tr");
   var tdCN=document.createElement("td");
   tdCN.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-weight:700;position:sticky;left:0;background:#ecfdf5;z-index:1;font-size:11px;color:#065f46;white-space:nowrap";
-  tdCN.textContent="👷 Charge (effectifs)";
+  tdCN.innerHTML="👷 Charge<br><span style='font-size:9px;font-weight:400'>effectifs / sem.</span>";
   trC.appendChild(tdCN);
   var tdCDet=document.createElement("td");
-  tdCDet.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;background:#ecfdf5;font-size:10px;color:#065f46";
-  tdCDet.textContent="Total personnes / semaine";
+  tdCDet.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;background:#ecfdf5;font-size:10px;color:#065f46;vertical-align:middle;text-align:center";
+  tdCDet.innerHTML="<b>max "+maxCharge+"</b><br>pers.";
   trC.appendChild(tdCDet);
   weeks.forEach(function(w,wi){
     var val=chargeMap[wi]||0;
     var td=document.createElement("td");
-    td.style.cssText="border:1px solid #e2e8f0;padding:2px 0;width:"+WW+"px;text-align:center;background:#ecfdf5;position:relative;height:40px";
+    var isNowC=(w<=today&&today<new Date(w.getTime()+7*24*60*60*1000));
+    td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;background:"+(isNowC?"#d1fae5":"#ecfdf5")+";position:relative;height:"+ROW_H+"px;overflow:hidden";
     if(val>0){
-      var barH=Math.round((val/maxCharge)*30);
+      var barH=Math.max(4,Math.round((val/maxCharge)*BAR_MAX));
+      var pct=Math.round(val/maxCharge*100);
+      // Couleur selon charge : vert→orange→rouge
+      var barColor= pct>80?"#ef4444":pct>50?"#f59e0b":"#10b981";
       var bar=document.createElement("div");
-      bar.style.cssText="position:absolute;bottom:2px;left:2px;right:2px;height:"+barH+"px;background:#10b981;border-radius:2px 2px 0 0;opacity:.8";
+      bar.style.cssText="position:absolute;bottom:0;left:1px;right:1px;height:"+barH+"px;background:"+barColor+";border-radius:2px 2px 0 0;opacity:.85;transition:height .2s";
       bar.title=val+" pers. S"+getISOWeek(w);
       td.appendChild(bar);
       var lbl=document.createElement("div");
-      lbl.style.cssText="position:absolute;bottom:"+(barH+3)+"px;left:0;right:0;text-align:center;font-size:9px;font-weight:700;color:#065f46";
+      lbl.style.cssText="position:absolute;bottom:"+(barH+2)+"px;left:0;right:0;text-align:center;font-size:9px;font-weight:800;color:"+barColor;
       lbl.textContent=val;
       td.appendChild(lbl);
     }
+    if(isNowC){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.35;z-index:2";td.appendChild(tl);}
     trC.appendChild(td);
   });
   tbody.appendChild(trC);
 
   tbl.appendChild(tbody);wrap.appendChild(tbl);gWrap.appendChild(wrap);
-  if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Prévisionnel</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> Réel</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#7c3aed;border-radius:3px;vertical-align:middle'></span> Phase</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#10b981;border-radius:3px;vertical-align:middle'></span> Charge effectifs</span><span style='color:#dc2626'>| Aujourd'hui</span>";
+  if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Prévisionnel</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> Réel</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#7c3aed;border-radius:3px;vertical-align:middle'></span> Phase</span><span style='margin-right:12px;white-space:nowrap'><span style='display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;vertical-align:middle'></span>/<span style='display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;vertical-align:middle'></span>/<span style='display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;vertical-align:middle'></span> Charge effectifs</span><span style='color:#dc2626'>| Aujourd'hui</span>";
+
+  // ── Carte de charge mensuelle ──
+  _renderChargeCard(gWrap, chantiers, startDate, endDate);
+}
+
+function _renderChargeCard(gWrap, chantiers, startDate, endDate){
+  // Calculer les mois entre startDate et endDate
+  var months=[];
+  var cur=new Date(startDate.getFullYear(),startDate.getMonth(),1);
+  var end=new Date(endDate.getFullYear(),endDate.getMonth(),1);
+  while(cur<=end){months.push(new Date(cur));cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);}
+  if(!months.length)return;
+
+  // Pour chaque mois, calculer la charge par chantier (somme eff * jours_ouvres_phase_dans_mois / jours_ouvres_mois)
+  var mNames=["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+  var mColors=["#7c3aed","#0891b2","#16a34a","#d97706","#db2777","#dc2626","#0d9488","#4338ca","#b45309","#0f766e","#be185d","#65a30d"];
+  var today=new Date();
+
+  // chargeByMonth[mi] = { total: N, detail: [{ch, eff}] }
+  var chargeByMonth=months.map(function(mStart){
+    var mEnd=new Date(mStart.getFullYear(),mStart.getMonth()+1,0); // dernier jour du mois
+    var total=0;
+    var detail=[];
+    chantiers.forEach(function(ch){
+      var chEff=0;
+      (ch.phases||[]).forEach(function(ph){
+        if(!ph.debut||!ph.fin||!ph.effectif)return;
+        var pS=new Date(ph.debut),pE=new Date(ph.fin);
+        // Si la phase chevauche ce mois
+        if(pS<=mEnd&&pE>=mStart){
+          chEff+=Number(ph.effectif);
+        }
+      });
+      if(chEff>0){total+=chEff;detail.push({ch:ch,eff:chEff});}
+    });
+    return{total:total,detail:detail};
+  });
+
+  var maxTotal=Math.max(1,Math.max.apply(null,chargeByMonth.map(function(m){return m.total;})));
+
+  // Card container
+  var card=document.createElement("div");
+  card.style.cssText="margin-top:24px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid #e2e8f0;padding:20px 24px;font-family:DM Sans,sans-serif";
+
+  var cardTitle=document.createElement("div");
+  cardTitle.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:15px;color:#13201e;margin-bottom:4px;display:flex;align-items:center;gap:8px";
+  cardTitle.innerHTML="📊 Carte de charge mensuelle <span style='font-size:11px;font-weight:400;color:#6b7280;font-family:DM Sans,sans-serif'>— effectifs engagés par mois</span>";
+  card.appendChild(cardTitle);
+
+  // Légende chantiers
+  var legWrap=document.createElement("div");
+  legWrap.style.cssText="display:flex;flex-wrap:wrap;gap:8px 16px;margin:10px 0 18px";
+  chantiers.forEach(function(ch){
+    var hasPhases=(ch.phases||[]).some(function(p){return p.effectif>0;});
+    if(!hasPhases)return;
+    var l=document.createElement("span");
+    l.style.cssText="display:flex;align-items:center;gap:5px;font-size:11px;color:#374151";
+    l.innerHTML="<span style='display:inline-block;width:12px;height:12px;border-radius:3px;background:"+ch.color+"'></span>"+(ch.ref?ch.ref+" — ":"")+ch.nom;
+    legWrap.appendChild(l);
+  });
+  card.appendChild(legWrap);
+
+  // Chart area
+  var chartArea=document.createElement("div");
+  chartArea.style.cssText="display:flex;align-items:flex-end;gap:6px;height:160px;padding-bottom:0;overflow-x:auto;padding:0 4px 0 0";
+
+  var CHART_H=130;
+  months.forEach(function(mStart,mi){
+    var data=chargeByMonth[mi];
+    var total=data.total;
+    var isNowM=(mStart.getFullYear()===today.getFullYear()&&mStart.getMonth()===today.getMonth());
+    var col=document.createElement("div");
+    col.style.cssText="display:flex;flex-direction:column;align-items:center;flex:1;min-width:52px;max-width:80px;position:relative";
+
+    // Barre empilée par chantier
+    var barWrap=document.createElement("div");
+    barWrap.style.cssText="display:flex;flex-direction:column-reverse;width:100%;height:"+CHART_H+"px;justify-content:flex-start;align-items:center;position:relative";
+
+    if(total>0){
+      var barInner=document.createElement("div");
+      barInner.style.cssText="display:flex;flex-direction:column-reverse;width:80%;border-radius:4px 4px 0 0;overflow:hidden;position:absolute;bottom:0";
+      var totalH=Math.round((total/maxTotal)*CHART_H);
+      barInner.style.height=totalH+"px";
+
+      // Empiler les chantiers (couleurs)
+      var usedH=0;
+      data.detail.forEach(function(d,di){
+        var segH=Math.round((d.eff/total)*totalH);
+        if(di===data.detail.length-1)segH=totalH-usedH; // dernier = reste
+        var seg=document.createElement("div");
+        seg.style.cssText="width:100%;height:"+segH+"px;background:"+d.ch.color+";opacity:.85";
+        seg.title=(d.ch.ref?d.ch.ref+" — ":"")+d.ch.nom+": "+d.eff+" pers.";
+        barInner.appendChild(seg);
+        usedH+=segH;
+      });
+      barWrap.appendChild(barInner);
+
+      // Valeur au-dessus
+      var valLbl=document.createElement("div");
+      valLbl.style.cssText="position:absolute;bottom:"+(totalH+4)+"px;left:0;right:0;text-align:center;font-size:11px;font-weight:800;color:"+(total/maxTotal>.7?"#ef4444":total/maxTotal>.4?"#f59e0b":"#10b981");
+      valLbl.textContent=total;
+      barWrap.appendChild(valLbl);
+    }
+    col.appendChild(barWrap);
+
+    // Label mois
+    var mLabel=document.createElement("div");
+    mLabel.style.cssText="font-size:10px;font-weight:"+(isNowM?"800":"500")+";color:"+(isNowM?"#dc2626":"#64748b")+";text-align:center;margin-top:4px;white-space:nowrap;border-top:2px solid "+(isNowM?"#dc2626":"transparent")+";padding-top:2px;width:100%";
+    mLabel.textContent=mNames[mStart.getMonth()]+" "+String(mStart.getFullYear()).slice(2);
+    col.appendChild(mLabel);
+
+    chartArea.appendChild(col);
+  });
+
+  // Axe Y (optionnel, ligne de max)
+  var chartWrap=document.createElement("div");chartWrap.style.cssText="position:relative;display:flex;flex-direction:column";
+  // Lignes de grille
+  var gridWrap=document.createElement("div");
+  gridWrap.style.cssText="position:relative";
+
+  var yAxis=document.createElement("div");
+  yAxis.style.cssText="display:flex;flex-direction:column;justify-content:space-between;height:"+CHART_H+"px;padding-right:6px;align-items:flex-end;flex-shrink:0";
+  [maxTotal,Math.round(maxTotal/2),0].forEach(function(v){
+    var y=document.createElement("div");y.style.cssText="font-size:9px;color:#94a3b8;white-space:nowrap";y.textContent=v+" p.";
+    yAxis.appendChild(y);
+  });
+
+  var areaRow=document.createElement("div");areaRow.style.cssText="display:flex;align-items:flex-end";
+  areaRow.appendChild(yAxis);
+  areaRow.appendChild(chartArea);
+  card.appendChild(areaRow);
+
+  // Grille horizontale en SVG overlay (simplifié — on utilise des lignes CSS)
+  // Juste une ligne de fond
+  var footnote=document.createElement("div");
+  footnote.style.cssText="margin-top:8px;font-size:10px;color:#9ca3af;font-style:italic";
+  footnote.textContent="Effectifs = somme des personnes engagées sur des phases actives dans le mois. Barre colorée = contribution par chantier.";
+  card.appendChild(footnote);
+
+  gWrap.appendChild(card);
 }
 
 // Modale ajout/édition de phase
