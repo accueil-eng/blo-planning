@@ -239,6 +239,7 @@ body.profile-salarie .tabs{display:none}
     <input type="number" id="nbrows" min="1" max="30" value="6" style="width:52px" onchange="RP()">
     <div style="margin-left:auto;display:flex;gap:6px">
       <button class="btn btn-p" style="font-size:12px" onclick="XCSV()">⬇ CSV</button>
+      <button class="btn" style="font-size:12px;background:#fef3c7;border-color:#fcd34d;color:#92400e" onclick="printPlanningWeek()" title="Imprimer le planning de la semaine">🖨️</button>
       <button class="btn" style="font-size:12px;background:#e0f2fe;border-color:#7dd3fc;color:#0369a1" onclick="loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RANALYSE();RGANTT();RPOINTAGE();RINDEM();showToast('✅ Données actualisées')})">🔄 Actualiser</button>
       <button class="btn" style="font-size:12px;background:#dcfce7;border-color:#86efac;color:#166534" onclick="showWhatsAppModal()">📱 Envoyer planning WhatsApp</button>
     </div>
@@ -284,7 +285,10 @@ body.profile-salarie .tabs{display:none}
 </div>
 
 <div class="pg" id="pg-absences">
-  <h2 class="stitle">Absences</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+    <h2 class="stitle" style="margin:0">Absences</h2>
+    <button class="btn" style="font-size:12px;background:#fef3c7;border-color:#fcd34d;color:#92400e" onclick="printAbsences()" title="Imprimer les absences du mois">🖨️ Imprimer</button>
+  </div>
   <div id="absdemandes-wrap" style="margin-bottom:18px"></div>
   <div class="arow" style="flex-wrap:wrap">
     <select id="absal" style="min-width:130px"></select>
@@ -365,6 +369,7 @@ body.profile-salarie .tabs{display:none}
     <select id="gantt-sel" style="min-width:220px;height:34px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 10px;font-size:13px;background:var(--bg);color:var(--txt);outline:none" onchange="RGANTT()">
       <option value="">Tous les chantiers</option>
     </select>
+    <button class="btn" style="font-size:12px;background:#fef3c7;border-color:#fcd34d;color:#92400e" onclick="printGantt()" title="Imprimer le planning annuel">🖨️ Imprimer</button>
   </div>
   <div style="margin-bottom:8px">
     <button class="btn btn-p" onclick="addChantierFromGantt()" style="font-size:12px">+ Nouveau chantier</button>
@@ -417,6 +422,7 @@ body.profile-salarie .tabs{display:none}
       <option value="">— Tous les salariés —</option>
     </select>
     <button class="btn btn-p" id="export-pointage-btn" onclick="exportPointageXLSX()" style="background:#16a34a;border-color:#16a34a">📥 Export Excel</button>
+    <button class="btn" style="font-size:12px;background:#fef3c7;border-color:#fcd34d;color:#92400e" onclick="printPointage()" title="Imprimer le pointage">🖨️ Imprimer</button>
     <select id="archive-select" style="height:34px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 10px;font-size:12px;background:var(--bg);color:var(--txt);outline:none" onchange="handleArchiveSelect(this)">
       <option value="">🗄️ Archiver...</option>
       <option value="pointages">Pointages de plus d'1 an</option>
@@ -1973,6 +1979,124 @@ function printQRCode(nom,qrImgUrl){
     "</body></html>");
   w.document.close();
   setTimeout(function(){w.print();},400);
+}
+
+// ── IMPRESSION UNIVERSELLE ──
+function printSection(title,htmlContent,extraCss){
+  var w=window.open("","_blank");
+  if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
+  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+title+"</title><style>"+
+    "@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap');"+
+    "body{font-family:Syne,sans-serif;padding:20px;font-size:11px;color:#13201e;margin:0}"+
+    "h1{font-size:16px;font-weight:800;margin:0 0 4px;color:#13201e}"+
+    ".subtitle{font-size:11px;color:#6b7c79;margin:0 0 16px}"+
+    "table{border-collapse:collapse;width:100%}"+
+    "th{border:1px solid #cbd5e1;padding:4px 6px;background:#e2e8f0;font-weight:700;font-size:10px;text-align:center}"+
+    "td{border:1px solid #e2e8f0;padding:3px 5px;font-size:10px}"+
+    ".header-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;border-bottom:2px solid #13201e;padding-bottom:8px}"+
+    ".logo-txt{font-family:Syne,sans-serif;font-weight:800;font-size:18px;color:#13201e;letter-spacing:-0.5px}"+
+    "@page{margin:12mm;size:A4 landscape}"+
+    "@media print{button{display:none!important}}"+
+    (extraCss||"")+
+    "</style></head><body>"+
+    "<div class='header-bar'>"+
+    "<span class='logo-txt'>BLO</span>"+
+    "<h1>"+title+"</h1>"+
+    "<span class='subtitle'>Imprimé le "+new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+"</span>"+
+    "</div>"+
+    htmlContent+
+    "</body></html>");
+  w.document.close();
+  setTimeout(function(){w.print();},600);
+}
+
+function printPlanningWeek(){
+  var tbl=document.getElementById("ptable");
+  if(!tbl){showToast("Aucun planning à imprimer.");return;}
+  var lbl=document.getElementById("wlbl");
+  var title="Planning semaine"+(lbl?" — "+lbl.textContent:"");
+  // Cloner le tableau pour ne pas affecter l'UI
+  var clone=tbl.cloneNode(true);
+  // Supprimer les boutons de drag, les éléments d'édition
+  clone.querySelectorAll("button,input,select,.drag-handle").forEach(function(el){el.remove();});
+  var css="table{font-size:9px}td,th{padding:3px 4px}@page{size:A4 landscape}";
+  printSection(title,clone.outerHTML,css);
+}
+
+function printPointage(){
+  var wrap=document.getElementById("pointage-wrap");
+  if(!wrap||!wrap.innerHTML.trim()){showToast("Aucun pointage à imprimer.");return;}
+  var moisEl=document.getElementById("pt-mois");
+  var anEl=document.getElementById("pt-annee");
+  var salEl=document.getElementById("pt-sal");
+  var MNOMS=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var mois=moisEl?parseInt(moisEl.value):new Date().getMonth()+1;
+  var annee=anEl?parseInt(anEl.value):new Date().getFullYear();
+  var salNom=salEl&&salEl.value?(salEl.options[salEl.selectedIndex]||{}).text:"Tous les salariés";
+  var title="Pointage "+MNOMS[mois]+" "+annee+" — "+salNom;
+  var clone=wrap.cloneNode(true);
+  clone.querySelectorAll("button,select,.no-print").forEach(function(el){el.remove();});
+  var css="table{font-size:9px}td,th{padding:2px 4px;min-width:0!important;width:auto}@page{size:A4 landscape}";
+  printSection(title,clone.outerHTML,css);
+}
+
+function printAbsences(){
+  var MNOMS=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  // Construire un sélecteur de mois/année dans une mini-modal
+  var existing=document.getElementById("print-abs-modal");if(existing)existing.remove();
+  var today=new Date();
+  var modal=document.createElement("div");modal.id="print-abs-modal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center";
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:12px;padding:24px;max-width:320px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2)";
+  var mOptsHtml="";
+  for(var m=1;m<=12;m++)mOptsHtml+="<option value='"+m+"'"+(m===today.getMonth()+1?" selected":"")+">"+MNOMS[m]+"</option>";
+  box.innerHTML="<div style='font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:16px'>🖨️ Imprimer les absences</div>"+
+    "<div style='display:flex;gap:8px;margin-bottom:16px'>"+
+    "<select id='print-abs-mois' style='flex:1;height:34px;border:1px solid #cbd5e1;border-radius:8px;padding:0 8px;font-size:13px'>"+mOptsHtml+"</select>"+
+    "<input type='number' id='print-abs-annee' value='"+today.getFullYear()+"' min='2020' max='2035' style='width:80px;height:34px;border:1px solid #cbd5e1;border-radius:8px;padding:0 8px;font-size:13px'>"+
+    "</div>"+
+    "<div style='display:flex;gap:8px'>"+
+    "<button onclick='_doPrintAbs()' style='flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer'>Imprimer</button>"+
+    "<button onclick='document.getElementById(\"print-abs-modal\").remove()' style='height:36px;padding:0 16px;border:1px solid #cbd5e1;background:none;border-radius:8px;font-size:13px;cursor:pointer'>Annuler</button>"+
+    "</div>";
+  modal.appendChild(box);document.body.appendChild(modal);
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+}
+
+function _doPrintAbs(){
+  var MNOMS=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var mois=parseInt(document.getElementById("print-abs-mois").value);
+  var annee=parseInt(document.getElementById("print-abs-annee").value);
+  document.getElementById("print-abs-modal").remove();
+  var ABLBLS2={cp:"Congés payés",intemperies:"Intempéries",css:"Congés sans solde",formation:"Formation",maladie:"Arrêt maladie",autre:"Autre",rtt:"RTT"};
+  var abs=D.absences.filter(function(a){
+    var d=pd(a.debut),f=pd(a.fin);
+    return (d.getMonth()+1<=mois&&d.getFullYear()<=annee&&f.getMonth()+1>=mois&&f.getFullYear()>=annee)||
+           (d.getFullYear()===annee&&d.getMonth()+1===mois)||
+           (f.getFullYear()===annee&&f.getMonth()+1===mois);
+  }).sort(function(a,b){return a.debut.localeCompare(b.debut);});
+  if(!abs.length){showToast("Aucune absence pour "+MNOMS[mois]+" "+annee);return;}
+  var rows=abs.map(function(a){
+    var sal=D.salaries.find(function(s){return s.id===a.salId;})||{prenom:"?",nom:""};
+    var d1=pd(a.debut).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+    var d2=pd(a.fin).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+    var heures=a.heureDebut&&a.heureFin?"("+a.heureDebut+"→"+a.heureFin+")":"Journée complète";
+    return "<tr><td>"+(sal.prenom+" "+(sal.nom||"")).trim()+"</td><td>"+d1+"</td><td>"+d2+"</td><td>"+(ABLBLS2[a.type]||a.type)+"</td><td>"+heures+"</td></tr>";
+  }).join("");
+  var html="<table><thead><tr><th>Salarié</th><th>Début</th><th>Fin</th><th>Type</th><th>Horaire</th></tr></thead><tbody>"+rows+"</tbody></table>";
+  printSection("Absences — "+MNOMS[mois]+" "+annee,html,"@page{size:A4 portrait}");
+}
+
+function printGantt(){
+  var wrap=document.getElementById("gantt-wrap");
+  if(!wrap||!wrap.innerHTML.trim()){showToast("Aucun planning annuel à imprimer.");return;}
+  var ds=document.getElementById("gantt-date-start"),de=document.getElementById("gantt-date-end");
+  var title="Planning annuel"+(ds&&ds.value?" du "+new Date(ds.value).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"}):"")+(de&&de.value?" au "+new Date(de.value).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"}):"");
+  var clone=wrap.cloneNode(true);
+  clone.querySelectorAll("button,input,select,.no-print").forEach(function(el){el.remove();});
+  var css="table{font-size:8px}td,th{padding:2px 3px;min-width:0!important}@page{size:A3 landscape;margin:8mm}";
+  printSection(title,clone.outerHTML,css);
 }
 
 // ── ABSENCES ──
@@ -3607,9 +3731,16 @@ function RGANTT(){
   });
 
   function getMon(d){var dt=new Date(d);var day=dt.getDay()||7;dt.setDate(dt.getDate()-(day-1));dt.setHours(0,0,0,0);return dt;}
+  var _gStart=new Date(startDate.getFullYear(),startDate.getMonth(),1);
+  var _gEnd=new Date(endDate.getFullYear(),endDate.getMonth()+1,0);
   var weeks=[];
   var cur2=getMon(startDate);
-  while(cur2<=endDate){weeks.push(new Date(cur2));cur2=new Date(cur2.getTime()+7*24*60*60*1000);}
+  while(cur2<=endDate){
+    // N'inclure la semaine que si son jeudi (ISO) est dans la plage de mois sélectionnée
+    var _thu=new Date(cur2.getTime()+3*24*60*60*1000);
+    if(_thu>=_gStart&&_thu<=_gEnd)weeks.push(new Date(cur2));
+    cur2=new Date(cur2.getTime()+7*24*60*60*1000);
+  }
 
   gWrap.innerHTML="";
   if(!chantiers.length){
@@ -3635,10 +3766,12 @@ function RGANTT(){
   var lastM=-1,lastY=-1,curTH=null;
   var mColors=["#7c3aed","#0891b2","#16a34a","#d97706","#db2777","#dc2626","#0d9488","#4338ca","#b45309","#0f766e","#be185d","#65a30d"];
   weeks.forEach(function(w){
-    var m=w.getMonth(),y=w.getFullYear();
+    // Utiliser le jeudi (ISO) pour déterminer le mois de la semaine
+    var thu=new Date(w.getTime()+3*24*60*60*1000);
+    var m=thu.getMonth(),y=thu.getFullYear();
     if(m!==lastM||y!==lastY){
       lastM=m;lastY=y;
-      curTH=mkTH(w.toLocaleDateString("fr-FR",{month:"short",year:"numeric"}),mColors[m],"#fff",0,false,1);
+      curTH=mkTH(thu.toLocaleDateString("fr-FR",{month:"short",year:"numeric"}),mColors[m],"#fff",0,false,1);
       tr0.appendChild(curTH);
     } else if(curTH)curTH.colSpan=(curTH.colSpan||1)+1;
   });
