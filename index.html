@@ -1310,7 +1310,25 @@ function mkAbsCell(d){
     var c=document.createElement("div");c.className="st-chip ab";c.style.flexWrap="wrap";
     var dot=document.createElement("span");dot.className="cdot";dot.style.background=sal.color;c.appendChild(dot);
     var nm=document.createElement("span");nm.style.cssText="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px";nm.textContent=sal.prenom+(sal.nom?" "+sal.nom[0]+".":"");c.appendChild(nm);
-    var lb=document.createElement("span");lb.style.cssText="font-size:9px;font-weight:700;opacity:.85;background:rgba(0,0,0,.06);border-radius:3px;padding:1px 4px";lb.textContent=ABABBR[sal.absType]||"";c.appendChild(lb);
+    var absLabel=sal.absType==="formation"?"FORM":(ABABBR[sal.absType]||sal.absType||"ABS");
+    var lb=document.createElement("span");lb.style.cssText="font-size:9px;font-weight:700;opacity:.85;background:rgba(0,0,0,.06);border-radius:3px;padding:1px 4px";lb.textContent=absLabel;c.appendChild(lb);
+    // Si ce salarié était aussi affecté à un chantier ce jour, l'indiquer
+    var chAffecte=null;
+    var nb=getNR();
+    for(var r=0;r<nb;r++){
+      var ck=CW+"|"+r+"|"+d;
+      if((D.cells[ck]||[]).indexOf(sal.id)>=0){
+        var ch=GRC(CW+"|"+r);
+        chAffecte=ch?ch.nom:"Chantier";break;
+      }
+    }
+    if(chAffecte){
+      var chTag=document.createElement("span");
+      chTag.style.cssText="font-size:9px;color:#7c3aed;background:#ede9fe;border-radius:3px;padding:1px 4px;margin-left:2px;font-weight:600";
+      chTag.title="Retiré du chantier car absent";
+      chTag.textContent="📋 "+chAffecte;
+      c.appendChild(chTag);
+    }
     cc.appendChild(c);
     if(sal.absHeureDebut&&sal.absHeureFin){
       var hr=document.createElement("div");hr.style.cssText="font-size:9px;color:#b45309;background:#fef3c7;border-radius:4px;padding:1px 5px;margin-top:2px;width:100%;box-sizing:border-box";
@@ -1450,7 +1468,11 @@ function mkChip(eid,ck,di,idx,all){
   var sal=D.salaries.find(function(s){return s.id===eid;});
   var wrap=document.createElement("div");
   if(!sal){wrap.style.display="none";return wrap;}
-  var iAb=isAbs(eid,di);var conf=getConf(eid,di,ck);var isDup=all.filter(function(id){return id===eid;}).length>1;
+  var iAb=isAbs(eid,di);
+  // Si le salarié est absent ce jour, ne pas l'afficher dans la cellule chantier
+  // Il apparaîtra dans la ligne Absences via allAbsDay
+  if(iAb){wrap.style.display="none";return wrap;}
+  var conf=getConf(eid,di,ck);var isDup=all.filter(function(id){return id===eid;}).length>1;
   // Check birthday
   var isBday=false;
   if(sal.ddn){var bday=new Date(sal.ddn);var cellDay=wd(CW)[di];isBday=(bday.getDate()===cellDay.getDate()&&bday.getMonth()===cellDay.getMonth());}
