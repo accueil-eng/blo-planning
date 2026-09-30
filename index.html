@@ -2077,9 +2077,64 @@ function printPointage(){
   var salNom=salEl&&salEl.value?(salEl.options[salEl.selectedIndex]||{}).text:"Tous les salariés";
   var title="Pointage "+MNOMS[mois]+" "+annee+" — "+salNom;
   var clone=wrap.cloneNode(true);
+  // Retirer boutons, selects, éléments non imprimables, position sticky
   clone.querySelectorAll("button,select,.no-print").forEach(function(el){el.remove();});
-  var css="table{font-size:9px}td,th{padding:2px 4px;min-width:0!important;width:auto}@page{size:A4 landscape}";
-  printSection(title,clone.outerHTML,css);
+  // Enlever les styles sticky/overflow qui empêchent l'étalement pleine largeur
+  clone.querySelectorAll("[style]").forEach(function(el){
+    el.style.position="";
+    el.style.overflow="";
+    el.style.overflowX="";
+    el.style.maxHeight="";
+    el.style.zIndex="";
+    el.style.boxShadow="";
+  });
+
+  var ptCss=
+    "@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');"+
+    ":root{--acc:#0d9488;--brd:#e2e8f0;--brd2:#cbd5e1;--s2:#f8f7f4;--txt:#13201e;--muted:#6b7c79}"+
+    "html,body{margin:0;padding:0;width:100%}"+
+    "body{font-family:'DM Sans',sans-serif;font-size:9px;color:#13201e;padding:8px}"+
+    // Entête
+    ".header-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;border-bottom:2px solid #13201e;padding-bottom:5px}"+
+    ".logo-txt{font-family:Syne,sans-serif;font-weight:800;font-size:18px;color:#13201e}"+
+    "h1{font-size:12px;font-weight:700;margin:0;font-family:Syne,sans-serif}"+
+    ".subtitle{font-size:9px;color:#6b7c79}"+
+    // Tableau pleine largeur avec réduction proportionnelle
+    "div{overflow:visible!important;max-height:none!important;position:static!important}"+
+    "table{border-collapse:collapse;width:100%;table-layout:auto;font-size:8px}"+
+    "th{border:1px solid #cbd5e1;padding:2px 3px;font-size:8px;font-weight:700;text-align:center;white-space:nowrap}"+
+    "td{border:1px solid #e2e8f0;padding:2px 3px;font-size:8px;white-space:nowrap}"+
+    // Conserver les couleurs de fond des cellules
+    "td[style*='background:#dbeafe'],th[style*='background:#dbeafe']{background:#dbeafe!important}"+
+    "td[style*='background:#c7d2fe'],th[style*='background:#c7d2fe']{background:#c7d2fe!important}"+
+    "td[style*='background:#fef9c3'],th[style*='background:#fef9c3']{background:#fef9c3!important}"+
+    "td[style*='background:#f8f7f4']{background:#f8f7f4!important}"+
+    "td[style*='background:#e2e8f0'],th[style*='background:#e2e8f0']{background:#e2e8f0!important}"+
+    "td[style*='background:#0d9488']{background:#0d9488!important;color:#fff!important}"+
+    "td[style*='background:#1e3a5f']{background:#1e3a5f!important;color:#fff!important}"+
+    "td[style*='background:#f5f5f5']{background:#f5f5f5!important}"+
+    // Bloc par salarié : ne pas couper entre salariés
+    "div[style*='border:1px solid']{page-break-inside:avoid;margin-bottom:12px}"+
+    // Sticky col : conserver fond mais sans position sticky
+    "td[style*='sticky'],th[style*='sticky']{position:static!important;box-shadow:none!important;background:#f8f7f4}"+
+    "@page{size:A4 landscape;margin:8mm}"+
+    "@media print{button{display:none!important}html,body{width:100%}table{width:100%!important}}";
+
+  var w=window.open("","_blank");
+  if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
+  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'>"+
+    "<title>"+title+"</title>"+
+    "<style>"+ptCss+"</style>"+
+    "</head><body>"+
+    "<div class='header-bar'>"+
+    "<span class='logo-txt'>BLO</span>"+
+    "<h1>"+title+"</h1>"+
+    "<span class='subtitle'>Imprimé le "+new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+"</span>"+
+    "</div>"+
+    clone.outerHTML+
+    "</body></html>");
+  w.document.close();
+  setTimeout(function(){w.print();},700);
 }
 
 function printAbsences(){
