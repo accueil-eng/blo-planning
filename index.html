@@ -221,6 +221,7 @@ body.profile-salarie .tabs{display:none}
   </select>
   <span class="sind" id="sind">✓ Sauvegardé</span>
   <span id="ver-display" style="font-size:10px;color:var(--muted);padding:0 8px;flex-shrink:0;white-space:nowrap"></span>
+  <button id="sync-now-btn" onclick="forceSyncNow()" title="Synchroniser maintenant" style="height:30px;padding:0 10px;border-radius:20px;border:1px solid #0891b2;background:none;font-size:13px;cursor:pointer;flex-shrink:0;color:#0891b2;display:flex;align-items:center;gap:4px">🔄</button>
   <button id="gh-token-btn" onclick="showGHTokenModal()" title="Configurer synchronisation GitHub" style="position:relative;height:30px;padding:0 12px;border-radius:20px;border:1px solid var(--brd2);background:none;font-size:14px;cursor:pointer;display:none;align-items:center;gap:6px;flex-shrink:0;color:var(--txt)">☁️</button>
   <button id="notif-btn" onclick="showNotifPanel()" style="position:relative;height:30px;padding:0 12px;border-radius:20px;border:1px solid var(--brd2);background:none;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;display:none;align-items:center;gap:6px;flex-shrink:0;color:var(--txt)">🔔<span id="notif-badge" style="position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;display:none">0</span></button>
   <button id="profile-btn" onclick="showProfileModal()" style="height:30px;padding:0 12px;border-radius:20px;border:1px solid var(--brd2);background:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;color:var(--txt);margin-left:auto"><span id="profile-avatar" style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:#6b7c79">?</span><span id="profile-name">Choisir profil</span></button>
@@ -618,18 +619,39 @@ setInterval(function(){
 
 var NETLIFY_DATA_URL = "https://accueil-eng.github.io/blo-planning/data.json";
 
+function forceSyncNow(){
+  var btn=document.getElementById("sync-now-btn");
+  if(btn){btn.textContent="⏳";btn.style.opacity=".6";btn.disabled=true;}
+  // Forcer en remettant _lastLocalSaveAt à 0 pour ignorer la protection
+  var savedLSA=_lastLocalSaveAt;_lastLocalSaveAt=0;
+  loadFromCloud(function(){
+    _lastLocalSaveAt=savedLSA;
+    if(btn){btn.textContent="🔄";btn.style.opacity="1";btn.disabled=false;}
+    var v=document.getElementById("ver-display");
+    var now=new Date();
+    var t=String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
+    if(v){v.textContent="🔄 Sync forcé à "+t;v.style.color="#0891b2";}
+    RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
+    var activePg=document.querySelector(".pg.on");
+    var activeTab=activePg?activePg.id.replace("pg-",""):"";
+    if(activeTab==="pointage")RPOINTAGE();
+    else if(activeTab==="gantt")RGANTT();
+    else if(activeTab==="rdv")RRDV();
+    else if(activeTab==="indemnites")RINDEM();
+    else if(activeTab==="formation")RF();
+    if(_currentProfile)applyProfile(_currentProfile);
+    showToast("🔄 Données synchronisées !");
+  });
+}
+
 function loadFromCloud(cb){
   function applyRemote(remote){
     if(!remote)return;
-    // Ne pas écraser si les données locales sont plus récentes
-    // Comparer _savedAt du remote avec celui du localStorage (plus fiable que _lastLocalSaveAt qui est 0 au démarrage)
-    var localSavedAt = D && D._savedAt ? D._savedAt : 0;
-    if(remote._savedAt && localSavedAt && remote._savedAt < localSavedAt){
-      console.log("[loadFromCloud] données locales plus récentes ("+localSavedAt+" > "+remote._savedAt+"), on garde le local");
-      return;
-    }
-    if(_lastLocalSaveAt > 0 && remote._savedAt && remote._savedAt < _lastLocalSaveAt){
-      console.log("[loadFromCloud] _lastLocalSaveAt plus récent, on garde le local");
+    // Ne bloquer le remote QUE si une sauvegarde est en cours ou vient d'avoir lieu (< 30s)
+    // Cela évite que la protection ne bloque les changements des autres utilisateurs
+    var recentlySaved = _lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 30000;
+    if(recentlySaved && remote._savedAt && remote._savedAt < _lastLocalSaveAt){
+      console.log("[loadFromCloud] sauvegarde locale récente ("+Math.round((Date.now()-_lastLocalSaveAt)/1000)+"s), on garde le local");
       return;
     }
     D=remote;
@@ -643,10 +665,10 @@ function loadFromCloud(cb){
     localStorage.setItem(SK,JSON.stringify(D));
   }
 
-  // Sans token écriture → lecture publique via raw.githubusercontent.com (pas de CORS)
+  // Sans token écriture → lecture via API GitHub (pas de cache CDN contrairement à raw.githubusercontent.com)
   if(!GH_TOKEN){
-    var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?t="+Date.now();
-    fetch(rawUrl,{cache:"no-store"})
+    var rawUrl="https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE;
+    fetch(rawUrl,{cache:"no-store",headers:{"Accept":"application/vnd.github.v3.raw","X-GitHub-Api-Version":"2022-11-28"}})
       .then(function(r){return r.ok?r.json():null;})
       .then(function(remote){
         if(remote){
@@ -2240,6 +2262,47 @@ function showGHTokenModal(){
   var inp2label=document.createElement("div");inp2label.style.cssText="font-size:11px;font-weight:600;color:#6b7c79;margin-bottom:4px;margin-top:10px";inp2label.textContent="Token lecture seule (salariés via QR code)";
   var inp2=document.createElement("input");inp2.id="gh-token-readonly-input";inp2.type="password";inp2.value=D.readonlyToken||"";inp2.placeholder="github_pat_... (lecture seule)";inp2.style.cssText="width:100%;height:34px;border:1px solid #c0cccb;border-radius:6px;padding:0 10px;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px";
   var inp2hint=document.createElement("div");inp2hint.style.cssText="font-size:10px;color:#6b7c79;margin-bottom:10px";inp2hint.textContent="Créez un token Fine-grained avec Contents:Read-only sur blo-planning.";
+  // ── Lien de configuration pour partager le token ──
+  var shareSection=document.createElement("div");
+  shareSection.style.cssText="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:12px";
+  var shareTitle=document.createElement("div");shareTitle.style.cssText="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:6px";shareTitle.textContent="📤 Partager la config à un collègue";
+  var shareBtnRow=document.createElement("div");shareBtnRow.style.cssText="display:flex;gap:6px;flex-wrap:wrap";
+
+  function makeSetupLink(tokenVal){
+    var base="https://accueil-eng.github.io/blo-planning/";
+    return base+"?setup="+btoa(tokenVal||"");
+  }
+
+  var copyLinkBtn=document.createElement("button");
+  copyLinkBtn.style.cssText="height:28px;padding:0 10px;background:#0369a1;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer";
+  copyLinkBtn.textContent="📋 Copier le lien";
+  copyLinkBtn.onclick=function(){
+    var t=inp.value.trim()||localStorage.getItem("gh_token")||"";
+    if(!t){alert("Saisissez d'abord le token.");return;}
+    var link=makeSetupLink(t);
+    navigator.clipboard.writeText(link).then(function(){
+      copyLinkBtn.textContent="✅ Lien copié !";
+      setTimeout(function(){copyLinkBtn.textContent="📋 Copier le lien";},2000);
+    });
+  };
+
+  var waBtnShare=document.createElement("button");
+  waBtnShare.style.cssText="height:28px;padding:0 10px;background:#25d366;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer";
+  waBtnShare.textContent="💬 Envoyer par WhatsApp";
+  waBtnShare.onclick=function(){
+    var t=inp.value.trim()||localStorage.getItem("gh_token")||"";
+    if(!t){alert("Saisissez d'abord le token.");return;}
+    var link=makeSetupLink(t);
+    var msg="Ouvre ce lien pour configurer BLO Planning sur ton ordi :\n"+link;
+    window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank");
+  };
+
+  var hintShare=document.createElement("div");hintShare.style.cssText="font-size:10px;color:#64748b;margin-top:5px";
+  hintShare.textContent="Le collègue ouvre le lien → token configuré automatiquement.";
+
+  shareBtnRow.appendChild(copyLinkBtn);shareBtnRow.appendChild(waBtnShare);
+  shareSection.appendChild(shareTitle);shareSection.appendChild(shareBtnRow);shareSection.appendChild(hintShare);
+
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px";
   var okB=document.createElement("button");okB.style.cssText="flex:1;height:34px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okB.textContent="Enregistrer";
   okB.onclick=function(){
@@ -2254,7 +2317,7 @@ function showGHTokenModal(){
   var cancelB=document.createElement("button");cancelB.style.cssText="height:34px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelB.textContent="Annuler";
   cancelB.onclick=function(){modal.remove();};
   btnRow.appendChild(okB);btnRow.appendChild(cancelB);
-  box.appendChild(title);box.appendChild(desc);box.appendChild(inp);box.appendChild(inp2label);box.appendChild(inp2);box.appendChild(inp2hint);box.appendChild(btnRow);
+  box.appendChild(title);box.appendChild(desc);box.appendChild(inp);box.appendChild(inp2label);box.appendChild(inp2);box.appendChild(inp2hint);box.appendChild(shareSection);box.appendChild(btnRow);
   modal.appendChild(box);document.body.appendChild(modal);
   modal.onclick=function(e){if(e.target===modal)modal.remove();};
 }
@@ -2385,6 +2448,24 @@ function showProfileModal() {
     });
     return;
   }
+  // Détection du paramètre ?setup= pour auto-configurer le token depuis un lien partagé
+  (function(){
+    try{
+      var params=new URLSearchParams(window.location.search);
+      var setupB64=params.get("setup");
+      if(setupB64){
+        var token=atob(setupB64);
+        if(token&&token.startsWith("ghp_")||token.startsWith("github_pat_")){
+          localStorage.setItem("gh_token",token);
+          GH_TOKEN=token;
+          // Nettoyer l'URL sans recharger la page
+          window.history.replaceState({},"",window.location.pathname);
+          showToast("✅ Token configuré ! Synchronisation activée.");
+        }
+      }
+    }catch(e){console.warn("setup param error",e);}
+  })();
+
   var saved = localStorage.getItem("current_profile");
   if(saved && PROFILES[saved]){
     applyProfile(saved);
