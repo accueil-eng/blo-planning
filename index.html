@@ -212,6 +212,7 @@ body.profile-salarie .tabs{display:none}
     <button class="tb" onclick="TAB('formation')">Formation</button>
     <button class="tb" onclick="TAB('gantt')">&#128197; Pr&#233;visionnel</button>
     <button class="tb" onclick="TAB('bilan')">&#128202; Bilan heures chantiers</button>
+    <button class="tb" onclick="TAB('vehicules')">🚗 Véhicules</button>
   </nav>
   <select id="salarie-tab-select" style="display:none;width:100%;height:44px;border:1px solid var(--brd2);border-radius:10px;padding:0 14px;font-size:14px;background:var(--bg);color:var(--txt);outline:none;font-weight:600" onchange="TAB(this.value)">
     <option value="planning">🗓️ Planning</option>
@@ -596,7 +597,7 @@ if(!D.grille)D.grille={
   trajet:{Z1A:0,Z1B:0,Z2:0,Z3:0,Z4:0,Z5:0,Z6:0,Z7:0,Z8:0,Z9:0,Z10:0},
   transport:{Z1A:0,Z1B:0,Z2:0,Z3:0,Z4:0,Z5:0,Z6:0,Z7:0,Z8:0,Z9:0,Z10:0}
 };
-["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
+["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","alexisValidations","ptSalMessages"].forEach(function(k){if(!D[k])D[k]={};});
 if(!D.absDemandes)D.absDemandes=[];
 
 // Auto-reload every 60s (sync temps réel entre utilisateurs)
@@ -628,15 +629,15 @@ var NETLIFY_DATA_URL = "https://accueil-eng.github.io/blo-planning/data.json";
 function forceSyncNow(){
   var btn=document.getElementById("sync-now-btn");
   if(btn){btn.textContent="⏳";btn.style.opacity=".6";btn.disabled=true;}
-  // Forcer en remettant _lastLocalSaveAt à 0 pour ignorer la protection
-  var savedLSA=_lastLocalSaveAt;_lastLocalSaveAt=0;
-  loadFromCloud(function(){
-    _lastLocalSaveAt=savedLSA;
+  // NE PAS désactiver _lastLocalSaveAt : la protection doit rester active
+  // Le sync forcé récupère le remote et compare les timestamps
+  // Si local est plus récent → on re-push le local vers le cloud
+  loadFromCloud(function(appliedRemote){
     if(btn){btn.textContent="🔄";btn.style.opacity="1";btn.disabled=false;}
     var v=document.getElementById("ver-display");
     var now=new Date();
     var t=String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
-    if(v){v.textContent="🔄 Sync forcé à "+t;v.style.color="#0891b2";}
+    if(v){v.textContent="🔄 Sync à "+t;v.style.color="#0891b2";}
     RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
     var activePg=document.querySelector(".pg.on");
     var activeTab=activePg?activePg.id.replace("pg-",""):"";
@@ -646,29 +647,62 @@ function forceSyncNow(){
     else if(activeTab==="indemnites")RINDEM();
     else if(activeTab==="formation")RF();
     if(_currentProfile)applyProfile(_currentProfile);
-    showToast("🔄 Données synchronisées !");
+    if(appliedRemote===false){
+      // Local plus récent : on re-pousse vers le cloud pour que les autres voient nos données
+      save();
+      showToast("📤 Local plus récent — mis à jour sur le cloud !");
+    } else {
+      showToast("🔄 Données synchronisées depuis le cloud !");
+    }
   });
 }
 
 function loadFromCloud(cb){
+  // Retourne true si remote appliqué, false si local conservé
   function applyRemote(remote){
-    if(!remote)return;
-    // Ne bloquer le remote QUE si une sauvegarde est en cours ou vient d'avoir lieu (< 30s)
-    // Cela évite que la protection ne bloque les changements des autres utilisateurs
-    var recentlySaved = _lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 30000;
-    if(recentlySaved && remote._savedAt && remote._savedAt < _lastLocalSaveAt){
-      console.log("[loadFromCloud] sauvegarde locale récente ("+Math.round((Date.now()-_lastLocalSaveAt)/1000)+"s), on garde le local");
-      return;
+    if(!remote)return false;
+
+    var localSavedAt = D&&D._savedAt ? D._savedAt : (_lastLocalSaveAt||0);
+    var remoteSavedAt = remote._savedAt || 0;
+
+    // Conserver le local si :
+    // - une sauvegarde locale est très récente (< 45s), OU
+    // - le local a un _savedAt plus récent que le remote
+    var recentlySaved = _lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 45000;
+    var localNewer = localSavedAt > 0 && remoteSavedAt > 0 && localSavedAt > remoteSavedAt;
+
+    if(recentlySaved || localNewer){
+      console.log("[loadFromCloud] local conservé — recentlySaved="+recentlySaved+" localNewer="+localNewer+
+        " localAt="+new Date(localSavedAt).toISOString()+" remoteAt="+new Date(remoteSavedAt).toISOString());
+      return false; // local plus récent, pas d'écrasement
     }
+
+    // Backup automatique avant écrasement (en cas de perte accidentelle)
+    try{
+      var backupKey=SK+"_backup_"+Date.now();
+      localStorage.setItem(backupKey,localStorage.getItem(SK)||"{}");
+      // Garder seulement les 3 derniers backups
+      var bks=Object.keys(localStorage).filter(function(k){return k.startsWith(SK+"_backup_");}).sort();
+      while(bks.length>3){localStorage.removeItem(bks.shift());}
+    }catch(e){}
+
     D=remote;
-    // Récupérer le token lecture seule embarqué dans les données
     if(D.readonlyToken) GH_TOKEN_READONLY=D.readonlyToken;
     ["chantiers","salaries","absences","vehicules","formations","rdvs"].forEach(function(k){if(!D[k])D[k]=[];});
-    ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
+    ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","alexisValidations","ptSalMessages"].forEach(function(k){if(!D[k])D[k]={};});
     if(!D.absDemandes)D.absDemandes=[];
     if(!D.pointages)D.pointages={};
     if(!D.grille)D.grille={trajet:{},transport:{}};
     localStorage.setItem(SK,JSON.stringify(D));
+    return true;
+  }
+
+  function _afterApply(applied){
+    var now=new Date();
+    _savedAt=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
+    var v=document.getElementById("ver-display");
+    if(v){v.textContent="☁️ Chargé le "+_savedAt;v.style.color="#0891b2";}
+    if(cb)cb(applied);
   }
 
   // Sans token écriture → lecture via API GitHub (pas de cache CDN contrairement à raw.githubusercontent.com)
@@ -677,20 +711,15 @@ function loadFromCloud(cb){
     fetch(rawUrl,{cache:"no-store",headers:{"Accept":"application/vnd.github.v3.raw","X-GitHub-Api-Version":"2022-11-28"}})
       .then(function(r){return r.ok?r.json():null;})
       .then(function(remote){
-        if(remote){
-          applyRemote(remote);
-          var now=new Date();
-          _savedAt=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
-          var v=document.getElementById("ver-display");
-          if(v){v.textContent="☁️ Chargé le "+_savedAt;v.style.color="#0891b2";}
-        }
-        if(cb)cb();
+        var applied=false;
+        if(remote)applied=applyRemote(remote);
+        _afterApply(applied);
       })
       .catch(function(e){
         console.log("Raw fetch error:",e);
         var local=localStorage.getItem(SK);
         if(local){try{D=JSON.parse(local);}catch(ex){}}
-        if(cb)cb();
+        if(cb)cb(false);
       });
     return;
   }
@@ -698,28 +727,25 @@ function loadFromCloud(cb){
   // Avec token → lecture via GitHub API
   fetch(GH_API,{headers:{"Authorization":"token "+GH_TOKEN,"Accept":"application/vnd.github.v3+json"}})
   .then(function(r){
-    if(r.status===404){if(cb)cb();return null;}
+    if(r.status===404){if(cb)cb(false);return null;}
     return r.json();
   })
   .then(function(data){
     if(!data)return;
+    var applied=false;
     if(data.content){
       _ghSha=data.sha;
       var b64=data.content.split("\n").join("");
       var json=decodeURIComponent(escape(atob(b64)));
-      applyRemote(JSON.parse(json));
-      var now=new Date();
-      _savedAt=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
-      var v=document.getElementById("ver-display");
-      if(v){v.textContent="☁️ Chargé le "+_savedAt;v.style.color="#0891b2";}
+      applied=applyRemote(JSON.parse(json));
     }
-    if(cb)cb();
+    _afterApply(applied);
   })
   .catch(function(e){
     console.log("GitHub load error:",e);
     var local=localStorage.getItem(SK);
     if(local){try{D=JSON.parse(local);}catch(ex){}}
-    if(cb)cb();
+    if(cb)cb(false);
   });
 }
 
@@ -786,6 +812,11 @@ window.addEventListener("beforeunload",function(e){
 });
 
 function _doGithubSave(){
+  if(!GH_TOKEN){
+    var ind0=document.getElementById("sind");
+    if(ind0){ind0.textContent="⚠️ Pas de token — local seulement";ind0.style.opacity="1";ind0.style.color="#b45309";}
+    return;
+  }
   var ind=document.getElementById("sind");
   if(ind){ind.textContent="☁️ Sync...";ind.style.opacity="1";}
   // Compress: remove empty/null values to reduce size
@@ -819,7 +850,7 @@ function _doGithubSave(){
     var now=new Date();
     var readable=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
     var ind2=document.getElementById("sind");
-    if(ind2){ind2.textContent="✅ Sync GitHub";ind2.style.opacity="1";clearTimeout(ind2._t);ind2._t=setTimeout(function(){ind2.style.opacity="0";},3000);}
+    if(ind2){ind2.textContent="✅ Sync GitHub";ind2.style.opacity="1";ind2.style.color="";clearTimeout(ind2._t);ind2._t=setTimeout(function(){ind2.style.opacity="0";},3000);}
     var v=document.getElementById("ver-display");
     if(v){v.textContent="☁️ Sync "+readable;v.style.color="#0891b2";}
     // If a newer change happened while this save was in flight, save again with the latest data+sha
@@ -917,7 +948,7 @@ function importJSON(ev){
       if(!confirm("Remplacer toutes les données par cette sauvegarde ?"))return;
       D=data;
       ["chantiers","salaries","absences","vehicules"].forEach(function(k){if(!D[k])D[k]=[];});
-      ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","bureauWeekValidations"].forEach(function(k){if(!D[k])D[k]={};});
+      ["cells","rowChantiers","livraisons","vehAssign","vehIndispo","rttReport","ptReview","planningNotifSent","ptWeekValidations","rttManual","chHoursValidated","bureauWeekValidations","alexisValidations","ptSalMessages"].forEach(function(k){if(!D[k])D[k]={};});
 if(!D.absDemandes)D.absDemandes=[];
       save();RP();RC();RS();RA();RV();RF();RRDV();RANALYSE();RGANTT();RPOINTAGE();RINDEM();
     }catch(err){alert("Fichier invalide: "+err.message);}
@@ -1849,6 +1880,7 @@ function editSal(id){
   var fTaux=mkRow("💶 Taux horaire €/h",Object.assign(document.createElement("input"),{type:"number",value:sal.taux||"",min:0,step:"0.01",placeholder:"ex: 18.50",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fType=mkRow("Type",Object.assign(document.createElement("select"),{style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fBureau=mkRow("\uD83C\uDFE2 Affect\u00e9 Bureau (9200)",Object.assign(document.createElement("input"),{type:"checkbox",checked:!!sal.isBureau,style:"width:18px;height:18px;accent-color:#db2777;cursor:pointer"}));
+  var fNoPanier=mkRow("\uD83E\uDDE3 Jamais de panier repas",Object.assign(document.createElement("input"),{type:"checkbox",checked:!!sal.noPanier,style:"width:18px;height:18px;accent-color:#dc2626;cursor:pointer"}));
   [["salarie","Salarié"],["apprenti","Apprenti"],["stagiaire","Stagiaire"],["interimaire","Intérimaire"]].forEach(function(o){var opt=document.createElement("option");opt.value=o[0];opt.textContent=o[1];if(sal.type===o[0])opt.selected=true;fType.appendChild(opt);});
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:6px";
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
@@ -1857,7 +1889,7 @@ function editSal(id){
     sal.prenom=fPrenom.value.trim();sal.nom=fNom.value.trim();sal.poste=fPoste.value.trim();
     sal.whatsapp=fTel.value.trim().replace(/[^0-9]/g,"");
     sal.telType=fTelType.value;
-    sal.ddn=fDdn.value;sal.visite=fVm.value;sal.visitePrev=fVmPrev.value;sal.type=fType.value;sal.isBureau=fBureau.checked;
+    sal.ddn=fDdn.value;sal.visite=fVm.value;sal.visitePrev=fVmPrev.value;sal.type=fType.value;sal.isBureau=fBureau.checked;sal.noPanier=fNoPanier.checked;
     sal.taux=fTaux.value?parseFloat(fTaux.value):null;
     saveNow();modal.remove();RS();
   };
@@ -2443,7 +2475,7 @@ var PROFILES = {
     readOnlyTabs: ["rdv","salaries","absences","pointage"],
     readOnly: false },
   alexis: { name: "Alexis", initiale: "A", color: "#7c3aed",
-    tabs: ["planning","rdv","chantiers","salaries","absences","pointage","gantt","bilan"],
+    tabs: ["planning","rdv","chantiers","salaries","absences","pointage","gantt","bilan","vehicules"],
     readOnlyTabs: ["rdv"],
     readOnly: false },
   valerie: { name: "Valérie", initiale: "V", color: "#db2777",
@@ -2451,7 +2483,7 @@ var PROFILES = {
     readOnlyTabs: ["pointage"],
     readOnly: false },
   // Profils techniques conservés
-  salarie: { name: "Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnlyTabs: [], readOnly: true },
+  salarie: { name: "Espace Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnlyTabs: [], readOnly: true },
   planningpublic: { name: "Planning (lecture seule)", initiale: "P", pin: null, color: "#0891b2", tabs: ["planning"], readOnlyTabs: [], readOnly: true }
 };
 var _currentProfile = null;
@@ -2530,6 +2562,25 @@ function applyProfile(key) {
   // GitHub token button for Bureau only
   var ghBtn = document.getElementById("gh-token-btn");
   if(ghBtn) ghBtn.style.display = !isReadOnly ? "flex" : "none";
+
+  // ⚠️ Alerte si token manquant pour un profil bureau (écriture)
+  var noSyncBanner = document.getElementById("no-sync-banner");
+  var needsToken = !isReadOnly && !GH_TOKEN;
+  if(needsToken){
+    if(!noSyncBanner){
+      noSyncBanner = document.createElement("div");
+      noSyncBanner.id = "no-sync-banner";
+      noSyncBanner.style.cssText = "background:#fef3c7;border-bottom:2px solid #f59e0b;color:#92400e;font-size:13px;font-weight:700;padding:9px 16px;text-align:center;cursor:pointer;z-index:100;position:relative";
+      noSyncBanner.innerHTML = "⚠️ <strong>Synchronisation cloud désactivée</strong> — Les données ne seront PAS sauvegardées sur GitHub. &nbsp;<u style='font-weight:700'>Configurer le token →</u>";
+      noSyncBanner.onclick = function(){ showGHTokenModal(); };
+      var hdr = document.querySelector("header");
+      if(hdr && hdr.nextSibling) hdr.parentNode.insertBefore(noSyncBanner, hdr.nextSibling);
+      else document.body.insertBefore(noSyncBanner, document.body.firstChild);
+    }
+    noSyncBanner.style.display = "";
+  } else {
+    if(noSyncBanner) noSyncBanner.style.display = "none";
+  }
 }
 
 function showGHTokenModal(){
@@ -2627,12 +2678,12 @@ function showProfileModal() {
   box.appendChild(sub);
 
   // Utilisateurs principaux
-  var mainUsers = ["quentin","alexis","valerie"];
+  var mainUsers = ["quentin","alexis","valerie","salarie"];
   var descriptions = {
     quentin: "Planning · Chantiers · Prévisionnel",
     alexis: "Planning · Pointage · Chantiers · Salariés",
     valerie: "Planning · RDV · Indemnités · Formation · Prévisionnel",
-    salarie: "Planning · Pointage personnel · Absences"
+    salarie: "Développer et tester l'interface commune à tous les salariés"
   };
 
   mainUsers.forEach(function(key){
@@ -2642,11 +2693,12 @@ function showProfileModal() {
     btn.style.cssText = "display:flex;align-items:center;gap:14px;padding:16px 18px;border:2px solid "+(isActive?p.color:"#dde5e4")+";border-radius:12px;cursor:pointer;margin-bottom:10px;transition:border-color .15s"+(isActive?";background:#f8f9ff":"");
     btn.onmouseover = function(){ btn.style.borderColor = p.color; btn.style.background="#f8f9ff"; };
     btn.onmouseout = function(){ btn.style.borderColor = isActive?p.color:"#dde5e4"; btn.style.background=isActive?"#f8f9ff":""; };
-    btn.onclick = function(){
+    btn.onclick = (function(k,pp){return function(){
+      if(k==="salarie"){modal.remove();_salLockedId="";applyProfile("salarie");loadFromCloud(function(){TAB("pointage");showToast("\ud83d\udc64 Espace salari\u00e9 — aperçu");});return;}
       modal.remove();
-      applyProfile(key);
-      loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👋 Bonjour "+p.name+" !");});
-    };
+      applyProfile(k);
+      loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👋 Bonjour "+pp.name+" !");});
+    };})(key,p);
     var av = document.createElement("div");
     av.style.cssText = "width:46px;height:46px;border-radius:50%;background:"+p.color+";display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:#fff;flex-shrink:0";
     av.textContent = p.initiale||p.name[0];
@@ -2671,12 +2723,75 @@ function showProfileModal() {
   var salBtn=document.createElement("div");
   salBtn.style.cssText="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:12px;color:#6b7c79";
   salBtn.innerHTML="<span style='font-size:16px'>📱</span> <span>Connexion salarié (QR code)</span>";
-  salBtn.onclick=function(){modal.remove();showToast("Scannez le QR code affiché en réunion.");};
+  salBtn.onclick=function(){
+    salBtn.innerHTML="<span style='font-size:16px'>&#128100;</span>&nbsp;<span style='font-weight:600;font-size:12px;color:#374151'>Connexion salarié :</span>";
+    var sel=document.createElement("select");
+    sel.style.cssText="width:100%;height:34px;border:1px solid var(--brd2);border-radius:8px;padding:0 10px;font-size:13px;margin-top:6px";
+    var opt0=document.createElement("option");opt0.value="";opt0.textContent="— Choisir un salarié —";sel.appendChild(opt0);
+    D.salaries.forEach(function(s){if(!s.prenom)return;var o=document.createElement("option");o.value=s.id;o.textContent=(s.nom?s.nom+" ":"")+s.prenom;sel.appendChild(o);});
+    salBtn.appendChild(sel);
+    var goBtn=document.createElement("button");
+    goBtn.textContent="Accéder à l'espace salarié";
+    goBtn.style.cssText="width:100%;height:34px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-top:6px";
+    goBtn.onclick=function(){
+      var sid=sel.value;if(!sid)return;
+      modal.remove();
+      _salLockedId=sid;
+      applyProfile("salarie");
+      loadFromCloud(function(){TAB("pointage");showToast("\ud83d\udc64 Espace salarié");});
+    };
+    salBtn.appendChild(goBtn);
+  };
   box.appendChild(salBtn);
 
   modal.appendChild(box);
   document.body.appendChild(modal);
   modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
+}
+
+function showSalariePickerModal(){
+  var modal=document.createElement("div");
+  modal.id="sal-picker-modal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:28px;max-width:340px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif";
+  var title=document.createElement("div");
+  title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:17px;margin-bottom:6px;color:#13201e";
+  title.textContent="👤 Espace Salarié";
+  box.appendChild(title);
+  var sub=document.createElement("p");
+  sub.style.cssText="font-size:12px;color:#6b7c79;margin-bottom:16px";
+  sub.textContent="Choisissez votre nom pour accéder à votre espace.";
+  box.appendChild(sub);
+  var sel=document.createElement("select");
+  sel.style.cssText="width:100%;height:40px;border:1px solid var(--brd2);border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:12px";
+  var opt0=document.createElement("option");opt0.value="";opt0.textContent="— Sélectionner —";sel.appendChild(opt0);
+  D.salaries.forEach(function(s){
+    if(!s.prenom)return;
+    var o=document.createElement("option");o.value=s.id;
+    o.textContent=(s.nom?s.nom+" ":"")+s.prenom;
+    sel.appendChild(o);
+  });
+  box.appendChild(sel);
+  var goBtn=document.createElement("button");
+  goBtn.textContent="Accéder à mon espace";
+  goBtn.style.cssText="width:100%;height:40px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px";
+  goBtn.onclick=function(){
+    var sid=sel.value;if(!sid)return;
+    modal.remove();
+    _salLockedId=sid;
+    applyProfile("salarie");
+    loadFromCloud(function(){TAB("pointage");showToast("👤 Bonjour !");});
+  };
+  box.appendChild(goBtn);
+  var backBtn=document.createElement("button");
+  backBtn.textContent="← Retour aux profils";
+  backBtn.style.cssText="width:100%;height:34px;background:none;border:1px solid var(--brd2);border-radius:10px;font-size:13px;cursor:pointer;color:#6b7c79";
+  backBtn.onclick=function(){modal.remove();showProfileModal();};
+  box.appendChild(backBtn);
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+  modal.onclick=function(e){if(e.target===modal){modal.remove();showProfileModal();}};
 }
 
 // PIN removed - click to select profile
@@ -4341,7 +4456,7 @@ function editChAnalyse(id){
 var PT_ROWS = [
   {id:"panier",    label:"Panier repas",         type:"check",  unit:""},
   {id:"trajet",    label:"Trajet (zone)",         type:"zone_dd", unit:""},
-  {id:"transport", label:"Transport (zone)",      type:"zone_dd", unit:""},
+  // {id:"transport", label:"Transport (zone)",      type:"zone_dd", unit:""},
   {id:"cp",        label:"Congés payés",          type:"number", unit:"h"},
   {id:"css",       label:"Congés sans solde",     type:"number", unit:"h"},
   {id:"hs",        label:"Heures supplémentaires",type:"number", unit:"h"},
@@ -5113,7 +5228,7 @@ function RPOINTAGE(){
   var filterId=isSalMode?_salLockedId:(ptSal?ptSal.value:"");
   var weeks=[];
   try{weeks=getWeeksOfMonth(mois,annee);}catch(e){console.error("getWeeksOfMonth err",mois,annee,e);}
-  console.log("[RPOINTAGE] mois="+mois+" annee="+annee+" weeks=",weeks);
+  console.log("[RPOINTAGE] mois="+mois+" annee="+annee+" sals="+sals.length+" weeks=",weeks);
   var sals=D.salaries.filter(function(s){
     if(!s.prenom||!s.prenom.trim())return false;
     if(filterId&&s.id!==filterId)return false;
@@ -5124,6 +5239,7 @@ function RPOINTAGE(){
 
   var html="";
   sals.forEach(function(sal){
+    try{
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
     html+="<div style='margin-bottom:28px;border:1px solid var(--brd);border-radius:8px;overflow:hidden'>";
     html+="<div style='background:#13201e;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:13px;padding:8px 14px'>"+nomAff+"</div>";
@@ -5177,6 +5293,12 @@ function RPOINTAGE(){
           if(!inM0)continue;
           if(row.type==="zone_dd"){
             var zv=ptGet(mois,annee,row.id,sal.id,wk,d);
+            // Auto-zone trajet et transport depuis le chantier si pas de valeur saisie
+            if(!zv&&(row.id==="trajet"||row.id==="transport")){
+              var _dtZ2=getDatesOfWeek(wk,annee)[d];
+              var _chZ2=getChantierForSalDay(sal.id,_dtZ2);
+              if(_chZ2){var _sgZ2=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";zv=(_sgZ2==="fontevraud"?_chZ2.zoneFontevraud:_chZ2.zoneEcouflant)||"";}
+            }
             if(zv){totalMois+=1;zoneCounts[zv]=(zoneCounts[zv]||0)+1;}
           } else if(row.type==="rtt"){
             var storedRttM=ptGet(mois,annee,row.id,sal.id,wk,d);
@@ -5229,15 +5351,22 @@ function RPOINTAGE(){
               html+="<td style='"+tdStyle()+"background:#f5f5f5'></td>";
             } else {
               var zval=ptGet(mois,annee,row.id,sal.id,wk,di)||"";
-              // Auto-suggest zone from chantier worked this day, only if salarié used personal vehicle (chip P)
-              if(!zval){
+              // Auto-suggest zone trajet depuis le chantier affecté ce jour (indépendamment du véhicule)
+              if(!zval&&row.id==="trajet"){
                 var dtZ=getDatesOfWeek(wk,annee)[di];
-                if(isPersoVehDay(sal.id,dtZ)){
-                  var chZ=getChantierForSalDay(sal.id,dtZ);
-                  if(chZ){
-                    var siegeZ=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";
-                    zval=(siegeZ==="fontevraud"?chZ.zoneFontevraud:chZ.zoneEcouflant)||"";
-                  }
+                var chZ=getChantierForSalDay(sal.id,dtZ);
+                if(chZ){
+                  var siegeZ=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";
+                  zval=(siegeZ==="fontevraud"?chZ.zoneFontevraud:chZ.zoneEcouflant)||"";
+                }
+              }
+              // Auto-suggest zone transport depuis le chantier (véhicule société)
+              if(!zval&&row.id==="transport"){
+                var dtZ=getDatesOfWeek(wk,annee)[di];
+                var chZ=getChantierForSalDay(sal.id,dtZ);
+                if(chZ){
+                  var siegeZ=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";
+                  zval=(siegeZ==="fontevraud"?chZ.zoneFontevraud:chZ.zoneEcouflant)||"";
                 }
               }
               wkTotal+=(zval?1:0);
@@ -5304,6 +5433,11 @@ function RPOINTAGE(){
             var inMz2=(dt2.getMonth()+1===mois&&dt2.getFullYear()===annee);
             if(!inMz2)return;
             var zv2=ptGet(mois,annee,row.id,sal.id,wk,di2);
+            // Auto-zone trajet et transport depuis le chantier si pas de valeur saisie
+            if(!zv2&&(row.id==="trajet"||row.id==="transport")){
+              var _chZ3=getChantierForSalDay(sal.id,dt2);
+              if(_chZ3){var _sg3=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";zv2=(_sg3==="fontevraud"?_chZ3.zoneFontevraud:_chZ3.zoneEcouflant)||"";}
+            }
             if(zv2)wkZones[zv2]=(wkZones[zv2]||0)+1;
           });
           var wkZStr=Object.keys(wkZones).sort().map(function(z){return zoneChip(z)+"<span style='font-size:9px;font-weight:700;color:#475569'>×"+wkZones[z]+"</span>";}).join(" ");
@@ -5462,9 +5596,10 @@ function RPOINTAGE(){
 
     html+="</table></div>";
     if(!isSalMode){
-      html+=renderBureauWeekValidateBlock(sal.id,annee);
+      html+=renderBureauWeekValidateBlock(sal.id,weeks,annee);
     }
     html+="</div>";
+    }catch(err){html+="<div style='color:red;padding:10px;font-size:12px'>⚠️ Erreur rendu "+sal.prenom+": "+err.message+"</div>";}
   });
 
   wrap.innerHTML=html;
@@ -5473,6 +5608,7 @@ function RPOINTAGE(){
     renderValidateWeekButton(mois,annee,filterId);
     lockValidatedWeeksInputs(filterId,mois,annee);
   } else {
+    sals.forEach(function(s){lockValidatedWeeksInputs(s.id,mois,annee);});
     renderPtValidationsList();
   }
   function _restoreScrollAndFocus(){
@@ -5593,6 +5729,7 @@ function archiveOldPointages(){
 function lockValidatedWeeksInputs(salId,mois,annee){
   if(!salId)return;
   if(!D.ptWeekValidations)D.ptWeekValidations={};
+  if(!D.alexisValidations)D.alexisValidations={};
   var wrap=document.getElementById("pointage-wrap");
   if(!wrap)return;
   var inputs=wrap.querySelectorAll("[data-pt]");
@@ -5600,11 +5737,9 @@ function lockValidatedWeeksInputs(salId,mois,annee){
     var p=inp.dataset.pt.split("|");
     var wk=p[4];
     var vKey=salId+"|"+wk+"|"+p[1];
-    if(D.ptWeekValidations[vKey]){
-      inp.disabled=true;
-      inp.style.opacity="0.6";
-      inp.style.cursor="not-allowed";
-      inp.title="Semaine déjà validée — modification verrouillée";
+    if(D.ptWeekValidations[vKey]&&D.alexisValidations[vKey]){
+      inp.disabled=true;inp.style.opacity="0.6";inp.style.cursor="not-allowed";
+      inp.title="Semaine verrouillée — modification non autorisée";
     }
   });
 }
@@ -5633,25 +5768,40 @@ function updateValerieNotifDot(){
 }
 
 // ── VALIDATION HEBDOMADAIRE COTE ALEXIS ──
-function renderBureauWeekValidateBlock(salId,annee){
+function renderBureauWeekValidateBlock(salId,weeks,annee){
   if(_currentProfile!=="alexis")return "";
-  var curWeek=getISOWeek(new Date());
   if(!D.alexisValidations)D.alexisValidations={};
-  var vKey=salId+"|"+curWeek+"|"+annee;
-  var already=!!D.alexisValidations[vKey];
-  var salValidated=!!(D.ptWeekValidations&&D.ptWeekValidations[vKey]);
-  var html="<div style='padding:10px 14px;border-top:1px solid var(--brd2);background:#f0fdfa'>";
-  if(!salValidated){
-    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>⏳ En attente de validation par le salarié</div>";
-  } else if(already){
-    html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:10px'>";
-    html+="<span style='font-size:12px;font-weight:600;color:#0f766e'>✅ Semaine "+curWeek+" validée par Alexis</span>";
-    html+="<button onclick=\"unvalidateAlexisWeek('"+salId+"',"+curWeek+","+annee+")\" style='font-size:11px;background:none;border:1px solid var(--brd2);border-radius:6px;padding:4px 10px;cursor:pointer;color:#6b7c79'>Annuler</button>";
+  if(!D.ptWeekValidations)D.ptWeekValidations={};
+  if(!D.ptSalMessages)D.ptSalMessages={};
+  var html="<div style='padding:10px 14px;border-top:2px solid var(--brd2);background:#f8fafc'>";
+  html+="<div style='font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px'>Validation des semaines</div>";
+  html+="<div style='display:flex;flex-wrap:wrap;gap:8px'>";
+  weeks.forEach(function(wk){
+    var vKey=salId+"|"+wk+"|"+annee;
+    var alexisOk=!!D.alexisValidations[vKey];
+    var salOk=!!D.ptWeekValidations[vKey];
+    var locked=alexisOk&&salOk;
+    var salMsg=D.ptSalMessages[vKey];
+    var bg=locked?"#dcfce7":(alexisOk?"#dbeafe":"#f1f5f9");
+    var bdr=locked?"#86efac":(alexisOk?"#93c5fd":"#e2e8f0");
+    html+="<div style='background:"+bg+";border:1px solid "+bdr+";border-radius:8px;padding:8px 12px;min-width:120px;flex:1'>";
+    html+="<div style='font-size:11px;font-weight:700;color:#0f172a;margin-bottom:6px'>Semaine "+wk+"</div>";
+    if(locked){
+      html+="<div style='font-size:11px;font-weight:600;color:#166534'>🔒 Verrouillée</div>";
+      html+="<button onclick=\"unlockWeek('"+salId+"',"+wk+","+annee+")\" style='font-size:10px;background:none;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;cursor:pointer;color:#6b7c79;margin-top:4px;width:100%'>Déverrouiller</button>";
+    } else if(!alexisOk){
+      html+="<button onclick=\"validateAlexisWeekDirect('"+salId+"',"+wk+","+annee+")\" style='width:100%;height:28px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer'>✅ Valider</button>";
+    } else {
+      html+="<div style='font-size:11px;color:#1d4ed8;font-weight:600'>✅ Alexis a validé</div>";
+      html+="<div style='font-size:11px;color:#6b7c79;font-style:italic;margin-top:2px'>⏳ Salarié en attente</div>";
+      html+="<button onclick=\"unvalidateAlexisWeek('"+salId+"',"+wk+","+annee+")\" style='font-size:10px;background:none;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;cursor:pointer;color:#6b7c79;margin-top:4px;width:100%'>Annuler</button>";
+    }
+    if(salMsg){
+      html+="<div style='margin-top:6px;background:#fef9c3;border:1px solid #fcd34d;border-radius:4px;padding:4px 6px;font-size:10px'>💬 "+salMsg.text.substring(0,60)+(salMsg.text.length>60?"...":"")+"</div>";
+    }
     html+="</div>";
-  } else {
-    html+="<button onclick=\"validateAlexisWeekDirect('"+salId+"',"+curWeek+","+annee+")\" style='width:100%;height:34px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>✅ Valider la semaine "+curWeek+" (Alexis)</button>";
-  }
-  html+="</div>";
+  });
+  html+="</div></div>";
   return html;
 }
 
@@ -5665,10 +5815,20 @@ function unvalidateAlexisWeek(salId,semaine,annee){
   var key=salId+"|"+semaine+"|"+annee;
   if(!D.alexisValidations)D.alexisValidations={};
   delete D.alexisValidations[key];
-  // Retirer aussi de la notif Valérie
+  save();
+  RPOINTAGE();
+}
+
+function unlockWeek(salId,semaine,annee){
+  if(_currentProfile!=="alexis")return;
+  var key=salId+"|"+semaine+"|"+annee;
+  if(!confirm("Déverrouiller la semaine "+semaine+" ? Les pointages pourront à nouveau être modifiés."))return;
+  if(D.alexisValidations)delete D.alexisValidations[key];
+  if(D.ptWeekValidations)delete D.ptWeekValidations[key];
+  if(D.ptSalMessages)delete D.ptSalMessages[key];
   if(D.ptValerieNotif)D.ptValerieNotif=D.ptValerieNotif.filter(function(n){return n.key!==key;});
   save();
-  updateValerieNotifDot();
+  showToast("🔓 Semaine déverrouillée");
   RPOINTAGE();
 }
 
@@ -5678,36 +5838,56 @@ function renderValidateWeekButton(mois,annee,salId){
   var today=new Date();
   var curWeek=getISOWeek(today);
   if(!D.ptWeekValidations)D.ptWeekValidations={};
+  if(!D.alexisValidations)D.alexisValidations={};
+  if(!D.ptSalMessages)D.ptSalMessages={};
   var vKey=salId+"|"+curWeek+"|"+annee;
-  var already=!!D.ptWeekValidations[vKey];
-
-  if(already){
-    wrap.innerHTML="<div style='background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:12px 16px;text-align:center;font-size:13px;font-weight:600;color:#166534'>✅ Semaine "+curWeek+" validée — envoyée au Bureau</div>";
+  var alexisOk=!!D.alexisValidations[vKey];
+  var salOk=!!D.ptWeekValidations[vKey];
+  var locked=alexisOk&&salOk;
+  if(locked){
+    wrap.innerHTML="<div style='background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:12px 16px;text-align:center;font-size:13px;font-weight:600;color:#166534'>🔒 Semaine "+curWeek+" verrouillée — tout le monde a validé ✅</div>";
+  } else if(!alexisOk){
+    wrap.innerHTML="<div style='background:#fef9c3;border:1px solid #fcd34d;border-radius:10px;padding:12px 16px;text-align:center;font-size:13px;color:#92400e'>⏳ En attente de validation par Alexis</div>";
+  } else if(salOk){
+    wrap.innerHTML="<div style='background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:12px 16px;text-align:center;font-size:13px;font-weight:600;color:#1e40af'>✅ Semaine "+curWeek+" validée — en attente du verrouillage</div>";
   } else {
-    wrap.innerHTML="<button onclick='validateMyWeek("+JSON.stringify(salId)+","+curWeek+","+annee+")' style='width:100%;height:44px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer'>✅ Valider ma semaine "+curWeek+"</button>";
+    wrap.innerHTML=
+      "<div style='background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:12px 16px'>"+
+      "<div style='font-size:13px;font-weight:600;color:#0f766e;margin-bottom:8px'>✅ Alexis a validé votre pointage S"+curWeek+"</div>"+
+      "<textarea id='sal-msg-field' placeholder='Observation (optionnel)...' style='width:100%;height:56px;border:1px solid var(--brd2);border-radius:6px;padding:6px 8px;font-size:12px;resize:none;box-sizing:border-box'></textarea>"+
+      "<button onclick='validateMyWeek("+JSON.stringify(salId)+","+curWeek+","+annee+")' style='width:100%;height:36px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px'>✅ Valider ma semaine</button>"+
+      "</div>";
   }
 }
 
 function validateMyWeek(salId,semaine,annee){
   if(!D.ptWeekValidations)D.ptWeekValidations={};
+  if(!D.ptSalMessages)D.ptSalMessages={};
   var sal=D.salaries.find(function(s){return s.id===salId;});
-  D.ptWeekValidations[salId+"|"+semaine+"|"+annee]={
-    salId:salId,
-    nom:sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?",
-    semaine:semaine,
-    annee:annee,
-    ts:Date.now()
-  };
+  var key=salId+"|"+semaine+"|"+annee;
+  D.ptWeekValidations[key]={salId:salId,nom:sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?",semaine:semaine,annee:annee,ts:Date.now()};
+  // Sauvegarder le message si saisi
+  var msgField=document.getElementById("sal-msg-field");
+  var msg=msgField?msgField.value.trim():"";
+  if(msg){D.ptSalMessages[key]={text:msg,ts:Date.now(),salId:salId};}
+  // Notifier Valérie quand la semaine est verrouillée (les deux ont validé)
+  if(D.alexisValidations&&D.alexisValidations[key]){
+    if(!D.ptValerieNotif)D.ptValerieNotif=[];
+    var already=D.ptValerieNotif.some(function(n){return n.key===key;});
+    if(!already)D.ptValerieNotif.push({key:key,salId:salId,semaine:semaine,annee:annee,nom:sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?",ts:Date.now(),locked:true});
+    updateValerieNotifDot();
+  }
   save();
-  showToast("✅ Semaine validée et envoyée au Bureau !");
+  showToast("✅ Semaine validée !");
   var mois=parseInt(document.getElementById("pt-mois").value);
   renderValidateWeekButton(mois,annee,salId);
+  RPOINTAGE();
 }
 
 function renderPtValidationsList(){
   var wrap=document.getElementById("pt-validations-wrap");
   if(!wrap)return;
-  if(_currentProfile!=="bureau"){wrap.innerHTML="";return;}
+  if(_currentProfile!=="alexis"&&_currentProfile!=="valerie"){wrap.innerHTML="";return;}
   if(!D.ptWeekValidations)D.ptWeekValidations={};
   if(!D.bureauWeekValidations)D.bureauWeekValidations={};
   if(!D.ptTraite)D.ptTraite={};
@@ -5883,7 +6063,12 @@ function buildPtTableHTML(sal,mo,an){
           html+="<td>"+(val==="1"?"✓":"")+"</td>";
           total+=val==="1"?1:0;
         } else if(row.type==="zone_dd"){
-          html+="<td>"+( val||"")+"</td>";
+          // Auto-zone trajet et transport depuis le chantier si pas de valeur saisie
+          if(!val&&(row.id==="trajet"||row.id==="transport")){
+            var _chZP=getChantierForSalDay(sal.id,dt);
+            if(_chZP){var _sgP=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";val=(_sgP==="fontevraud"?_chZP.zoneFontevraud:_chZP.zoneEcouflant)||"";}
+          }
+          html+="<td>"+(val||"")+"</td>";
           total+=val?1:0;
         } else {
           var n=parseFloat(val)||0;
@@ -6098,15 +6283,18 @@ function hasFullDayBlockingAbsence(salId,dt){
 }
 
 function isFullAbsDay(salId,dt){
-  if(!D.absences)return false;
   var dStr=ds(dt);
-  return D.absences.some(function(a){
+  if(D.absences&&D.absences.some(function(a){
     if(a.salId!==salId)return false;
     if(a.debut>dStr||dStr>a.fin)return false;
-    // Absence après-midi seulement (RTT partiel) = pas une absence totale
     if(isAfternoonRttAbsence(salId,dt))return false;
     return true;
-  });
+  }))return true;
+  // Formation du module Formation (nextdeb/nextfin) = absent ce jour
+  if((D.formations||[]).some(function(f){
+    return f.salId===salId&&f.nextdeb&&f.nextfin&&f.nextdeb<=dStr&&dStr<=f.nextfin;
+  }))return true;
+  return false;
 }
 
 function isAfternoonRttAbsence(salId,dt){
@@ -6120,12 +6308,16 @@ function isAfternoonRttAbsence(salId,dt){
   return found.heureDebut>="12:00";
 }
 
-// Panier auto-attribué : salarié affecté sur un chantier ce jour-là dans le planning,
-// OU absence RTT de l'après-midi (matin travaillé)
+// Panier auto-attribué : salarié présent un jour ouvré (lun-ven)
+// Les exceptions (maladie, formation, congés…) sont gérées par absTotal dans le code appelant.
+// Exception individuelle : sal.noPanier===true (ex. Alexis Parpaillon)
 function shouldAutoPanier(salId,dt){
-  if(getChantierForSalDay(salId,dt))return true;
-  if(isAfternoonRttAbsence(salId,dt))return true;
-  return false;
+  var sal=D.salaries.find(function(s){return s.id===salId;});
+  if(sal&&sal.noPanier)return false;
+  // Alexis Parpaillon : jamais de panier (sécurité par nom)
+  if(sal&&sal.prenom&&sal.prenom.toLowerCase().includes(alexis)&&sal.nom&&sal.nom.toLowerCase().includes(parpaillon))return false;
+  var dow=dt.getDay();
+  return dow>=1&&dow<=5; // Jours ouvrés uniquement (1=lundi … 5=vendredi)
 }
 
 function getChantierForSalDay(salId,dt){
