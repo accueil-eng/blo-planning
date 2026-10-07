@@ -2498,6 +2498,8 @@ function applyProfile(key) {
   if(salSelect)salSelect.style.display=(key==="salarie")?"block":"none";
   setTimeout(updateAbsDemandesDot,100);
   setTimeout(updatePointageDot,100);
+  // Rafraîchir le suivi des validations quand on passe sur un profil bureau
+  if(key==="alexis"||key==="valerie"){setTimeout(renderPtValidationsList,50);}
 
   // Update avatar button
   var av = document.getElementById("profile-avatar");
@@ -5887,7 +5889,9 @@ function validateMyWeek(salId,semaine,annee){
 function renderPtValidationsList(){
   var wrap=document.getElementById("pt-validations-wrap");
   if(!wrap)return;
-  if(_currentProfile!=="alexis"&&_currentProfile!=="valerie"){wrap.innerHTML="";return;}
+  // Masquer le panneau pour les profils non-bureau, sans effacer le contenu
+  if(_currentProfile!=="alexis"&&_currentProfile!=="valerie"){wrap.style.display="none";return;}
+  wrap.style.display="";
   if(!D.ptWeekValidations)D.ptWeekValidations={};
   if(!D.alexisValidations)D.alexisValidations={};
 
@@ -6239,9 +6243,9 @@ function ptPrintSalariePDF(){
 function marquerTransmisValerie(key){
   if(confirm("Marquer ce pointage comme transmis à Valérie ?\nIl sera retiré de la liste.")){
     if(!D.ptWeekValidations)D.ptWeekValidations={};
-    if(!D.bureauWeekValidations)D.bureauWeekValidations={};
+    if(!D.alexisValidations)D.alexisValidations={};
     delete D.ptWeekValidations[key];
-    delete D.bureauWeekValidations[key];
+    delete D.alexisValidations[key];
     save();
     showToast("📬 Transmis à Valérie !");
     renderPtValidationsList();
