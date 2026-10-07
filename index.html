@@ -218,7 +218,7 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
     <button class="tb" onclick="TAB('bilan')">&#128202; Bilan heures chantiers</button>
     <button class="tb" onclick="TAB('vehicules')">🚗 Véhicules</button>
   </nav>
-  <select id="salarie-tab-select" style="display:none;width:100%;height:44px;border:1px solid var(--brd2);border-radius:10px;padding:0 14px;font-size:14px;background:var(--bg);color:var(--txt);outline:none;font-weight:600" onchange="TAB(this.value)">
+  <select id="salarie-tab-select" style="display:none;flex:1;min-width:0;height:44px;border:1px solid var(--brd2);border-radius:10px;padding:0 14px;font-size:14px;background:var(--bg);color:var(--txt);outline:none;font-weight:600" onchange="TAB(this.value)">
     <option value="planning">🗓️ Planning</option>
     <option value="absdemande">🏖 Demande d'absence</option>
     <option value="pointage">🕐 Pointage</option>
@@ -2902,20 +2902,28 @@ function showSalariePickerModal(){
         return;
       }
       if(screen)screen.remove();
-      RP(); // pré-rendre le planning pour qu'il soit prêt quand le salarié le consulte
-      TAB("pointage");
+      TAB("planning"); // ouvrir directement le planning
     }
+
+    // Timeout de sécurité : si le chargement prend trop longtemps, forcer l'affichage
+    var _loadDone=false;
+    setTimeout(function(){
+      if(_loadDone)return;
+      var sc=document.getElementById("qr-load-screen");
+      if(sc)sc.remove();
+      TAB("planning");
+    },10000);
 
     // Tentative 1 : chargement immédiat
     var statusEl=document.getElementById("qr-load-status");
     if(statusEl)statusEl.textContent="Récupération des données...";
     loadFromCloud(function(){
       var sal=D.salaries&&D.salaries.find(function(s){return s.id===_salLockedId;});
-      if(sal){finishLoad();return;}
-      // Tentative 2 après 3 secondes (au cas où Netlify était en cours de déploiement)
+      if(sal){_loadDone=true;finishLoad();return;}
+      // Tentative 2 après 3 secondes (au cas où les données étaient en cours de déploiement)
       if(statusEl)statusEl.textContent="Nouvelle tentative...";
       setTimeout(function(){
-        loadFromCloud(finishLoad);
+        loadFromCloud(function(){_loadDone=true;finishLoad();});
       },3000);
     });
     return;
