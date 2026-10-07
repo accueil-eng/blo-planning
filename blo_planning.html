@@ -25,6 +25,10 @@ body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--txt);min-
 .logo-txt small{font-weight:600;font-size:12px;color:var(--muted)}
 .tabs{display:flex;gap:0;overflow-x:auto}
 body.profile-salarie .tabs{display:none}
+/* Salarié : planning en lecture seule — bloque édition mais garde navigation semaine */
+body.profile-salarie .lbtn{pointer-events:none!important;cursor:default!important}
+body.profile-salarie .addbtn{pointer-events:none!important;display:none!important}
+body.profile-salarie .crm{pointer-events:none!important;display:none!important}
 .tb{background:none;border:none;border-bottom:2px solid transparent;padding:14px 12px 12px;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tb:hover{color:var(--txt)}.tb.on{color:var(--acc);border-bottom-color:var(--acc)}
 /* Onglets en lecture seule — désactive les contrôles via CSS (fonctionne aussi sur contenu dynamique) */
@@ -2632,8 +2636,9 @@ function applyProfile(key) {
   if(ghBtn) ghBtn.style.display = !isReadOnly ? "flex" : "none";
 
   // ⚠️ Alerte si token manquant pour un profil bureau (écriture)
+  // Ne pas afficher pour le profil salarié (il n'est pas censé avoir le token écriture)
   var noSyncBanner = document.getElementById("no-sync-banner");
-  var needsToken = !isReadOnly && !GH_TOKEN;
+  var needsToken = !isReadOnly && !GH_TOKEN && key !== "salarie";
   if(needsToken){
     if(!noSyncBanner){
       noSyncBanner = document.createElement("div");
@@ -2897,6 +2902,7 @@ function showSalariePickerModal(){
         return;
       }
       if(screen)screen.remove();
+      RP(); // pré-rendre le planning pour qu'il soit prêt quand le salarié le consulte
       TAB("pointage");
     }
 
