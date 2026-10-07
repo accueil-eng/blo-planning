@@ -5228,12 +5228,12 @@ function RPOINTAGE(){
   var filterId=isSalMode?_salLockedId:(ptSal?ptSal.value:"");
   var weeks=[];
   try{weeks=getWeeksOfMonth(mois,annee);}catch(e){console.error("getWeeksOfMonth err",mois,annee,e);}
-  console.log("[RPOINTAGE] mois="+mois+" annee="+annee+" sals="+sals.length+" weeks=",weeks);
   var sals=D.salaries.filter(function(s){
     if(!s.prenom||!s.prenom.trim())return false;
     if(filterId&&s.id!==filterId)return false;
     return true;
   });
+  console.log("[RPOINTAGE] mois="+mois+" annee="+annee+" sals="+sals.length+" weeks=",weeks);
 
   if(!sals.length){wrap.innerHTML="<div class='empty'><div class='empty-icon'>👷</div><p>Aucun salarié.</p></div>";return;}
 
