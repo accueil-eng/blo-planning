@@ -295,10 +295,14 @@ body.profile-salarie .tabs{display:none}
     <select id="absal" style="min-width:130px"></select>
     <input type="date" id="abd"><input type="date" id="abf">
     <select id="abt" style="min-width:110px">
+      <option value="cp">Congés payés</option>
+      <option value="ecole">École</option>
       <option value="formation">Formation</option>
-      <option value="cp">Congés payés</option><option value="intemperies">Intempéries</option>
-      <option value="css">Congés sans solde</option><option value="formation">Formation</option>
-      <option value="maladie">Arrêt maladie</option><option value="autre">Autre</option>
+      <option value="intemperies">Intempéries</option>
+      <option value="css">Congés sans solde</option>
+      <option value="maladie">Arrêt maladie</option>
+      <option value="rtt">RTT</option>
+      <option value="autre">Autre</option>
     </select>
     <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#6b7c79">De <input type="time" id="abhd" style="width:90px"></label>
     <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#6b7c79">à <input type="time" id="abhf" style="width:90px"></label>
@@ -505,7 +509,8 @@ body.profile-salarie .tabs{display:none}
       <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px">Type d'absence</label>
       <select id="ad-type" style="height:38px;border:1px solid var(--brd2);border-radius:8px;padding:0 10px;font-size:14px;background:var(--bg);color:var(--txt);outline:none;width:100%">
         <option value="cp">Congés payés</option>
-        <option value="formation">École / Formation</option>
+        <option value="ecole">École</option>
+        <option value="formation">Formation</option>
         <option value="css">Congés sans solde</option>
         <option value="rtt">RTT</option>
         <option value="autre">Autre</option>
@@ -571,8 +576,8 @@ body.profile-salarie .tabs{display:none}
 
 <script>
 var COLORS=["#2563eb","#16a34a","#dc2626","#d97706","#7c3aed","#db2777","#0891b2","#65a30d","#9333ea","#ea580c","#0d9488","#be185d","#4338ca","#b45309","#0f766e"];
-var ABLBLS={cp:"Congés payés",intemperies:"Intempéries",css:"Congés sans solde",formation:"Formation",rtt:"RTT",maladie:"Arrêt maladie",autre:"Autre"};
-var ABABBR={cp:"CP",intemperies:"INT",css:"CSS",formation:"FOR",rtt:"RTT",maladie:"AM",autre:"AUT"};
+var ABLBLS={cp:"Congés payés",intemperies:"Intempéries",css:"Congés sans solde",formation:"Formation",ecole:"École",rtt:"RTT",maladie:"Arrêt maladie",autre:"Autre"};
+var ABABBR={cp:"CP",intemperies:"INT",css:"CSS",formation:"FOR",ecole:"ECO",rtt:"RTT",maladie:"AM",autre:"AUT"};
 var DN=["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 // ── GITHUB SYNC ──
 var GH_TOKEN = localStorage.getItem("gh_token")||"";
@@ -2200,7 +2205,7 @@ function _doPrintAbs(){
   var mois=parseInt(document.getElementById("print-abs-mois").value);
   var annee=parseInt(document.getElementById("print-abs-annee").value);
   document.getElementById("print-abs-modal").remove();
-  var ABLBLS2={cp:"Congés payés",intemperies:"Intempéries",css:"Congés sans solde",formation:"Formation",maladie:"Arrêt maladie",autre:"Autre",rtt:"RTT"};
+  var ABLBLS2={cp:"Congés payés",intemperies:"Intempéries",css:"Congés sans solde",formation:"Formation",ecole:"École",maladie:"Arrêt maladie",autre:"Autre",rtt:"RTT"};
   var abs=D.absences.filter(function(a){
     var d=pd(a.debut),f=pd(a.fin);
     return (d.getMonth()+1<=mois&&d.getFullYear()<=annee&&f.getMonth()+1>=mois&&f.getFullYear()>=annee)||
@@ -2302,9 +2307,10 @@ function showGroupAbsModal(){
     "<label style='display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px'>Type d'absence</label>"+
     "<select id='gabs-type' style='height:36px;border:1px solid var(--brd2);border-radius:8px;padding:0 10px;font-size:13px;background:var(--bg);color:var(--txt);outline:none;width:100%'>"+
     "<option value='cp'>Congés payés</option>"+
+    "<option value='ecole'>École</option>"+
+    "<option value='formation'>Formation</option>"+
     "<option value='intemperies'>Intempéries</option>"+
     "<option value='css'>Congés sans solde</option>"+
-    "<option value='formation'>Formation</option>"+
     "<option value='maladie'>Arrêt maladie</option>"+
     "<option value='autre'>Autre</option>"+
     "</select></div>"+
@@ -4464,7 +4470,8 @@ var PT_ROWS = [
   {id:"cp",        label:"Congés payés",          type:"number", unit:"h"},
   {id:"css",       label:"Congés sans solde",     type:"number", unit:"h"},
   {id:"hs",        label:"Heures supplémentaires",type:"number", unit:"h"},
-  {id:"formation", label:"École / Formation",     type:"number", unit:"h"},
+  {id:"ecole",     label:"École",                 type:"number", unit:"h"},
+  {id:"formation", label:"Formation",             type:"number", unit:"h"},
   {id:"maladie",   label:"Arrêt maladie",         type:"number", unit:"h"},
   {id:"intemp",    label:"Intempéries",           type:"number", unit:"h"}
 ];
@@ -5436,7 +5443,7 @@ function RPOINTAGE(){
               } else {
                 var _absBg=_absAutoFill?(ABS_PT_COLORS[_absDay.type]||"#f9fafb"):"";
                 var _absTip=_absAutoFill?"Auto : "+(ABS_PT_LABELS[_absDay.type]||_absDay.type)+" (absence)":"";
-                var _absBorderC=_absAutoFill?(_absDay.type==="cp"?"#86efac":_absDay.type==="maladie"?"#fca5a5":_absDay.type==="formation"?"#93c5fd":"#d1d5db"):"#e2e8f0";
+                var _absBorderC=_absAutoFill?(_absDay.type==="cp"?"#86efac":_absDay.type==="maladie"?"#fca5a5":_absDay.type==="formation"?"#93c5fd":_absDay.type==="ecole"?"#f9a8d4":"#d1d5db"):"#e2e8f0";
                 html+="<td style='"+tdStyle()+"padding:1px;text-align:center;"+(_absBg?"background:"+_absBg+";":"")+"' title='"+_absTip+"'>";
                 if(_absAutoFill){
                   html+="<div style='display:flex;align-items:center;justify-content:center;gap:1px'><input type='number' value='"+val+"' min='0' step='0.25' style='width:32px;height:22px;border:1px solid "+_absBorderC+";border-radius:3px;font-size:10px;text-align:center;padding:0;outline:none;background:"+_absBg+";font-style:italic' data-pt='"+mois+"|"+annee+"|"+row.id+"|"+sal.id+"|"+wk+"|"+di+"' onchange='ptNum(this)'><span style='font-size:8px;font-weight:800;color:#64748b;line-height:1'>"+(ABS_PT_LABELS[_absDay.type]||"ABS")+"</span></div>";
@@ -6125,6 +6132,7 @@ function buildPtTableHTML(sal,mo,an){
     {id:"cp",label:"Congés payés (h)",type:"number"},
     {id:"css",label:"Congés sans solde (h)",type:"number"},
     {id:"hs",label:"Heures supp. (h)",type:"number"},
+    {id:"ecole",label:"École (h)",type:"number"},
     {id:"formation",label:"Formation (h)",type:"number"},
     {id:"maladie",label:"Arrêt maladie (h)",type:"number"},
     {id:"intemperies",label:"Intempéries (h)",type:"number"}
@@ -6422,10 +6430,10 @@ function getAbsAutoHours(abs){
 }
 
 // Mapping: absence type → pointage row id
-var ABS_PT_MAP={cp:"cp",maladie:"maladie",intemperies:"intemperies",formation:"formation",css:"css"};
+var ABS_PT_MAP={cp:"cp",maladie:"maladie",intemperies:"intemp",formation:"formation",ecole:"ecole",css:"css"};
 // Colors per absence type for cell background
-var ABS_PT_COLORS={cp:"#dcfce7",maladie:"#fee2e2",intemperies:"#fff7ed",formation:"#dbeafe",css:"#f5f3ff",rtt:"#fef9c3",autre:"#f3f4f6"};
-var ABS_PT_LABELS={cp:"CP",maladie:"AM",intemperies:"INT",formation:"FOR",css:"CSS",rtt:"RTT",autre:"AUT"};
+var ABS_PT_COLORS={cp:"#dcfce7",maladie:"#fee2e2",intemperies:"#fff7ed",formation:"#dbeafe",ecole:"#fce7f3",css:"#f5f3ff",rtt:"#fef9c3",autre:"#f3f4f6"};
+var ABS_PT_LABELS={cp:"CP",maladie:"AM",intemperies:"INT",formation:"FOR",ecole:"ECO",css:"CSS",rtt:"RTT",autre:"AUT"};
 
 function getChantierForSalDay(salId,dt){
   var dow=dt.getDay()||7;
