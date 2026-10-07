@@ -4494,6 +4494,7 @@ var PT_ROWS = [
   {id:"panier",    label:"Panier repas",         type:"check",  unit:""},
   {id:"trajet",    label:"Trajet (zone)",         type:"zone_dd", unit:""},
   // {id:"transport", label:"Transport (zone)",      type:"zone_dd", unit:""},
+  {id:"bureau",    label:"Heures bureau",         type:"number", unit:"h", bureauOnly:true},
   {id:"cp",        label:"Congés payés",          type:"number", unit:"h"},
   {id:"css",       label:"Congés sans solde",     type:"number", unit:"h"},
   {id:"hs",        label:"Heures supplémentaires",type:"number", unit:"h"},
@@ -5317,6 +5318,7 @@ function RPOINTAGE(){
 
     // Rows
     PT_ROWS.forEach(function(row){
+      if(row.bureauOnly&&!sal.isBureau)return;
       html+="<tr>";
       html+="<td style='"+tdStyle()+"font-weight:500;white-space:nowrap;background:#f8f7f4;position:sticky;left:0;z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.08)'>"+row.label+(row.unit?" ("+row.unit+")":"")+"</td>";
 
@@ -6156,6 +6158,7 @@ function buildPtTableHTML(sal,mo,an){
     {id:"panier",label:"Panier repas",type:"check"},
     {id:"trajet",label:"Trajet (zone)",type:"zone_dd"},
     {id:"transport",label:"Transport (zone)",type:"zone_dd"},
+    {id:"bureau",label:"Heures bureau (h)",type:"number",bureauOnly:true},
     {id:"cp",label:"Congés payés (h)",type:"number"},
     {id:"css",label:"Congés sans solde (h)",type:"number"},
     {id:"hs",label:"Heures supp. (h)",type:"number"},
@@ -6166,6 +6169,7 @@ function buildPtTableHTML(sal,mo,an){
   ];
 
   PT_ROWS_PDF.forEach(function(row){
+    if(row.bureauOnly&&!sal.isBureau)return;
     html+="<tr><td>"+row.label+"</td>";
     var total=0;
     weeks.forEach(function(wk){
@@ -6683,6 +6687,7 @@ function exportPointageXLSX(){
   sals.forEach(function(sal){
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
     PT_ROWS.forEach(function(row){
+      if(row.bureauOnly&&!sal.isBureau)return;
       var line=[nomAff,row.label];
       var totalMois=0;
       var cells=[];
