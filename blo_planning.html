@@ -5228,7 +5228,7 @@ function RPOINTAGE(){
   var filterId=isSalMode?_salLockedId:(ptSal?ptSal.value:"");
   var weeks=[];
   try{weeks=getWeeksOfMonth(mois,annee);}catch(e){console.error("getWeeksOfMonth err",mois,annee,e);}
-  console.log("[RPOINTAGE] mois="+mois+" annee="+annee+" weeks=",weeks);
+  console.log("[RPOINTAGE] mois="+mois+" annee="+annee+" sals="+sals.length+" weeks=",weeks);
   var sals=D.salaries.filter(function(s){
     if(!s.prenom||!s.prenom.trim())return false;
     if(filterId&&s.id!==filterId)return false;
@@ -5239,6 +5239,7 @@ function RPOINTAGE(){
 
   var html="";
   sals.forEach(function(sal){
+    try{
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
     html+="<div style='margin-bottom:28px;border:1px solid var(--brd);border-radius:8px;overflow:hidden'>";
     html+="<div style='background:#13201e;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:13px;padding:8px 14px'>"+nomAff+"</div>";
@@ -5598,6 +5599,7 @@ function RPOINTAGE(){
       html+=renderBureauWeekValidateBlock(sal.id,weeks,annee);
     }
     html+="</div>";
+    }catch(err){html+="<div style='color:red;padding:10px;font-size:12px'>⚠️ Erreur rendu "+sal.prenom+": "+err.message+"</div>";}
   });
 
   wrap.innerHTML=html;
