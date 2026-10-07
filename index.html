@@ -5362,6 +5362,10 @@ function RPOINTAGE(){
               var _absM=getAbsForSalDay(sal.id,_absDt2);
               if(_absM&&ABS_PT_MAP[_absM.type]===row.id)_storedNum=String(getAbsAutoHours(_absM));
             }
+            if(_storedNum===""&&row.id==="bureau"&&sal.isBureau){
+              var _absDt3=dates2[d];
+              if(!getAbsForSalDay(sal.id,_absDt3))_storedNum=String(_absDt3.getDay()===5?6:7.25);
+            }
             totalMois+=parseFloat(_storedNum)||0;
           }
         }
@@ -5445,6 +5449,10 @@ function RPOINTAGE(){
             var _absDay=inM3?getAbsForSalDay(sal.id,dt):null;
             var _absAutoFill=_absDay&&ABS_PT_MAP[_absDay.type]===row.id&&val==="";
             if(_absAutoFill)val=String(getAbsAutoHours(_absDay));
+            // Bureau auto-fill : jours ouvrés sans absence → 7.25h (L-J) ou 6h (V)
+            if(row.id==="bureau"&&sal.isBureau&&inM3&&val===""&&!_absDay){
+              val=String(dt.getDay()===5?6:7.25);
+            }
             var n=inM3?(parseFloat(val)||0):0;wkTotal+=n;
             if(inM3){
               if(row.id==="conduite"){
