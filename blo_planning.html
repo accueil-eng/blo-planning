@@ -5318,7 +5318,13 @@ function RPOINTAGE(){
               try{var cdM=JSON.parse(condValM);if(cdM.validated)totalMois+=parseFloat(cdM.h)||0;}catch(e){}
             }
           } else {
-            totalMois+=parseFloat(ptGet(mois,annee,row.id,sal.id,wk,d))||0;
+            var _storedNum=ptGet(mois,annee,row.id,sal.id,wk,d);
+            if(_storedNum===""&&ABS_PT_MAP[row.id]){
+              var _absDt2=dates2[d];
+              var _absM=getAbsForSalDay(sal.id,_absDt2);
+              if(_absM&&ABS_PT_MAP[_absM.type]===row.id)_storedNum=String(getAbsAutoHours(_absM));
+            }
+            totalMois+=parseFloat(_storedNum)||0;
           }
         }
       });
@@ -5354,7 +5360,8 @@ function RPOINTAGE(){
             } else {
               var zval=ptGet(mois,annee,row.id,sal.id,wk,di)||"";
               // Auto-suggest zone trajet depuis le chantier affecté ce jour (indépendamment du véhicule)
-              if(!zval&&row.id==="trajet"){
+              var _absZoneDay=getAbsForSalDay(sal.id,getDatesOfWeek(wk,annee)[di]);
+              if(!zval&&row.id==="trajet"&&!_absZoneDay){
                 var dtZ=getDatesOfWeek(wk,annee)[di];
                 var chZ=getChantierForSalDay(sal.id,dtZ);
                 if(chZ){
@@ -5363,7 +5370,7 @@ function RPOINTAGE(){
                 }
               }
               // Auto-suggest zone transport depuis le chantier (véhicule société)
-              if(!zval&&row.id==="transport"){
+              if(!zval&&row.id==="transport"&&!_absZoneDay){
                 var dtZ=getDatesOfWeek(wk,annee)[di];
                 var chZ=getChantierForSalDay(sal.id,dtZ);
                 if(chZ){
@@ -5396,6 +5403,10 @@ function RPOINTAGE(){
             }
           } else {
             var inM3=(dt.getMonth()+1===mois&&dt.getFullYear()===annee);
+            // Absence auto-fill for number rows (cp, maladie, formation, intemperies, css)
+            var _absDay=inM3?getAbsForSalDay(sal.id,dt):null;
+            var _absAutoFill=_absDay&&ABS_PT_MAP[_absDay.type]===row.id&&val==="";
+            if(_absAutoFill)val=String(getAbsAutoHours(_absDay));
             var n=inM3?(parseFloat(val)||0):0;wkTotal+=n;
             if(inM3){
               if(row.id==="conduite"){
@@ -5421,7 +5432,16 @@ function RPOINTAGE(){
                 html+="</td>";
                 if(isValid)wkTotal+=parseFloat(condData.h)||0;
               } else {
-                html+="<td style='"+tdStyle()+"padding:1px;text-align:center'><input type='number' value='"+(val||"")+"' min='0' step='0.25' style='width:40px;height:24px;border:1px solid #e2e8f0;border-radius:3px;font-size:11px;text-align:center;padding:0 2px;outline:none' data-pt='"+mois+"|"+annee+"|"+row.id+"|"+sal.id+"|"+wk+"|"+di+"' onchange='ptNum(this)'></td>";
+                var _absBg=_absAutoFill?(ABS_PT_COLORS[_absDay.type]||"#f9fafb"):"";
+                var _absTip=_absAutoFill?"Auto : "+(ABS_PT_LABELS[_absDay.type]||_absDay.type)+" (absence)":"";
+                var _absBorderC=_absAutoFill?(_absDay.type==="cp"?"#86efac":_absDay.type==="maladie"?"#fca5a5":_absDay.type==="formation"?"#93c5fd":"#d1d5db"):"#e2e8f0";
+                html+="<td style='"+tdStyle()+"padding:1px;text-align:center;"+(_absBg?"background:"+_absBg+";":"")+"' title='"+_absTip+"'>";
+                if(_absAutoFill){
+                  html+="<div style='display:flex;align-items:center;justify-content:center;gap:1px'><input type='number' value='"+val+"' min='0' step='0.25' style='width:32px;height:22px;border:1px solid "+_absBorderC+";border-radius:3px;font-size:10px;text-align:center;padding:0;outline:none;background:"+_absBg+";font-style:italic' data-pt='"+mois+"|"+annee+"|"+row.id+"|"+sal.id+"|"+wk+"|"+di+"' onchange='ptNum(this)'><span style='font-size:8px;font-weight:800;color:#64748b;line-height:1'>"+(ABS_PT_LABELS[_absDay.type]||"ABS")+"</span></div>";
+                } else {
+                  html+="<input type='number' value='"+(val||"")+"' min='0' step='0.25' style='width:40px;height:24px;border:1px solid #e2e8f0;border-radius:3px;font-size:11px;text-align:center;padding:0 2px;outline:none' data-pt='"+mois+"|"+annee+"|"+row.id+"|"+sal.id+"|"+wk+"|"+di+"' onchange='ptNum(this)'>";
+                }
+                html+="</td>";
               }
             } else {
               html+="<td style='"+tdStyle()+"background:#f5f5f5'></td>";
@@ -6379,6 +6399,31 @@ function shouldAutoPanier(salId,dt){
   var dow=dt.getDay();
   return dow>=1&&dow<=5; // Jours ouvrés uniquement (1=lundi … 5=vendredi)
 }
+
+// Returns the absence object for salarié on a given day, or null
+function getAbsForSalDay(salId,dt){
+  if(!D.absences||!D.absences.length)return null;
+  var dStr=ds(dt);
+  return D.absences.find(function(a){
+    return a.salId===salId&&a.debut<=dStr&&dStr<=a.fin;
+  })||null;
+}
+
+// Returns hours for an absence (uses heureDebut/heureFin if set, else 7h full day)
+function getAbsAutoHours(abs){
+  if(abs.heureDebut&&abs.heureFin){
+    var t1=abs.heureDebut.split(":");var t2=abs.heureFin.split(":");
+    var h=(parseFloat(t2[0])+parseFloat(t2[1])/60)-(parseFloat(t1[0])+parseFloat(t1[1])/60);
+    return Math.max(0,Math.round(h*4)/4);
+  }
+  return 7;
+}
+
+// Mapping: absence type → pointage row id
+var ABS_PT_MAP={cp:"cp",maladie:"maladie",intemperies:"intemperies",formation:"formation",css:"css"};
+// Colors per absence type for cell background
+var ABS_PT_COLORS={cp:"#dcfce7",maladie:"#fee2e2",intemperies:"#fff7ed",formation:"#dbeafe",css:"#f5f3ff",rtt:"#fef9c3",autre:"#f3f4f6"};
+var ABS_PT_LABELS={cp:"CP",maladie:"AM",intemperies:"INT",formation:"FOR",css:"CSS",rtt:"RTT",autre:"AUT"};
 
 function getChantierForSalDay(salId,dt){
   var dow=dt.getDay()||7;
