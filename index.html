@@ -2548,7 +2548,7 @@ var PROFILES = {
     readOnlyTabs: ["pointage"],
     readOnly: false },
   // Profils techniques conservés
-  salarie: { name: "Espace Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnlyTabs: [], readOnly: true },
+  salarie: { name: "Espace Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnlyTabs: ["pointage"], readOnly: false },
   planningpublic: { name: "Planning (lecture seule)", initiale: "P", pin: null, color: "#0891b2", tabs: ["planning"], readOnlyTabs: [], readOnly: true }
 };
 var _currentProfile = null;
@@ -2612,9 +2612,10 @@ function applyProfile(key) {
       var rb=pg.querySelector(".ro-banner");if(rb)rb.remove();
     }
   });
-  // Désactiver le drag sur planning si lecture seule
+  // Désactiver le drag sur planning seulement en mode planningpublic
+  // (le salarié via QR doit pouvoir scroller/voir le planning, même en lecture seule)
   var planningPg = document.getElementById("pg-planning");
-  if(planningPg) planningPg.style.pointerEvents = (isReadOnly||roTabs.indexOf("planning")>=0) ? "none" : "";
+  if(planningPg) planningPg.style.pointerEvents = (key==="planningpublic") ? "none" : "";
 
   // WhatsApp button visible only for Bureau (sending planning to team)
   var waBtn = document.querySelector("[onclick='showWhatsAppModal()']");
@@ -2660,9 +2661,9 @@ function showGHTokenModal(){
   var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:8px";title.textContent="☁️ Synchronisation GitHub";
   var desc=document.createElement("p");desc.style.cssText="font-size:12px;color:#475569;margin-bottom:12px";desc.textContent="Token écriture (Bureau) — pour sauvegarder les données.";
 
-  var inp2label=document.createElement("div");inp2label.style.cssText="font-size:11px;font-weight:600;color:#6b7c79;margin-bottom:4px;margin-top:10px";inp2label.textContent="Token lecture seule (salariés via QR code)";
-  var inp2=document.createElement("input");inp2.id="gh-token-readonly-input";inp2.type="password";inp2.value=D.readonlyToken||"";inp2.placeholder="github_pat_... (lecture seule)";inp2.style.cssText="width:100%;height:34px;border:1px solid #c0cccb;border-radius:6px;padding:0 10px;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px";
-  var inp2hint=document.createElement("div");inp2hint.style.cssText="font-size:10px;color:#6b7c79;margin-bottom:10px";inp2hint.textContent="Créez un token Fine-grained avec Contents:Read-only sur blo-planning.";
+  var inp2label=document.createElement("div");inp2label.style.cssText="font-size:11px;font-weight:600;color:#6b7c79;margin-bottom:4px;margin-top:10px";inp2label.textContent="Token salarié (demandes d'absence via QR code)";
+  var inp2=document.createElement("input");inp2.id="gh-token-readonly-input";inp2.type="password";inp2.value=D.readonlyToken||"";inp2.placeholder="github_pat_... (écriture requise)";inp2.style.cssText="width:100%;height:34px;border:1px solid #c0cccb;border-radius:6px;padding:0 10px;font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px";
+  var inp2hint=document.createElement("div");inp2hint.style.cssText="font-size:10px;color:#6b7c79;margin-bottom:10px";inp2hint.textContent="Token Fine-grained avec Contents:Read+Write sur blo-planning. Permet aux salariés d'envoyer leurs demandes d'absence.";
   // ── Lien de configuration pour partager le token ──
   var shareSection=document.createElement("div");
   shareSection.style.cssText="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:12px";
@@ -3224,6 +3225,45 @@ function renderMesDemandes(){
   wrap.innerHTML=html;
 }
 
+// Pousse une demande d'absence vers GitHub même sans token écriture (utilise le token salarié)
+function _pushAbsDemandeToCloud(demande, onDone){
+  var token = GH_TOKEN || GH_TOKEN_READONLY;
+  if(!token){if(onDone)onDone(false);return;}
+  // Récupère le SHA courant puis pousse
+  fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+    headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json"}
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    if(!data.content)throw new Error("no content");
+    var sha=data.sha;
+    var b64=data.content.split("\n").join("");
+    var current=JSON.parse(decodeURIComponent(escape(atob(b64))));
+    if(!current.absDemandes)current.absDemandes=[];
+    // Évite les doublons
+    current.absDemandes=current.absDemandes.filter(function(d){return d.id!==demande.id;});
+    current.absDemandes.push(demande);
+    // Garde D local en sync
+    D.absDemandes=current.absDemandes;
+    var json=JSON.stringify(current,function(k,v){if(v===null||v===undefined||v==="")return undefined;return v;});
+    var encoded=btoa(unescape(encodeURIComponent(json)));
+    return fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+      method:"PUT",
+      headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json","Content-Type":"application/json"},
+      body:JSON.stringify({message:"Demande d'absence salarié",content:encoded,sha:sha})
+    });
+  })
+  .then(function(r){return r.json();})
+  .then(function(result){
+    if(result.content){_ghSha=result.content.sha;}
+    if(onDone)onDone(true);
+  })
+  .catch(function(e){
+    console.log("Push abs demande error:",e);
+    if(onDone)onDone(false);
+  });
+}
+
 function sendAbsDemande(){
   var salId=(_currentProfile==="salarie")?_salLockedId:document.getElementById("ad-sal").value;
   var type=document.getElementById("ad-type").value;
@@ -3259,6 +3299,19 @@ function sendAbsDemande(){
   document.getElementById("ad-motif").value="";
   showToast("✅ Demande envoyée !");
   renderMesDemandes();
+
+  // Salarié via QR code : pousse la demande vers le cloud pour notifier les admins
+  if(_currentProfile==="salarie"){
+    showToast("☁️ Envoi en cours...");
+    _pushAbsDemandeToCloud(demande, function(ok){
+      if(ok){
+        showToast("✅ Demande transmise aux responsables !");
+      } else {
+        showToast("⚠️ Envoi impossible — pensez à informer votre responsable");
+      }
+    });
+  }
+
   showAbsDemandeNotifModal(msg);
 }
 
@@ -3287,12 +3340,17 @@ function updateAbsDemandesDot(){
   var pendingCount=D.absDemandes.filter(function(d){return d.status==="pending";}).length;
   if(dot)dot.style.display=pendingCount?"block":"none";
 
-  // Persistent banner, visible across all tabs, Bureau only
+  // Persistent banner, visible across all tabs, pour les profils admin
   var banner=document.getElementById("absdemandes-banner");
   if(banner){
-    if(pendingCount&&_currentProfile==="bureau"){
+    var isAdmin=(_currentProfile==="alexis"||_currentProfile==="valerie"||_currentProfile==="quentin");
+    if(pendingCount&&isAdmin){
       banner.style.display="block";
-      banner.textContent="🏖 "+pendingCount+" demande"+(pendingCount>1?"s":"")+" d'absence en attente de validation — cliquez pour traiter";
+      if(_currentProfile==="alexis"){
+        banner.textContent="🏖 "+pendingCount+" demande"+(pendingCount>1?"s":"")+" d'absence en attente — cliquez pour valider";
+      } else {
+        banner.textContent="🏖 "+pendingCount+" demande"+(pendingCount>1?"s":"")+" d'absence en attente de validation — cliquez pour consulter";
+      }
     } else {
       banner.style.display="none";
     }
