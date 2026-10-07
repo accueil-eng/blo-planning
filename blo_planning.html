@@ -2353,20 +2353,47 @@ function RA(){
   rafSel();var el=document.getElementById("abslist");
   if(!D.absences.length){el.innerHTML="<div class='empty'><div class='empty-icon'>📅</div><p>Aucune absence.</p></div>";return;}
   el.innerHTML="";
-  var sorted=D.absences.slice().sort(function(a,b){return a.debut.localeCompare(b.debut);});
-  sorted.forEach(function(abs){
-    var sal=D.salaries.find(function(s){return s.id===abs.salId;});if(!sal)return;
+  var today=ds(new Date());
+  var sorted=D.absences.slice().sort(function(a,b){return b.debut.localeCompare(b.debut)||b.debut.localeCompare(a.debut);});
+  var actives=sorted.filter(function(a){return a.fin>=today;}).sort(function(a,b){return a.debut.localeCompare(b.debut);});
+  var archivees=sorted.filter(function(a){return a.fin<today;}).sort(function(a,b){return b.fin.localeCompare(a.fin);});
+
+  function makeCard(abs,muted){
+    var sal=D.salaries.find(function(s){return s.id===abs.salId;});if(!sal)return null;
     var d1=pd(abs.debut).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
     var d2=pd(abs.fin).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
     var card=document.createElement("div");card.className="abs-card";
+    if(muted)card.style.opacity="0.6";
     var av=document.createElement("div");av.style.cssText="width:26px;height:26px;border-radius:50%;background:"+sal.color+";display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0";av.textContent=(sal.prenom[0]+(sal.nom?sal.nom[0]:"")).toUpperCase();card.appendChild(av);
     var nm=document.createElement("div");nm.style.cssText="flex:1;font-weight:500;font-size:12px";nm.textContent=sal.prenom+(sal.nom?" "+sal.nom:"");card.appendChild(nm);
-    var dt=document.createElement("div");dt.style.cssText="font-size:11px;color:var(--muted)";dt.textContent=d1+" → "+d2+(abs.heureDebut&&abs.heureFin?" ("+abs.heureDebut+"-"+abs.heureFin+")":"");card.appendChild(dt);
+    var dt=document.createElement("div");dt.style.cssText="font-size:11px;color:var(--muted)";dt.textContent=d1+(abs.debut!==abs.fin?" → "+d2:"")+(abs.heureDebut&&abs.heureFin?" ("+abs.heureDebut+"-"+abs.heureFin+")":"");card.appendChild(dt);
     var badge=document.createElement("span");badge.className="abs-badge "+abs.type;badge.textContent=ABLBLS[abs.type]||abs.type;card.appendChild(badge);
     var xb=document.createElement("button");xb.className="bico";xb.textContent="×";
     xb.onclick=(function(aid){return function(){delAbs(aid);};})(abs.id);
-    card.appendChild(xb);el.appendChild(card);
-  });
+    card.appendChild(xb);
+    return card;
+  }
+
+  if(!actives.length){
+    var empty=document.createElement("div");empty.innerHTML="<div class='empty'><div class='empty-icon'>📅</div><p>Aucune absence en cours ou à venir.</p></div>";el.appendChild(empty);
+  } else {
+    actives.forEach(function(abs){var c=makeCard(abs,false);if(c)el.appendChild(c);});
+  }
+
+  if(archivees.length){
+    var archWrap=document.createElement("div");archWrap.style.cssText="margin-top:18px";
+    var archToggle=document.createElement("button");
+    archToggle.style.cssText="display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--brd2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;width:100%";
+    archToggle.innerHTML="<span id='arch-arrow'>▶</span> 📦 Absences passées ("+archivees.length+")";
+    var archList=document.createElement("div");archList.id="arch-list";archList.style.display="none";archList.style.marginTop="8px";
+    archToggle.onclick=function(){
+      var open=archList.style.display!=="none";
+      archList.style.display=open?"none":"block";
+      document.getElementById("arch-arrow").textContent=open?"▶":"▼";
+    };
+    archivees.forEach(function(abs){var c=makeCard(abs,true);if(c)archList.appendChild(c);});
+    archWrap.appendChild(archToggle);archWrap.appendChild(archList);el.appendChild(archWrap);
+  }
 }
 
 // ── VÉHICULES ──
