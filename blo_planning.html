@@ -672,16 +672,24 @@ function loadFromCloud(cb){
     var localSavedAt = D&&D._savedAt ? D._savedAt : (_lastLocalSaveAt||0);
     var remoteSavedAt = remote._savedAt || 0;
 
-    // Conserver le local si :
-    // - une sauvegarde locale est très récente (< 45s), OU
-    // - le local a un _savedAt plus récent que le remote
-    var recentlySaved = _lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 45000;
-    var localNewer = localSavedAt > 0 && remoteSavedAt > 0 && localSavedAt > remoteSavedAt;
+    // Sans token d'écriture (salarié via QR code) → toujours appliquer le remote
+    // car le salarié ne peut pas écrire sur le cloud, ses saves locaux ne doivent pas
+    // bloquer la synchronisation
+    if(!GH_TOKEN){
+      console.log("[loadFromCloud] mode lecture seule → remote toujours appliqué");
+      // on continue vers l'application du remote
+    } else {
+      // Conserver le local si :
+      // - une sauvegarde locale est très récente (< 45s), OU
+      // - le local a un _savedAt plus récent que le remote
+      var recentlySaved = _lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 45000;
+      var localNewer = localSavedAt > 0 && remoteSavedAt > 0 && localSavedAt > remoteSavedAt;
 
-    if(recentlySaved || localNewer){
-      console.log("[loadFromCloud] local conservé — recentlySaved="+recentlySaved+" localNewer="+localNewer+
-        " localAt="+new Date(localSavedAt).toISOString()+" remoteAt="+new Date(remoteSavedAt).toISOString());
-      return false; // local plus récent, pas d'écrasement
+      if(recentlySaved || localNewer){
+        console.log("[loadFromCloud] local conservé — recentlySaved="+recentlySaved+" localNewer="+localNewer+
+          " localAt="+new Date(localSavedAt).toISOString()+" remoteAt="+new Date(remoteSavedAt).toISOString());
+        return false; // local plus récent, pas d'écrasement
+      }
     }
 
     // Backup automatique avant écrasement (en cas de perte accidentelle)
