@@ -5253,12 +5253,12 @@ function RPOINTAGE(){
       var dates=getDatesOfWeek(wk,annee);
       var span=PT_DAYS.length+1;
       var salValidated=!!(D.ptWeekValidations&&D.ptWeekValidations[sal.id+"|"+wk+"|"+annee]);
-      var bureauV=!!(D.bureauWeekValidations&&D.bureauWeekValidations[sal.id+"|"+wk+"|"+annee]);
+      var alexisV=!!(D.alexisValidations&&D.alexisValidations[sal.id+"|"+wk+"|"+annee]);
       var weekIndicators="";
-      if(salValidated)weekIndicators+="<span title='Validée par le salarié' style='margin-left:4px'>👤✅</span>";
-      else weekIndicators+="<span title='Non validée par le salarié' style='margin-left:4px;opacity:.5'>👤⏳</span>";
-      if(bureauV)weekIndicators+="<span title='Validée par le Bureau' style='margin-left:2px'>🏢✅</span>";
-      else weekIndicators+="<span title='Non validée par le Bureau' style='margin-left:2px;opacity:.5'>🏢⏳</span>";
+      if(alexisV)weekIndicators+="<span title='Validée par Alexis' style='margin-left:4px'>📋✅</span>";
+      else weekIndicators+="<span title='En attente validation Alexis' style='margin-left:4px;opacity:.5'>📋⏳</span>";
+      if(salValidated)weekIndicators+="<span title='Validée par le salarié' style='margin-left:2px'>👤✅</span>";
+      else weekIndicators+="<span title='En attente validation salarié' style='margin-left:2px;opacity:.5'>👤⏳</span>";
       html+="<th colspan='"+span+"' style='"+thStyle()+"background:#c7d2fe;color:#3730a3'>S"+wk+" "+weekIndicators+"</th>";
     });
     html+="</tr>";
@@ -5889,48 +5889,92 @@ function renderPtValidationsList(){
   if(!wrap)return;
   if(_currentProfile!=="alexis"&&_currentProfile!=="valerie"){wrap.innerHTML="";return;}
   if(!D.ptWeekValidations)D.ptWeekValidations={};
-  if(!D.bureauWeekValidations)D.bureauWeekValidations={};
-  if(!D.ptTraite)D.ptTraite={};
+  if(!D.alexisValidations)D.alexisValidations={};
 
-  var pending=[], validated=[];
-  Object.keys(D.ptWeekValidations).forEach(function(k){
-    var e=D.ptWeekValidations[k];
-    if(D.bureauWeekValidations[k]) validated.push({key:k,e:e,v:D.bureauWeekValidations[k]});
-    else pending.push({key:k,e:e});
-  });
+  var now=new Date();
+  var moisEl=document.getElementById("pt-mois"),anEl=document.getElementById("pt-annee");
+  var mois=moisEl?parseInt(moisEl.value):now.getMonth()+1;
+  var annee=anEl?parseInt(anEl.value):now.getFullYear();
+  var weeks=getWeeksOfMonth(mois,annee);
+
+  var sals=(D.salaries||[]).filter(function(s){return s.prenom&&s.prenom.trim();});
 
   var html="";
 
-  // ── SECTION ALEXIS ──
+  // ── SECTION ALEXIS : tableau de suivi des validations par salarié/semaine ──
   html+="<div style='background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
-  html+="<div style='font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px'>📋 Alexis — Pointages à valider"+(pending.length?" ("+pending.length+")":"")+"</div>";
-  if(!pending.length){
-    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucun pointage en attente ✓</div>";
-  } else {
-    pending.forEach(function(item){
-      var e=item.e; var k=item.key;
-      html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap'>";
-      html+="<div style='font-size:12px'>📋 Sem. <b>"+e.semaine+"</b> — <b>"+e.nom+"</b></div>";
-      html+="<div style='display:flex;gap:6px'>";
-      html+="<button onclick='ptVoirSalarie("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#f0fdfa;color:#0d9488;border:1px solid #5eead4;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>👁 Voir</button>";
-      html+="<button onclick='alexisValider("+JSON.stringify(k)+")' style='height:28px;padding:0 10px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>✅ Valider</button>";
-      html+="</div></div>";
+
+  // Compter les semaines non encore validées par Alexis
+  var nbPending=0;
+  sals.forEach(function(sal){
+    weeks.forEach(function(wk){
+      var k=sal.id+"|"+wk+"|"+annee;
+      if(!D.alexisValidations[k])nbPending++;
     });
+  });
+
+  html+="<div style='font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px'>📋 Alexis — Suivi des validations "+(nbPending>0?"<span style='background:#f59e0b;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px'>"+nbPending+" à valider</span>":"<span style='background:#10b981;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px'>Tout validé ✓</span>")+"</div>";
+
+  if(!sals.length||!weeks.length){
+    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucune donnée pour ce mois.</div>";
+  } else {
+    // Tableau compact : lignes = salariés, colonnes = semaines
+    html+="<div style='overflow-x:auto'><table style='border-collapse:collapse;width:100%;font-size:11px'>";
+    html+="<thead><tr><th style='text-align:left;padding:6px 10px;background:#fef3c7;border:1px solid #fde68a;font-size:11px;font-weight:700;color:#92400e;min-width:130px'>Salarié</th>";
+    weeks.forEach(function(wk){
+      html+="<th style='text-align:center;padding:6px 8px;background:#fef3c7;border:1px solid #fde68a;font-size:11px;font-weight:700;color:#92400e;min-width:60px'>S"+wk+"</th>";
+    });
+    html+="</tr></thead><tbody>";
+
+    sals.forEach(function(sal){
+      var nom=(sal.nom?sal.nom+" ":"")+sal.prenom;
+      html+="<tr>";
+      html+="<td style='padding:5px 10px;border:1px solid #fde68a;background:#fff;font-size:11px;font-weight:600;white-space:nowrap'>"+nom+"</td>";
+      weeks.forEach(function(wk){
+        var k=sal.id+"|"+wk+"|"+annee;
+        var alexisOk=!!D.alexisValidations[k];
+        var salOk=!!D.ptWeekValidations[k];
+        var cell="";
+        if(alexisOk&&salOk){
+          // Les deux ont validé = verrouillé
+          cell="<span title='Validé Alexis + salarié — verrouillé' style='font-size:14px;cursor:default'>🔒</span>";
+        } else if(alexisOk){
+          // Alexis a validé, en attente du salarié
+          cell="<span title='Validé par Alexis — en attente du salarié' style='font-size:14px;cursor:default'>✅</span><span style='font-size:9px;color:#6b7c79;display:block'>att. sal.</span>";
+        } else {
+          // Pas encore validé par Alexis — bouton direct
+          cell="<button onclick='alexisValiderDirect("+JSON.stringify(sal.id)+","+wk+","+annee+")' title='Valider la sem. "+wk+" pour "+nom+"' style='font-size:11px;background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;font-weight:700'>S"+wk+" ⏳</button>";
+        }
+        html+="<td style='text-align:center;padding:4px 6px;border:1px solid #fde68a;background:"+(alexisOk?"#f0fdf4":"#fff")+"'>"+cell+"</td>";
+      });
+      html+="</tr>";
+    });
+
+    html+="</tbody></table></div>";
+    html+="<div style='margin-top:8px;font-size:10px;color:#92400e;opacity:.7'>⏳ = en attente de votre validation &nbsp;·&nbsp; ✅ = validé, en attente du salarié &nbsp;·&nbsp; 🔒 = verrouillé (double validation)</div>";
   }
   html+="</div>";
 
-  // ── SECTION VALÉRIE ──
+  // ── SECTION VALÉRIE : semaines validées par les deux parties ──
+  var readyForVal=[];
+  Object.keys(D.alexisValidations).forEach(function(k){
+    if(D.ptWeekValidations[k]){
+      var e=D.alexisValidations[k];
+      var ts=D.alexisValidations[k].ts;
+      var d=new Date(ts);
+      readyForVal.push({key:k,e:e,dateStr:d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0")});
+    }
+  });
+
   html+="<div style='background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
-  html+="<div style='font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px'>📬 Valérie — À traiter pour les salaires"+(validated.length?" ("+validated.length+")":"")+"</div>";
-  if(!validated.length){
-    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucun pointage validé en attente ✓</div>";
+  html+="<div style='font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px'>📬 Valérie — À traiter pour les salaires"+(readyForVal.length?" <span style='background:#7c3aed;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px'>"+readyForVal.length+"</span>":"")+"</div>";
+  if(!readyForVal.length){
+    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucun pointage doublement validé en attente ✓</div>";
   } else {
-    validated.forEach(function(item){
+    readyForVal.forEach(function(item){
       var e=item.e; var k=item.key;
-      var d=new Date(item.v.ts);
-      var dateStr=d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
       html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #ede9fe;border-radius:8px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap'>";
-      html+="<div><div style='font-size:12px;font-weight:600'>Sem. "+e.semaine+" — "+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Validé par Alexis le "+dateStr+"</div></div>";
+      html+="<div><div style='font-size:12px;font-weight:600'>Sem. "+e.semaine+" — "+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Validé Alexis le "+item.dateStr+" · Salarié ✅</div></div>";
       html+="<div style='display:flex;gap:6px;flex-wrap:wrap'>";
       html+="<button onclick='ptVoirSalarie("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>👁 Voir</button>";
       html+="<button onclick='ptExportSalSemaine("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>📥 Excel</button>";
@@ -5938,7 +5982,7 @@ function renderPtValidationsList(){
       html+="</div></div>";
     });
   }
-  // Bouton PDF global
+  // Boutons globaux
   html+="<div style='margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'>";
   html+="<button onclick='ptPrintAllPDF()' style='height:32px;padding:0 14px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📄 PDF tous les salariés</button>";
   html+="<button onclick='window.print()' style='height:32px;padding:0 14px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
@@ -5946,6 +5990,18 @@ function renderPtValidationsList(){
   html+="</div>";
 
   wrap.innerHTML=html;
+}
+
+// Validation directe depuis le tableau de suivi (sans passer par les boutons inline)
+function alexisValiderDirect(salId,semaine,annee){
+  if(!D.alexisValidations)D.alexisValidations={};
+  var sal=D.salaries.find(function(s){return s.id===salId;});
+  var key=salId+"|"+semaine+"|"+annee;
+  D.alexisValidations[key]={salId:salId,semaine:semaine,annee:annee,ts:Date.now(),nom:sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?"};
+  save();
+  renderPtValidationsList();
+  RPOINTAGE();
+  showToast("Sem. "+semaine+" validée pour "+(sal?sal.prenom:"?")+" ✅");
 }
 
 function ptVoirSalarie(salId,semaine,annee){
