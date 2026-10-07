@@ -5446,7 +5446,8 @@ function RPOINTAGE(){
                 var _absBorderC=_absAutoFill?(_absDay.type==="cp"?"#86efac":_absDay.type==="maladie"?"#fca5a5":_absDay.type==="formation"?"#93c5fd":_absDay.type==="ecole"?"#f9a8d4":"#d1d5db"):"#e2e8f0";
                 html+="<td style='"+tdStyle()+"padding:1px;text-align:center;"+(_absBg?"background:"+_absBg+";":"")+"' title='"+_absTip+"'>";
                 if(_absAutoFill){
-                  html+="<div style='display:flex;align-items:center;justify-content:center;gap:1px'><input type='number' value='"+val+"' min='0' step='0.25' style='width:32px;height:22px;border:1px solid "+_absBorderC+";border-radius:3px;font-size:10px;text-align:center;padding:0;outline:none;background:"+_absBg+";font-style:italic' data-pt='"+mois+"|"+annee+"|"+row.id+"|"+sal.id+"|"+wk+"|"+di+"' onchange='ptNum(this)'><span style='font-size:8px;font-weight:800;color:#64748b;line-height:1'>"+(ABS_PT_LABELS[_absDay.type]||"ABS")+"</span></div>";
+                  var _showBadge=_absDay.type!=="ecole";
+                  html+="<div style='display:flex;align-items:center;justify-content:center;gap:1px'><input type='number' value='"+val+"' min='0' step='0.25' style='width:"+(_showBadge?"32":"40")+"px;height:22px;border:1px solid "+_absBorderC+";border-radius:3px;font-size:10px;text-align:center;padding:0;outline:none;background:"+_absBg+";font-style:italic' data-pt='"+mois+"|"+annee+"|"+row.id+"|"+sal.id+"|"+wk+"|"+di+"' onchange='ptNum(this)'>"+(_showBadge?"<span style='font-size:8px;font-weight:800;color:#64748b;line-height:1'>"+(ABS_PT_LABELS[_absDay.type]||"ABS")+"</span>":"")+"</div>";
                 } else {
                   html+="<input type='number' value='"+(val||"")+"' min='0' step='0.25' style='width:40px;height:24px;border:1px solid #e2e8f0;border-radius:3px;font-size:11px;text-align:center;padding:0 2px;outline:none' data-pt='"+mois+"|"+annee+"|"+row.id+"|"+sal.id+"|"+wk+"|"+di+"' onchange='ptNum(this)'>";
                 }
