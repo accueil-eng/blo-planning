@@ -212,6 +212,7 @@ body.profile-salarie .tabs{display:none}
     <button class="tb" onclick="TAB('formation')">Formation</button>
     <button class="tb" onclick="TAB('gantt')">&#128197; Pr&#233;visionnel</button>
     <button class="tb" onclick="TAB('bilan')">&#128202; Bilan heures chantiers</button>
+    <button class="tb" onclick="TAB('vehicules')">🚗 Véhicules</button>
   </nav>
   <select id="salarie-tab-select" style="display:none;width:100%;height:44px;border:1px solid var(--brd2);border-radius:10px;padding:0 14px;font-size:14px;background:var(--bg);color:var(--txt);outline:none;font-weight:600" onchange="TAB(this.value)">
     <option value="planning">🗓️ Planning</option>
@@ -2477,7 +2478,7 @@ var PROFILES = {
     readOnlyTabs: ["pointage"],
     readOnly: false },
   // Profils techniques conservés
-  salarie: { name: "Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnlyTabs: [], readOnly: true },
+  salarie: { name: "Espace Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnlyTabs: [], readOnly: true },
   planningpublic: { name: "Planning (lecture seule)", initiale: "P", pin: null, color: "#0891b2", tabs: ["planning"], readOnlyTabs: [], readOnly: true }
 };
 var _currentProfile = null;
@@ -2653,12 +2654,12 @@ function showProfileModal() {
   box.appendChild(sub);
 
   // Utilisateurs principaux
-  var mainUsers = ["quentin","alexis","valerie"];
+  var mainUsers = ["quentin","alexis","valerie","salarie"];
   var descriptions = {
     quentin: "Planning · Chantiers · Prévisionnel",
     alexis: "Planning · Pointage · Chantiers · Salariés",
     valerie: "Planning · RDV · Indemnités · Formation · Prévisionnel",
-    salarie: "Planning · Pointage personnel · Absences"
+    salarie: "Développer et tester l'interface commune à tous les salariés"
   };
 
   mainUsers.forEach(function(key){
@@ -2668,11 +2669,12 @@ function showProfileModal() {
     btn.style.cssText = "display:flex;align-items:center;gap:14px;padding:16px 18px;border:2px solid "+(isActive?p.color:"#dde5e4")+";border-radius:12px;cursor:pointer;margin-bottom:10px;transition:border-color .15s"+(isActive?";background:#f8f9ff":"");
     btn.onmouseover = function(){ btn.style.borderColor = p.color; btn.style.background="#f8f9ff"; };
     btn.onmouseout = function(){ btn.style.borderColor = isActive?p.color:"#dde5e4"; btn.style.background=isActive?"#f8f9ff":""; };
-    btn.onclick = function(){
+    btn.onclick = (function(k,pp){return function(){
+      if(k==="salarie"){modal.remove();_salLockedId="";applyProfile("salarie");loadFromCloud(function(){TAB("pointage");showToast("\ud83d\udc64 Espace salari\u00e9 — aperçu");});return;}
       modal.remove();
-      applyProfile(key);
-      loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👋 Bonjour "+p.name+" !");});
-    };
+      applyProfile(k);
+      loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👋 Bonjour "+pp.name+" !");});
+    };})(key,p);
     var av = document.createElement("div");
     av.style.cssText = "width:46px;height:46px;border-radius:50%;background:"+p.color+";display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:#fff;flex-shrink:0";
     av.textContent = p.initiale||p.name[0];
@@ -2697,12 +2699,75 @@ function showProfileModal() {
   var salBtn=document.createElement("div");
   salBtn.style.cssText="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:12px;color:#6b7c79";
   salBtn.innerHTML="<span style='font-size:16px'>📱</span> <span>Connexion salarié (QR code)</span>";
-  salBtn.onclick=function(){modal.remove();showToast("Scannez le QR code affiché en réunion.");};
+  salBtn.onclick=function(){
+    salBtn.innerHTML="<span style='font-size:16px'>&#128100;</span>&nbsp;<span style='font-weight:600;font-size:12px;color:#374151'>Connexion salarié :</span>";
+    var sel=document.createElement("select");
+    sel.style.cssText="width:100%;height:34px;border:1px solid var(--brd2);border-radius:8px;padding:0 10px;font-size:13px;margin-top:6px";
+    var opt0=document.createElement("option");opt0.value="";opt0.textContent="— Choisir un salarié —";sel.appendChild(opt0);
+    D.salaries.forEach(function(s){if(!s.prenom)return;var o=document.createElement("option");o.value=s.id;o.textContent=(s.nom?s.nom+" ":"")+s.prenom;sel.appendChild(o);});
+    salBtn.appendChild(sel);
+    var goBtn=document.createElement("button");
+    goBtn.textContent="Accéder à l'espace salarié";
+    goBtn.style.cssText="width:100%;height:34px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-top:6px";
+    goBtn.onclick=function(){
+      var sid=sel.value;if(!sid)return;
+      modal.remove();
+      _salLockedId=sid;
+      applyProfile("salarie");
+      loadFromCloud(function(){TAB("pointage");showToast("\ud83d\udc64 Espace salarié");});
+    };
+    salBtn.appendChild(goBtn);
+  };
   box.appendChild(salBtn);
 
   modal.appendChild(box);
   document.body.appendChild(modal);
   modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
+}
+
+function showSalariePickerModal(){
+  var modal=document.createElement("div");
+  modal.id="sal-picker-modal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:28px;max-width:340px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif";
+  var title=document.createElement("div");
+  title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:17px;margin-bottom:6px;color:#13201e";
+  title.textContent="👤 Espace Salarié";
+  box.appendChild(title);
+  var sub=document.createElement("p");
+  sub.style.cssText="font-size:12px;color:#6b7c79;margin-bottom:16px";
+  sub.textContent="Choisissez votre nom pour accéder à votre espace.";
+  box.appendChild(sub);
+  var sel=document.createElement("select");
+  sel.style.cssText="width:100%;height:40px;border:1px solid var(--brd2);border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:12px";
+  var opt0=document.createElement("option");opt0.value="";opt0.textContent="— Sélectionner —";sel.appendChild(opt0);
+  D.salaries.forEach(function(s){
+    if(!s.prenom)return;
+    var o=document.createElement("option");o.value=s.id;
+    o.textContent=(s.nom?s.nom+" ":"")+s.prenom;
+    sel.appendChild(o);
+  });
+  box.appendChild(sel);
+  var goBtn=document.createElement("button");
+  goBtn.textContent="Accéder à mon espace";
+  goBtn.style.cssText="width:100%;height:40px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px";
+  goBtn.onclick=function(){
+    var sid=sel.value;if(!sid)return;
+    modal.remove();
+    _salLockedId=sid;
+    applyProfile("salarie");
+    loadFromCloud(function(){TAB("pointage");showToast("👤 Bonjour !");});
+  };
+  box.appendChild(goBtn);
+  var backBtn=document.createElement("button");
+  backBtn.textContent="← Retour aux profils";
+  backBtn.style.cssText="width:100%;height:34px;background:none;border:1px solid var(--brd2);border-radius:10px;font-size:13px;cursor:pointer;color:#6b7c79";
+  backBtn.onclick=function(){modal.remove();showProfileModal();};
+  box.appendChild(backBtn);
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+  modal.onclick=function(e){if(e.target===modal){modal.remove();showProfileModal();}};
 }
 
 // PIN removed - click to select profile
@@ -6223,6 +6288,8 @@ function isAfternoonRttAbsence(salId,dt){
 function shouldAutoPanier(salId,dt){
   var sal=D.salaries.find(function(s){return s.id===salId;});
   if(sal&&sal.noPanier)return false;
+  // Alexis Parpaillon : jamais de panier (sécurité par nom)
+  if(sal&&sal.prenom&&sal.prenom.toLowerCase().includes(alexis)&&sal.nom&&sal.nom.toLowerCase().includes(parpaillon))return false;
   var dow=dt.getDay();
   return dow>=1&&dow<=5; // Jours ouvrés uniquement (1=lundi … 5=vendredi)
 }
