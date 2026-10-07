@@ -2206,64 +2206,21 @@ function _doPrintAbs(){
   var annee=parseInt(document.getElementById("print-abs-annee").value);
   document.getElementById("print-abs-modal").remove();
   var ABLBLS2={cp:"Congés payés",intemperies:"Intempéries",css:"Congés sans solde",formation:"Formation",ecole:"École",maladie:"Arrêt maladie",autre:"Autre",rtt:"RTT"};
-  var ABS_COLORS2={cp:"#dcfce7",ecole:"#fce7f3",formation:"#dbeafe",maladie:"#fee2e2",intemperies:"#fff7ed",css:"#f5f3ff",rtt:"#fef9c3",autre:"#f3f4f6"};
   var abs=D.absences.filter(function(a){
     var d=pd(a.debut),f=pd(a.fin);
     return (d.getMonth()+1<=mois&&d.getFullYear()<=annee&&f.getMonth()+1>=mois&&f.getFullYear()>=annee)||
            (d.getFullYear()===annee&&d.getMonth()+1===mois)||
            (f.getFullYear()===annee&&f.getMonth()+1===mois);
-  }).sort(function(a,b){
-    var sa=D.salaries.find(function(s){return s.id===a.salId;})||{prenom:""};
-    var sb=D.salaries.find(function(s){return s.id===b.salId;})||{prenom:""};
-    return sa.prenom.localeCompare(sb.prenom)||a.debut.localeCompare(b.debut);
-  });
+  }).sort(function(a,b){return a.debut.localeCompare(b.debut);});
   if(!abs.length){showToast("Aucune absence pour "+MNOMS[mois]+" "+annee);return;}
-
-  // Compter les jours ouvrés d'une absence sur le mois
-  function joursOuvres(debut,fin){
-    var d=new Date(Math.max(pd(debut),new Date(annee,mois-1,1)));
-    var f=new Date(Math.min(pd(fin),new Date(annee,mois,0)));
-    var n=0;while(d<=f){var dw=d.getDay();if(dw>=1&&dw<=5)n++;d.setDate(d.getDate()+1);}
-    return n;
-  }
-
   var rows=abs.map(function(a){
-    var sal=D.salaries.find(function(s){return s.id===a.salId;})||{prenom:"?",nom:"",color:"#ccc"};
-    var d1=pd(a.debut).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-    var d2=pd(a.fin).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
-    var periode=a.debut===a.fin?d1:d1+" → "+d2;
-    var horaire=a.heureDebut&&a.heureFin?a.heureDebut+"–"+a.heureFin:"—";
-    var jours=joursOuvres(a.debut,a.fin);
-    var bg=ABS_COLORS2[a.type]||"#f9fafb";
-    var initiales=(sal.prenom[0]+(sal.nom?sal.nom[0]:"")).toUpperCase();
-    return "<tr style='background:"+bg+"'>"+
-      "<td><span style='display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:"+sal.color+";color:#fff;font-size:8px;font-weight:700;margin-right:5px'>"+initiales+"</span>"+(sal.prenom+(sal.nom?" "+sal.nom:""))+"</td>"+
-      "<td style='text-align:center'>"+periode+"</td>"+
-      "<td style='text-align:center;font-weight:600'>"+(ABLBLS2[a.type]||a.type)+"</td>"+
-      "<td style='text-align:center'>"+horaire+"</td>"+
-      "<td style='text-align:center;font-weight:700'>"+jours+"j</td>"+
-      "</tr>";
+    var sal=D.salaries.find(function(s){return s.id===a.salId;})||{prenom:"?",nom:""};
+    var d1=pd(a.debut).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+    var d2=pd(a.fin).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+    var heures=a.heureDebut&&a.heureFin?"("+a.heureDebut+"→"+a.heureFin+")":"Journée complète";
+    return "<tr><td>"+(sal.prenom+" "+(sal.nom||"")).trim()+"</td><td>"+d1+"</td><td>"+d2+"</td><td>"+(ABLBLS2[a.type]||a.type)+"</td><td>"+heures+"</td></tr>";
   }).join("");
-
-  // Récapitulatif par salarié
-  var recap={};
-  abs.forEach(function(a){
-    if(!recap[a.salId])recap[a.salId]={total:0,types:{}};
-    var j=joursOuvres(a.debut,a.fin);
-    recap[a.salId].total+=j;
-    recap[a.salId].types[a.type]=(recap[a.salId].types[a.type]||0)+j;
-  });
-  var recapRows=Object.keys(recap).map(function(sid){
-    var sal=D.salaries.find(function(s){return s.id===sid;})||{prenom:"?",nom:""};
-    var detail=Object.keys(recap[sid].types).map(function(t){return (ABLBLS2[t]||t)+": "+recap[sid].types[t]+"j";}).join(" · ");
-    return "<tr><td>"+(sal.prenom+(sal.nom?" "+sal.nom:""))+"</td><td>"+detail+"</td><td style='text-align:center;font-weight:800'>"+recap[sid].total+" j</td></tr>";
-  }).join("");
-
-  var html=
-    "<table><thead><tr><th style='text-align:left'>Salarié</th><th>Période</th><th>Type</th><th>Horaire</th><th>Jours</th></tr></thead><tbody>"+rows+"</tbody></table>"+
-    "<h2 style='margin:20px 0 8px;font-size:13px;font-weight:800'>Récapitulatif</h2>"+
-    "<table><thead><tr><th style='text-align:left'>Salarié</th><th style='text-align:left'>Détail</th><th>Total</th></tr></thead><tbody>"+recapRows+"</tbody></table>";
-
+  var html="<table><thead><tr><th>Salarié</th><th>Début</th><th>Fin</th><th>Type</th><th>Horaire</th></tr></thead><tbody>"+rows+"</tbody></table>";
   printSection("Absences — "+MNOMS[mois]+" "+annee,html,"@page{size:A4 portrait}");
 }
 
