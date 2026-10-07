@@ -712,21 +712,43 @@ function loadFromCloud(cb){
     if(cb)cb(applied);
   }
 
-  // Sans token écriture → lecture via API GitHub (pas de cache CDN contrairement à raw.githubusercontent.com)
+  // Sans token écriture → lecture publique (avec fallback)
   if(!GH_TOKEN){
-    var rawUrl="https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE;
-    fetch(rawUrl,{cache:"no-store",headers:{"Accept":"application/vnd.github.v3.raw","X-GitHub-Api-Version":"2022-11-28"}})
-      .then(function(r){return r.ok?r.json():null;})
+    var t=Date.now();
+    // Source 1 : raw.githubusercontent.com avec cache-busting
+    var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?t="+t;
+    // Source 2 (fallback) : API GitHub
+    var apiUrl="https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE;
+
+    function tryApi(){
+      fetch(apiUrl,{cache:"no-store",headers:{"Accept":"application/vnd.github.v3.raw","X-GitHub-Api-Version":"2022-11-28"}})
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(remote){
+          var applied=false;
+          if(remote)applied=applyRemote(remote);
+          _afterApply(applied);
+        })
+        .catch(function(e){
+          console.log("API fetch error:",e);
+          var local=localStorage.getItem(SK);
+          if(local){try{D=JSON.parse(local);}catch(ex){}}
+          if(cb)cb(false);
+        });
+    }
+
+    fetch(rawUrl,{cache:"no-store"})
+      .then(function(r){
+        if(!r.ok)throw new Error("raw "+r.status);
+        return r.json();
+      })
       .then(function(remote){
         var applied=false;
         if(remote)applied=applyRemote(remote);
         _afterApply(applied);
       })
       .catch(function(e){
-        console.log("Raw fetch error:",e);
-        var local=localStorage.getItem(SK);
-        if(local){try{D=JSON.parse(local);}catch(ex){}}
-        if(cb)cb(false);
+        console.log("[loadFromCloud] raw échoué ("+e.message+"), tentative API...");
+        tryApi();
       });
     return;
   }
