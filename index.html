@@ -6315,7 +6315,7 @@ function shouldAutoPanier(salId,dt){
   var sal=D.salaries.find(function(s){return s.id===salId;});
   if(sal&&sal.noPanier)return false;
   // Alexis Parpaillon : jamais de panier (sécurité par nom)
-  if(sal&&sal.prenom&&sal.prenom.toLowerCase().includes(alexis)&&sal.nom&&sal.nom.toLowerCase().includes(parpaillon))return false;
+  if(sal&&sal.prenom&&sal.prenom.toLowerCase().includes("alexis")&&sal.nom&&sal.nom.toLowerCase().includes("parpaillon"))return false;
   var dow=dt.getDay();
   return dow>=1&&dow<=5; // Jours ouvrés uniquement (1=lundi … 5=vendredi)
 }
