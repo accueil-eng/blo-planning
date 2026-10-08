@@ -727,9 +727,11 @@ function loadFromCloud(cb){
   // Sans token écriture → lecture publique (avec fallback)
   if(!GH_TOKEN){
     var t=Date.now();
-    // Source 1 : raw.githubusercontent.com avec cache-busting
+    // Source 1 : GitHub Pages (même domaine que l'app) — toujours accessible si la page charge
+    var pagesUrl="https://accueil-eng.github.io/blo-planning/"+GH_FILE+"?t="+t;
+    // Source 2 (fallback) : raw.githubusercontent.com
     var rawUrl="https://raw.githubusercontent.com/"+GH_REPO+"/main/"+GH_FILE+"?t="+t;
-    // Source 2 (fallback) : API GitHub
+    // Source 3 (fallback) : API GitHub
     var apiUrl="https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE;
 
     function tryApi(){
@@ -748,9 +750,27 @@ function loadFromCloud(cb){
         });
     }
 
-    fetch(rawUrl,{cache:"no-store"})
+    function tryRaw(){
+      fetch(rawUrl,{cache:"no-store"})
+        .then(function(r){
+          if(!r.ok)throw new Error("raw "+r.status);
+          return r.json();
+        })
+        .then(function(remote){
+          var applied=false;
+          if(remote)applied=applyRemote(remote);
+          _afterApply(applied);
+        })
+        .catch(function(e){
+          console.log("[loadFromCloud] raw échoué ("+e.message+"), tentative API...");
+          tryApi();
+        });
+    }
+
+    // Tentative 1 : GitHub Pages (même domaine, pas de CORS, pas de rate-limit)
+    fetch(pagesUrl,{cache:"no-store"})
       .then(function(r){
-        if(!r.ok)throw new Error("raw "+r.status);
+        if(!r.ok)throw new Error("pages "+r.status);
         return r.json();
       })
       .then(function(remote){
@@ -759,8 +779,8 @@ function loadFromCloud(cb){
         _afterApply(applied);
       })
       .catch(function(e){
-        console.log("[loadFromCloud] raw échoué ("+e.message+"), tentative API...");
-        tryApi();
+        console.log("[loadFromCloud] pages échoué ("+e.message+"), tentative raw...");
+        tryRaw();
       });
     return;
   }
