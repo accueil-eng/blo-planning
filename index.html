@@ -2883,8 +2883,25 @@ function showSalariePickerModal(){
   if(urlParams.get("sal")){
     _salLockedId=urlParams.get("sal");
     applyProfile("salarie");
-    // Charger les données cloud en arrière-plan et rafraîchir le planning
-    loadFromCloud(function(){TAB("planning");RPOINTAGE();renderMesDemandes();});
+    // Bandeau synchro visible pendant le chargement
+    var _syncBar=document.createElement("div");
+    _syncBar.id="qr-sync-bar";
+    _syncBar.style.cssText="background:#e0f2fe;border-bottom:1px solid #7dd3fc;color:#0369a1;font-size:12px;font-weight:600;padding:6px 16px;text-align:center;transition:opacity .5s";
+    _syncBar.textContent="⏳ Synchronisation des données en cours...";
+    document.body.insertBefore(_syncBar,document.body.firstChild);
+    // Charger les données cloud après init complète et rafraîchir le planning
+    setTimeout(function(){
+      loadFromCloud(function(applied){
+        RP();RPOINTAGE();renderMesDemandes();
+        var bar=document.getElementById("qr-sync-bar");
+        if(bar){
+          bar.style.background="#dcfce7";bar.style.borderColor="#86efac";bar.style.color="#166534";
+          var now=new Date();
+          bar.textContent="✅ Données à jour — "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
+          setTimeout(function(){if(bar.parentNode){bar.style.opacity="0";setTimeout(function(){if(bar.parentNode)bar.remove();},600);}},4000);
+        }
+      });
+    },300);
     return;
   }
   // Détection du paramètre ?setup= pour auto-configurer le token depuis un lien partagé
