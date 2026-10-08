@@ -767,8 +767,11 @@ function loadFromCloud(cb){
         });
     }
 
-    // Tentative 1 : GitHub Pages (même domaine, pas de CORS, pas de rate-limit)
-    fetch(pagesUrl,{cache:"no-store"})
+    // Tentative 1 : URL relative au domaine actuel (toujours accessible si la page charge)
+    var base=window.location.href.split("?")[0];
+    if(!base.endsWith("/"))base=base.substring(0,base.lastIndexOf("/")+1);
+    var relUrl=base+"data.json?t="+t;
+    fetch(relUrl,{cache:"no-store"})
       .then(function(r){
         if(!r.ok)throw new Error("pages "+r.status);
         return r.json();
