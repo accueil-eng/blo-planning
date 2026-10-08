@@ -2892,13 +2892,25 @@ function showSalariePickerModal(){
     // Charger les données cloud après init complète et rafraîchir le planning
     setTimeout(function(){
       loadFromCloud(function(applied){
+        initW(); // S'assurer que CW est bien initialisé
         RP();RPOINTAGE();renderMesDemandes();
+        // Re-rendu différé au cas où quelque chose l'effacerait après
+        setTimeout(function(){if(CW)RP();},300);
         var bar=document.getElementById("qr-sync-bar");
         if(bar){
-          bar.style.background="#dcfce7";bar.style.borderColor="#86efac";bar.style.color="#166534";
           var now=new Date();
-          bar.textContent="✅ Données à jour — "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
-          setTimeout(function(){if(bar.parentNode){bar.style.opacity="0";setTimeout(function(){if(bar.parentNode)bar.remove();},600);}},4000);
+          var cwCells=Object.keys(D.cells||{}).filter(function(k){return k.indexOf(CW+"|")===0&&(D.cells[k]||[]).length>0;}).length;
+          if(applied&&cwCells>0){
+            bar.style.background="#dcfce7";bar.style.borderColor="#86efac";bar.style.color="#166534";
+            bar.textContent="✅ "+D.salaries.length+" sal. — sem. "+CW+" ("+cwCells+" postes)";
+          } else if(applied&&cwCells===0){
+            bar.style.background="#fef9c3";bar.style.borderColor="#fde68a";bar.style.color="#854d0e";
+            bar.textContent="⚠️ Synchro OK ("+D.salaries.length+" sal.) — semaine "+CW+" sans postes";
+          } else {
+            bar.style.background="#fee2e2";bar.style.borderColor="#fca5a5";bar.style.color="#991b1b";
+            bar.textContent="⚠️ Données locales — sem. "+CW+" — "+D.salaries.length+" sal. / "+cwCells+" postes";
+          }
+          setTimeout(function(){if(bar.parentNode){bar.style.opacity="0";setTimeout(function(){if(bar.parentNode)bar.remove();},600);}},8000);
         }
       });
     },300);
