@@ -676,25 +676,17 @@ function loadFromCloud(cb){
     var localSavedAt = D&&D._savedAt ? D._savedAt : (_lastLocalSaveAt||0);
     var remoteSavedAt = remote._savedAt || 0;
 
-    // Sans token d'écriture (salarié via QR code) → appliquer le remote MAIS
-    // préserver les absDemandes locales en attente (pending) non encore poussées
-    if(!GH_TOKEN){
-      // Sauvegarder les demandes locales pending avant d'écraser D
-      var _localPending = (D&&D.absDemandes) ? D.absDemandes.filter(function(d){return d.status==="pending";}) : [];
-      // on continue vers l'application du remote, puis on remerge les pending locaux
-      // (voir après l'application)
-    } else {
-      // Conserver le local si :
-      // - une sauvegarde locale est très récente (< 45s), OU
-      // - le local a un _savedAt plus récent que le remote
+    // Toujours préserver les absDemandes pending locales avant tout écrasement
+    // (demandes soumises via QR mais pas encore poussées sur GitHub)
+    var _localPending = (D&&D.absDemandes) ? D.absDemandes.filter(function(d){return d.status==="pending";}) : [];
+
+    if(GH_TOKEN){
+      // Bureau : conserver le local si sauvegarde récente ou local plus récent
       var recentlySaved = _lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 45000;
       var localNewer = localSavedAt > 0 && remoteSavedAt > 0 && localSavedAt > remoteSavedAt;
 
       if(recentlySaved || localNewer){
-        console.log("[loadFromCloud] local conservé — recentlySaved="+recentlySaved+" localNewer="+localNewer+
-          " localAt="+new Date(localSavedAt).toISOString()+" remoteAt="+new Date(remoteSavedAt).toISOString());
-        // Même si local plus récent, on fusionne les nouvelles demandes d'absence du remote
-        // pour que les admins voient les demandes envoyées par QR code
+        // Même si local plus récent, fusionner les nouvelles absDemandes du remote
         if(remote.absDemandes&&remote.absDemandes.length){
           if(!D.absDemandes)D.absDemandes=[];
           var changed=false;
@@ -705,7 +697,7 @@ function loadFromCloud(cb){
           });
           if(changed){localStorage.setItem(SK,JSON.stringify(D));updateAbsDemandesDot();}
         }
-        return false; // local plus récent, pas d'écrasement total
+        return false;
       }
     }
 
@@ -713,7 +705,6 @@ function loadFromCloud(cb){
     try{
       var backupKey=SK+"_backup_"+Date.now();
       localStorage.setItem(backupKey,localStorage.getItem(SK)||"{}");
-      // Garder seulement les 3 derniers backups
       var bks=Object.keys(localStorage).filter(function(k){return k.startsWith(SK+"_backup_");}).sort();
       while(bks.length>3){localStorage.removeItem(bks.shift());}
     }catch(e){}
@@ -725,8 +716,8 @@ function loadFromCloud(cb){
     if(!D.absDemandes)D.absDemandes=[];
     if(!D.pointages)D.pointages={};
     if(!D.grille)D.grille={trajet:{},transport:{}};
-    // Mode salarié : réintégrer les demandes locales pending qui ne sont pas encore dans le remote
-    if(typeof _localPending !== "undefined" && _localPending.length){
+    // Réintégrer les demandes pending locales non encore dans le remote
+    if(_localPending.length){
       _localPending.forEach(function(lp){
         if(!D.absDemandes.find(function(d){return d.id===lp.id;})){
           D.absDemandes.push(lp);
