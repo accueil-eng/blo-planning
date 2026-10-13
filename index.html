@@ -3193,7 +3193,6 @@ function addRDV(){
 
 
 // ── DEMANDES D'ABSENCE (compte Salarié <-> Bureau) ──
-var ABSDEM_NOTIF_PHONES = ["33627991855","33626610036"]; // Quentin et Valérie
 
 function RABSDEMANDE(){
   var sel=document.getElementById("ad-sal");
@@ -3310,16 +3309,6 @@ function sendAbsDemande(){
   D.absDemandes.push(demande);
   save();
 
-  // WhatsApp notification to Valérie/Quentin
-  var rawMsg="🏖 Nouvelle demande d'absence\n"
-    +"👤 "+sal.prenom+(sal.nom?" "+sal.nom:"")+"\n"
-    +"📋 "+ABLBLS[type]+"\n"
-    +"📅 Du "+new Date(debut).toLocaleDateString("fr-FR")+" au "+new Date(fin).toLocaleDateString("fr-FR")+"\n"
-    +(heureDebut&&heureFin?"⏰ De "+heureDebut+" à "+heureFin+"\n":"")
-    +(motif?"📝 "+motif+"\n":"")
-    +"\nÀ valider sur le planning.";
-  var msg=encodeURIComponent(rawMsg);
-
   document.getElementById("ad-debut").value="";
   document.getElementById("ad-fin").value="";
   document.getElementById("ad-heuredebut").value="";
@@ -3340,27 +3329,8 @@ function sendAbsDemande(){
     });
   }
 
-  showAbsDemandeNotifModal(msg);
 }
 
-function showAbsDemandeNotifModal(msg){
-  var existing=document.getElementById("absdem-notif-modal");if(existing)existing.remove();
-  var modal=document.createElement("div");modal.id="absdem-notif-modal";
-  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center";
-  var labels={"33627991855":"Quentin","33626610036":"Valérie (Bureau)"};
-  var btnsHtml="";
-  ABSDEM_NOTIF_PHONES.forEach(function(phone){
-    btnsHtml+="<a href='https://wa.me/"+phone+"?text="+msg+"' target='_blank' style='display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:44px;background:#25d366;color:#fff;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:10px'>📱 Notifier "+(labels[phone]||phone)+"</a>";
-  });
-  modal.innerHTML="<div style='background:#fff;border-radius:14px;padding:24px 28px;max-width:380px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif'>"+
-    "<div style='font-family:Syne,sans-serif;font-weight:800;font-size:16px;margin-bottom:6px'>📤 Notifier le Bureau</div>"+
-    "<div style='font-size:12px;color:#6b7c79;margin-bottom:16px'>Cliquez sur chaque contact pour ouvrir WhatsApp avec le message pré-rempli (les navigateurs mobiles n'autorisent qu'une seule ouverture automatique à la fois).</div>"+
-    btnsHtml+
-    "<button onclick=\"document.getElementById('absdem-notif-modal').remove()\" style='width:100%;height:38px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;margin-top:4px'>Fermer</button>"+
-    "</div>";
-  document.body.appendChild(modal);
-  modal.onclick=function(e){if(e.target===modal)modal.remove();};
-}
 
 function updateAbsDemandesDot(){
   var dot=document.getElementById("absdemandes-dot");
