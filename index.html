@@ -3353,6 +3353,7 @@ function _pushAbsDemandeToCloud(demande, onDone){
 }
 
 function sendAbsDemande(){
+  alert("DEBUG sendAbsDemande — profil: "+_currentProfile+" | salLockedId: "+_salLockedId);
   var salId=(_currentProfile==="salarie")?_salLockedId:document.getElementById("ad-sal").value;
   var type=document.getElementById("ad-type").value;
   var debut=document.getElementById("ad-debut").value;
