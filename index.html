@@ -692,7 +692,19 @@ function loadFromCloud(cb){
       if(recentlySaved || localNewer){
         console.log("[loadFromCloud] local conservé — recentlySaved="+recentlySaved+" localNewer="+localNewer+
           " localAt="+new Date(localSavedAt).toISOString()+" remoteAt="+new Date(remoteSavedAt).toISOString());
-        return false; // local plus récent, pas d'écrasement
+        // Même si local plus récent, on fusionne les nouvelles demandes d'absence du remote
+        // pour que les admins voient les demandes envoyées par QR code
+        if(remote.absDemandes&&remote.absDemandes.length){
+          if(!D.absDemandes)D.absDemandes=[];
+          var changed=false;
+          remote.absDemandes.forEach(function(rd){
+            if(!D.absDemandes.find(function(ld){return ld.id===rd.id;})){
+              D.absDemandes.push(rd);changed=true;
+            }
+          });
+          if(changed){localStorage.setItem(SK,JSON.stringify(D));updateAbsDemandesDot();}
+        }
+        return false; // local plus récent, pas d'écrasement total
       }
     }
 
