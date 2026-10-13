@@ -895,48 +895,82 @@ function _doGithubSave(){
   }
   var ind=document.getElementById("sind");
   if(ind){ind.textContent="☁️ Sync...";ind.style.opacity="1";}
-  // Compress: remove empty/null values to reduce size
-  var json = JSON.stringify(D, function(key, val){
-    if(val===null||val===undefined)return undefined;
-    if(typeof val==="object"&&!Array.isArray(val)){
-      var hasContent=false;
-      for(var k in val){if(val[k]!==null&&val[k]!==undefined&&val[k]!==""){hasContent=true;break;}}
-      if(!hasContent&&key!=="")return undefined;
+
+  // Avant de sauvegarder, fusionner les absDemandes remote pour ne pas écraser
+  // les demandes poussées par les salariés via QR code
+  function _doActualSave(shaOverride){
+    // Compress: remove empty/null values to reduce size
+    var json = JSON.stringify(D, function(key, val){
+      if(val===null||val===undefined)return undefined;
+      if(typeof val==="object"&&!Array.isArray(val)){
+        var hasContent=false;
+        for(var k in val){if(val[k]!==null&&val[k]!==undefined&&val[k]!==""){hasContent=true;break;}}
+        if(!hasContent&&key!=="")return undefined;
+      }
+      if(val==="")return undefined;
+      return val;
+    });
+    var encoded = btoa(unescape(encodeURIComponent(json)));
+    var body = {message:"Update planning data",content:encoded};
+    if(sha) body.sha = sha;
+    _pendingSaveCount++;
+    fetch(GH_API, {
+      method: "PUT",
+      headers: {
+        "Authorization": "token "+GH_TOKEN,
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
+      if(data.content) _ghSha = data.content.sha;
+      var now=new Date();
+      var readable=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
+      var ind2=document.getElementById("sind");
+      if(ind2){ind2.textContent="✅ Sync GitHub";ind2.style.opacity="1";ind2.style.color="";clearTimeout(ind2._t);ind2._t=setTimeout(function(){ind2.style.opacity="0";},3000);}
+      var v=document.getElementById("ver-display");
+      if(v){v.textContent="☁️ Sync "+readable;v.style.color="#0891b2";}
+      if(_saveAgainNeeded){_saveAgainNeeded=false;_doGithubSave();}
+    })
+    .catch(function(e){
+      _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
+      console.log("GitHub save error:", e);
+      var ind3=document.getElementById("sind");
+      if(ind3){ind3.textContent="⚠️ Erreur sync";ind3.style.opacity="1";}
+    });
+  } // end _doActualSave
+
+  // Récupérer le remote pour fusionner les absDemandes avant sauvegarde
+  fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+    headers:{"Authorization":"token "+GH_TOKEN,"Accept":"application/vnd.github.v3+json"}
+  })
+  .then(function(r){return r.json();})
+  .then(function(remoteData){
+    if(remoteData&&remoteData.content){
+      var sha=remoteData.sha;
+      try{
+        var b64=remoteData.content.split("\n").join("");
+        var remote=JSON.parse(decodeURIComponent(escape(atob(b64))));
+        if(remote.absDemandes&&remote.absDemandes.length){
+          if(!D.absDemandes)D.absDemandes=[];
+          remote.absDemandes.forEach(function(rd){
+            if(!D.absDemandes.find(function(ld){return ld.id===rd.id;})){
+              D.absDemandes.push(rd);
+            }
+          });
+          updateAbsDemandesDot();
+        }
+        _ghSha=sha;
+      }catch(e){console.log("merge absDemandes parse error",e);}
     }
-    if(val==="")return undefined;
-    return val;
-  });
-  var encoded = btoa(unescape(encodeURIComponent(json)));
-  var body = {message:"Update planning data",content:encoded};
-  if(_ghSha) body.sha = _ghSha;
-  _pendingSaveCount++;
-  fetch(GH_API, {
-    method: "PUT",
-    headers: {
-      "Authorization": "token "+GH_TOKEN,
-      "Accept": "application/vnd.github.v3+json",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body)
+    _doActualSave(_ghSha);
   })
-  .then(function(r){ return r.json(); })
-  .then(function(data){
-    _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
-    if(data.content) _ghSha = data.content.sha;
-    var now=new Date();
-    var readable=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
-    var ind2=document.getElementById("sind");
-    if(ind2){ind2.textContent="✅ Sync GitHub";ind2.style.opacity="1";ind2.style.color="";clearTimeout(ind2._t);ind2._t=setTimeout(function(){ind2.style.opacity="0";},3000);}
-    var v=document.getElementById("ver-display");
-    if(v){v.textContent="☁️ Sync "+readable;v.style.color="#0891b2";}
-    // If a newer change happened while this save was in flight, save again with the latest data+sha
-    if(_saveAgainNeeded){_saveAgainNeeded=false;_doGithubSave();}
-  })
-  .catch(function(e){
-    _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
-    console.log("GitHub save error:", e);
-    var ind3=document.getElementById("sind");
-    if(ind3){ind3.textContent="⚠️ Erreur sync";ind3.style.opacity="1";}
+  .catch(function(){
+    // En cas d'erreur de fetch, on sauvegarde quand même sans merge
+    _doActualSave(_ghSha);
   });
 }
 
