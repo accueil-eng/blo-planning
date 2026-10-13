@@ -544,6 +544,7 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
       <textarea id="ad-motif" rows="3" style="border:1px solid var(--brd2);border-radius:8px;padding:8px 10px;font-size:14px;background:var(--bg);color:var(--txt);outline:none;width:100%;resize:vertical"></textarea>
     </div>
     <button class="btn btn-p" style="width:100%;margin-top:8px;height:42px;font-size:14px" onclick="sendAbsDemande()">📤 Envoyer la demande</button>
+    <div id="abs-send-status" style="display:none;margin-top:12px;padding:12px 14px;border:1px solid;border-radius:8px;font-size:13px;line-height:1.5"></div>
   </div>
   <div id="ad-mesdemandes" style="margin-top:24px;max-width:480px"></div>
 </div>
@@ -3352,7 +3353,18 @@ function _pushAbsDemandeToCloud(demande, onDone){
   });
 }
 
+function _showAbsStatus(msg, color, bg){
+  var el=document.getElementById("abs-send-status");
+  if(!el)return;
+  el.style.display="block";
+  el.style.background=bg||"#f0fdf4";
+  el.style.borderColor=color||"#86efac";
+  el.style.color=color||"#166534";
+  el.innerHTML=msg;
+}
+
 function sendAbsDemande(){
+  var btn=document.querySelector("#pg-absdemande .btn-p[onclick='sendAbsDemande()']");
   var salId=(_currentProfile==="salarie")?_salLockedId:document.getElementById("ad-sal").value;
   var type=document.getElementById("ad-type").value;
   var debut=document.getElementById("ad-debut").value;
@@ -3360,9 +3372,22 @@ function sendAbsDemande(){
   var heureDebut=document.getElementById("ad-heuredebut").value;
   var heureFin=document.getElementById("ad-heurefin").value;
   var motif=document.getElementById("ad-motif").value.trim();
-  if(!salId){alert("Veuillez sélectionner votre nom");return;}
-  if(!debut){alert("Veuillez indiquer une date de début");return;}
-  var sal=D.salaries.find(function(s){return s.id===salId;});
+
+  // Validation — inline errors bien visibles sur mobile
+  if(!salId){
+    _showAbsStatus("⚠️ <strong>Veuillez sélectionner votre nom</strong>","#b45309","#fffbeb");
+    return;
+  }
+  if(!debut){
+    _showAbsStatus("⚠️ <strong>Veuillez indiquer une date de début</strong>","#b45309","#fffbeb");
+    document.getElementById("ad-debut").focus();
+    return;
+  }
+
+  // Feedback immédiat — bouton en chargement
+  if(btn){btn.disabled=true;btn.textContent="⏳ Envoi...";}
+  _showAbsStatus("⏳ <strong>Envoi en cours…</strong>","#0369a1","#eff6ff");
+
   if(!D.absDemandes)D.absDemandes=[];
   var demande={id:"adem_"+Date.now(),salId:salId,type:type,debut:debut,fin:fin,motif:motif,status:"pending",createdAt:Date.now()};
   if(heureDebut)demande.heureDebut=heureDebut;
@@ -3375,21 +3400,25 @@ function sendAbsDemande(){
   document.getElementById("ad-heuredebut").value="";
   document.getElementById("ad-heurefin").value="";
   document.getElementById("ad-motif").value="";
-  showToast("✅ Demande envoyée !");
   renderMesDemandes();
+
+  function _onDone(ok, errMsg){
+    if(btn){btn.disabled=false;btn.textContent="📤 Envoyer la demande";}
+    if(ok){
+      _showAbsStatus("✅ <strong>Demande envoyée aux responsables !</strong><br><span style='font-size:12px'>Vous recevrez une réponse prochainement.</span>","#166534","#f0fdf4");
+      showToast("✅ Demande transmise !");
+    } else {
+      _showAbsStatus("⚠️ <strong>Envoi impossible côté serveur</strong>"+(errMsg?" : "+errMsg:"")+"<br><span style='font-size:12px'>Votre demande est sauvegardée localement — informez votre responsable.</span>","#991b1b","#fef2f2");
+      showToast("⚠️ Envoi échoué");
+    }
+  }
 
   // Salarié via QR code : pousse la demande vers le cloud pour notifier les admins
   if(_currentProfile==="salarie"){
-    showToast("☁️ Envoi en cours...");
-    _pushAbsDemandeToCloud(demande, function(ok){
-      if(ok){
-        showToast("✅ Demande transmise aux responsables !");
-      } else {
-        showToast("⚠️ Envoi impossible — pensez à informer votre responsable");
-      }
-    });
+    _pushAbsDemandeToCloud(demande, function(ok){_onDone(ok);});
+  } else {
+    _onDone(true);
   }
-
 }
 
 
