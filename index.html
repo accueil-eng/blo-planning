@@ -2947,6 +2947,9 @@ function showSalariePickerModal(){
 
 // PIN removed - click to select profile
 
+// ID salarié verrouillé via QR code — déclaré ici AVANT le bloc QR pour éviter écrasement tardif
+var _salLockedId = null;
+
 // Auto-restore profile on load
 (function(){
   var urlParams=new URLSearchParams(window.location.search);
@@ -5295,7 +5298,7 @@ function exportBilanCSV(){
 
 
 // ── MON POINTAGE (vue salarié, mois en cours, mobile-friendly) ──
-var _salLockedId=null; // The locked salarié ID for "salarie" profile, set once from URL param
+// Note: _salLockedId est déclaré AVANT le bloc QR code (ligne ~2962) pour éviter l'écrasement
 
 // Supprime définitivement heures chantier, panier, et RTT acquis pour les jours où le salarié
 // a une absence pleine journée (maladie, RTT, intempéries). S'exécute une fois par mois affiché.
