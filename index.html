@@ -3375,8 +3375,21 @@ function updateAbsDemandesDot(){
     if(pendingCount&&isAdmin){
       banner.style.display="block";
       if(_currentProfile==="alexis"){
-        banner.textContent="🏖 "+pendingCount+" demande"+(pendingCount>1?"s":"")+" d'absence en attente — cliquez pour valider";
+        // Bannière validation — rouge/orange urgent
+        banner.style.background="#fef2f2";
+        banner.style.borderBottom="2px solid #fca5a5";
+        banner.style.color="#991b1b";
+        banner.innerHTML="🏖 <strong>"+pendingCount+" demande"+(pendingCount>1?"s":"")+" d'absence à valider</strong> — cliquez ici pour traiter";
+      } else if(_currentProfile==="valerie"){
+        // Bannière notification — jaune/ambre
+        banner.style.background="#fffbeb";
+        banner.style.borderBottom="1px solid #fde68a";
+        banner.style.color="#92400e";
+        banner.innerHTML="🏖 "+pendingCount+" demande"+(pendingCount>1?"s":"")+" d'absence en attente — <strong>validation par Alexis requise</strong>";
       } else {
+        banner.style.background="#fffbeb";
+        banner.style.borderBottom="1px solid #fde68a";
+        banner.style.color="#92400e";
         banner.textContent="🏖 "+pendingCount+" demande"+(pendingCount>1?"s":"")+" d'absence en attente de validation — cliquez pour consulter";
       }
     } else {
