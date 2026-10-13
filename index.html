@@ -3301,14 +3301,18 @@ function renderMesDemandes(){
 // Pousse une demande d'absence vers GitHub même sans token écriture (utilise le token salarié)
 function _pushAbsDemandeToCloud(demande, onDone){
   var token = GH_TOKEN || GH_TOKEN_READONLY;
-  if(!token){if(onDone)onDone(false);return;}
+  if(!token){showToast("⚠️ Pas de token pour l'envoi");if(onDone)onDone(false);return;}
   // Récupère le SHA courant puis pousse
   fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+    cache:"no-store",
     headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json"}
   })
-  .then(function(r){return r.json();})
+  .then(function(r){
+    if(!r.ok)throw new Error("GET "+r.status);
+    return r.json();
+  })
   .then(function(data){
-    if(!data.content)throw new Error("no content");
+    if(!data.content)throw new Error("no content in GET response");
     var sha=data.sha;
     var b64=data.content.split("\n").join("");
     var current=JSON.parse(decodeURIComponent(escape(atob(b64))));
@@ -3326,13 +3330,21 @@ function _pushAbsDemandeToCloud(demande, onDone){
       body:JSON.stringify({message:"Demande d'absence salarié",content:encoded,sha:sha})
     });
   })
-  .then(function(r){return r.json();})
+  .then(function(r){
+    if(!r.ok){
+      return r.json().then(function(err){
+        throw new Error("PUT "+r.status+" — "+(err.message||"erreur inconnue"));
+      });
+    }
+    return r.json();
+  })
   .then(function(result){
     if(result.content){_ghSha=result.content.sha;}
     if(onDone)onDone(true);
   })
   .catch(function(e){
-    console.log("Push abs demande error:",e);
+    console.error("Push abs demande error:",e);
+    showToast("⚠️ Envoi échoué : "+e.message);
     if(onDone)onDone(false);
   });
 }
