@@ -3418,7 +3418,7 @@ function sendAbsDemande(){
       _showAbsStatus("✅ <strong>Demande envoyée aux responsables !</strong><br><span style='font-size:12px'>Vous recevrez une réponse prochainement.</span>","#166534","#f0fdf4");
       showToast("✅ Demande transmise !");
     } else {
-      _showAbsStatus("⚠️ <strong>Envoi impossible côté serveur</strong>"+(errMsg?" : "+errMsg:"")+"<br><span style='font-size:12px'>Votre demande est sauvegardée localement — informez votre responsable.</span>","#991b1b","#fef2f2");
+      _showAbsStatus("⚠️ <strong>Envoi échoué</strong><br><code style='font-size:11px;background:#fee2e2;padding:2px 6px;border-radius:4px'>"+(errMsg||"erreur inconnue")+"</code><br><span style='font-size:12px'>Votre demande est sauvegardée localement.</span>","#991b1b","#fef2f2");
       showToast("⚠️ Envoi échoué");
     }
   }
