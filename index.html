@@ -2752,11 +2752,12 @@ function applyProfile(key) {
     notifBtn.style.display = !isReadOnly ? "flex" : "none";
     if(!isReadOnly) updateNotifBadge();
   }
-  // GitHub token button + sync button : masqués pour les profils salarié/lecture seule
+  // GitHub token button + sync button : masqués pour les salariés et lecture seule
+  var _isBureau = !isReadOnly && key!=="salarie";
   var ghBtn = document.getElementById("gh-token-btn");
-  if(ghBtn) ghBtn.style.display = !isReadOnly ? "flex" : "none";
+  if(ghBtn) ghBtn.style.display = _isBureau ? "flex" : "none";
   var syncBtn = document.getElementById("sync-now-btn");
-  if(syncBtn) syncBtn.style.display = !isReadOnly ? "flex" : "none";
+  if(syncBtn) syncBtn.style.display = _isBureau ? "flex" : "none";
 
   // ⚠️ Alerte si token manquant pour un profil bureau (écriture)
   // Ne pas afficher pour le profil salarié (il n'est pas censé avoir le token écriture)
