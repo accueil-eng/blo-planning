@@ -501,7 +501,7 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
 </div>
 
 <div class="pg" id="pg-absdemande">
-  <h2 class="stitle">Demande d'absence</h2>
+  <h2 class="stitle">Demande d'absence <span id="abs-version" style="font-size:11px;font-weight:400;color:#9ca3af;font-family:DM Sans,sans-serif">v15oct</span></h2>
   <div style="max-width:480px;padding:20px;background:#fff;border:1px solid var(--brd2);border-radius:12px">
     <div style="margin-bottom:14px">
       <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px">Votre nom</label>
@@ -3302,54 +3302,62 @@ function renderMesDemandes(){
   wrap.innerHTML=html;
 }
 
-// Pousse une demande d'absence vers GitHub même sans token écriture (utilise le token salarié)
-function _pushAbsDemandeToCloud(demande, onDone){
-  var token = GH_TOKEN || GH_TOKEN_READONLY;
-  if(!token){showToast("⚠️ Pas de token pour l'envoi");if(onDone)onDone(false);return;}
-  // Récupère le SHA courant puis pousse
+// Pousse une demande d'absence vers GitHub avec retry automatique sur conflit SHA
+function _pushAbsDemandeToCloud(demande, onDone, _attempt){
+  _attempt = _attempt || 1;
+  var token = GH_TOKEN_READONLY || GH_TOKEN;
+  if(!token){if(onDone)onDone(false,"pas de token");return;}
+
   fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
     cache:"no-store",
     headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json"}
   })
   .then(function(r){
-    if(!r.ok)throw new Error("GET "+r.status);
+    if(!r.ok)throw new Error("GET_"+r.status);
     return r.json();
   })
   .then(function(data){
-    if(!data.content)throw new Error("no content in GET response");
+    if(!data||!data.content)throw new Error("GET_empty");
     var sha=data.sha;
     var b64=data.content.split("\n").join("");
-    var current=JSON.parse(decodeURIComponent(escape(atob(b64))));
+    var current;
+    try{current=JSON.parse(decodeURIComponent(escape(atob(b64))));}catch(e){throw new Error("PARSE_"+e.message);}
     if(!current.absDemandes)current.absDemandes=[];
-    // Évite les doublons
     current.absDemandes=current.absDemandes.filter(function(d){return d.id!==demande.id;});
     current.absDemandes.push(demande);
-    // Garde D local en sync
     D.absDemandes=current.absDemandes;
     var json=JSON.stringify(current,function(k,v){if(v===null||v===undefined||v==="")return undefined;return v;});
     var encoded=btoa(unescape(encodeURIComponent(json)));
     return fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
       method:"PUT",
       headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json","Content-Type":"application/json"},
-      body:JSON.stringify({message:"Demande d'absence salarié",content:encoded,sha:sha})
+      body:JSON.stringify({message:"Demande absence",content:encoded,sha:sha})
     });
   })
   .then(function(r){
-    if(!r.ok){
-      return r.json().then(function(err){
-        throw new Error("PUT "+r.status+" — "+(err.message||"erreur inconnue"));
-      });
+    if(r.status===409||r.status===422){
+      // Conflit SHA — re-essayer jusqu'à 4 fois
+      if(_attempt<4){
+        setTimeout(function(){_pushAbsDemandeToCloud(demande,onDone,_attempt+1);},800*_attempt);
+        return null; // ne pas appeler onDone, retry en cours
+      }
+      return r.json().then(function(err){throw new Error("PUT_"+r.status+"_"+( err.message||"conflit"));});
     }
+    if(!r.ok){return r.json().then(function(err){throw new Error("PUT_"+r.status+"_"+(err.message||"err"));});}
     return r.json();
   })
   .then(function(result){
-    if(result.content){_ghSha=result.content.sha;}
+    if(result===null)return; // retry en cours
+    if(result&&result.content)_ghSha=result.content.sha;
     if(onDone)onDone(true);
   })
   .catch(function(e){
-    console.error("Push abs demande error:",e);
-    showToast("⚠️ Envoi échoué : "+e.message);
-    if(onDone)onDone(false);
+    console.error("[absdemande] push échec tentative",_attempt,e.message);
+    if(_attempt<4){
+      setTimeout(function(){_pushAbsDemandeToCloud(demande,onDone,_attempt+1);},1000*_attempt);
+    } else {
+      if(onDone)onDone(false,e.message);
+    }
   });
 }
 
@@ -3361,6 +3369,8 @@ function _showAbsStatus(msg, color, bg){
   el.style.borderColor=color||"#86efac";
   el.style.color=color||"#166534";
   el.innerHTML=msg;
+  // Scroll pour s'assurer que le message est visible sur mobile
+  setTimeout(function(){el.scrollIntoView({behavior:"smooth",block:"nearest"});},50);
 }
 
 function sendAbsDemande(){
