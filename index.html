@@ -783,6 +783,13 @@ function loadFromCloud(cb){
         });
     }
 
+    // Mode QR salarié : aller directement sur l'API GitHub (toujours fraîche)
+    // GitHub Pages peut servir du contenu obsolète pendant 1-10 min après chaque commit
+    if(_salLockedId){
+      tryApi();
+      return;
+    }
+
     // Tentative 1 : URL relative au domaine actuel (toujours accessible si la page charge)
     var base=window.location.href.split("?")[0];
     if(!base.endsWith("/"))base=base.substring(0,base.lastIndexOf("/")+1);
@@ -3578,15 +3585,13 @@ function _pushAbsDecisionToCloud(id, status, _attempt){
     var dem=current.absDemandes.find(function(d){return d.id===id;});
     if(dem){
       dem.status=status;
-      // Fusionner aussi les demandes locales de D
+      // Fusionner uniquement les nouvelles demandes locales absentes du remote
+      // NE PAS écraser les statuts distants avec les statuts locaux périmés
       D.absDemandes.forEach(function(ld){
         if(!current.absDemandes.find(function(rd){return rd.id===ld.id;})){
           current.absDemandes.push(ld);
-        } else {
-          // Mettre à jour si changé localement
-          var rd=current.absDemandes.find(function(x){return x.id===ld.id;});
-          if(rd)rd.status=ld.status;
         }
+        // Pas de else : le remote fait autorité sur les statuts
       });
     }
     // Ajouter l'absence dans D.absences si acceptée
