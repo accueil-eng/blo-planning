@@ -3601,7 +3601,10 @@ function RABSDEMANDES(){
   }
 
   if(done.length){
-    html+="<div style='font-size:12px;font-weight:700;color:#6b7c79;margin:18px 0 8px'>Historique récent :</div>";
+    var _histOpen=localStorage.getItem("abs_hist_open")!=="0";
+    html+="<details "+((_histOpen)?"open":"")+' onToggle="localStorage.setItem(\'abs_hist_open\',this.open?\'1\':\'0\')" style="margin-top:18px">';
+    html+="<summary style='font-size:12px;font-weight:700;color:#6b7c79;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;padding:6px 0'>📋 Historique récent ("+done.length+")</summary>";
+    html+="<div style='margin-top:6px'>";
     done.forEach(function(d){
       var sal=D.salaries.find(function(s){return s.id===d.salId;});
       var statusColor=d.status==="accepted"?"#16a34a":"#dc2626";
@@ -3610,6 +3613,7 @@ function RABSDEMANDES(){
       html+="<span style='color:"+statusColor+";font-weight:700'>"+(d.status==="accepted"?"Acceptée":"Refusée")+"</span>";
       html+="</div>";
     });
+    html+="</div></details>";
   }
 
   if(archived.length){
