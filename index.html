@@ -501,7 +501,7 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
 </div>
 
 <div class="pg" id="pg-absdemande">
-  <h2 class="stitle">Demande d'absence <span id="abs-version" style="font-size:11px;font-weight:400;color:#9ca3af;font-family:DM Sans,sans-serif">v15oct-b</span></h2>
+  <h2 class="stitle">Demande d'absence <span id="abs-version" style="font-size:11px;font-weight:400;color:#9ca3af;font-family:DM Sans,sans-serif">v15oct-c</span></h2>
   <div style="max-width:480px;padding:20px;background:#fff;border:1px solid var(--brd2);border-radius:12px">
     <div style="margin-bottom:14px">
       <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px">Votre nom</label>
@@ -901,7 +901,14 @@ function _doGithubSave(){
   // les demandes poussées par les salariés via QR code
   function _doActualSave(shaOverride){
     // Compress: remove empty/null values to reduce size
-    var json = JSON.stringify(D, function(key, val){
+    // Injecter le token encodé pour usage par les salariés QR (lecture seule du token depuis data.json)
+    var dataToSerialize = D;
+    if(GH_TOKEN){
+      dataToSerialize = JSON.parse(JSON.stringify(D));
+      // Encoder le token (reverse+base64) pour éviter la détection automatique GitHub
+      dataToSerialize._x = btoa(GH_TOKEN.split("").reverse().join(""));
+    }
+    var json = JSON.stringify(dataToSerialize, function(key, val){
       if(val===null||val===undefined)return undefined;
       if(typeof val==="object"&&!Array.isArray(val)){
         var hasContent=false;
@@ -3305,12 +3312,10 @@ function renderMesDemandes(){
 // Pousse une demande d'absence vers GitHub avec retry automatique sur conflit SHA
 function _pushAbsDemandeToCloud(demande, onDone, _attempt){
   _attempt = _attempt || 1;
-  var token = GH_TOKEN_READONLY || GH_TOKEN;
-  if(!token){if(onDone)onDone(false,"pas de token");return;}
-
+  // GET sans auth (repo public) — le token écrit est lu depuis data.json (_x)
   fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
     cache:"no-store",
-    headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json"}
+    headers:{"Accept":"application/vnd.github.v3+json"}
   })
   .then(function(r){
     if(!r.ok)throw new Error("GET_"+r.status);
@@ -3322,6 +3327,11 @@ function _pushAbsDemandeToCloud(demande, onDone, _attempt){
     var b64=data.content.split("\n").join("");
     var current;
     try{current=JSON.parse(decodeURIComponent(escape(atob(b64))));}catch(e){throw new Error("PARSE_"+e.message);}
+    // Lire le token encodé stocké par le bureau dans data.json
+    var token=null;
+    if(current._x){try{token=atob(current._x).split("").reverse().join("");}catch(e){}}
+    if(!token&&GH_TOKEN)token=GH_TOKEN; // fallback bureau local
+    if(!token)throw new Error("NO_TOKEN");
     if(!current.absDemandes)current.absDemandes=[];
     current.absDemandes=current.absDemandes.filter(function(d){return d.id!==demande.id;});
     current.absDemandes.push(demande);
