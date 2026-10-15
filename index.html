@@ -501,7 +501,7 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
 </div>
 
 <div class="pg" id="pg-absdemande">
-  <h2 class="stitle">Demande d'absence <span id="abs-version" style="font-size:11px;font-weight:400;color:#9ca3af;font-family:DM Sans,sans-serif">v15oct-e</span></h2>
+  <h2 class="stitle">Demande d'absence <span id="abs-version" style="font-size:11px;font-weight:400;color:#9ca3af;font-family:DM Sans,sans-serif">v15oct-f</span></h2>
   <div style="max-width:480px;padding:20px;background:#fff;border:1px solid var(--brd2);border-radius:12px">
     <div style="margin-bottom:14px">
       <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px">Votre nom</label>
@@ -818,8 +818,12 @@ function loadFromCloud(cb){
       var b64=data.content.split("\n").join("");
       var json=decodeURIComponent(escape(atob(b64)));
       applied=applyRemote(JSON.parse(json));
+      _afterApply(applied);
+    } else {
+      // Token invalide (401/403) → réessayer en lecture publique pour récupérer _x
+      GH_TOKEN="";
+      loadFromCloud(cb);
     }
-    _afterApply(applied);
   })
   .catch(function(e){
     console.log("GitHub load error:",e);
