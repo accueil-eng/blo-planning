@@ -313,13 +313,6 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
     <button class="btn btn-o" onclick="addAbs()">+ Ajouter</button>
     <button class="btn" style="background:#f3e8ff;border-color:#c4b5fd;color:#6d28d9" onclick="showGroupAbsModal()">👥 Ajout groupé (plusieurs salariés)</button>
   </div>
-  <div class="arow" style="margin-bottom:10px">
-    <select id="archive-abs-select" style="height:32px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 10px;font-size:12px;background:var(--bg);color:var(--txt);outline:none" onchange="handleArchiveAbsSelect(this)">
-      <option value="">🗄️ Archiver...</option>
-      <option value="absences">Absences de plus d'1 an</option>
-      <option value="absdemandes">Supprimer définitivement les demandes archivées de plus d'1 an</option>
-    </select>
-  </div>
   <div style="font-size:10px;color:#9ca3af;margin:-4px 0 10px">Laissez les heures vides pour une absence journée complète.</div>
   <div class="ilist" id="abslist"></div>
 </div>
@@ -921,12 +914,19 @@ function _doGithubSave(){
       dataToSerialize = JSON.parse(JSON.stringify(D));
       // Encoder le token (reverse+base64) pour éviter la détection automatique GitHub
       dataToSerialize._x = btoa(GH_TOKEN.split("").reverse().join(""));
-      // Archivage : supprimer les demandes décidées de plus de 2 ans
+      // Archivage : supprimer les demandes décidées et absences de plus de 2 ans
       var _2ansAgo=Date.now()-2*365.25*24*3600*1000;
+      var _2ansAgoDate=new Date(_2ansAgo);
+      var _2ansAgoStr=ds(_2ansAgoDate);
       if(dataToSerialize.absDemandes){
         dataToSerialize.absDemandes=dataToSerialize.absDemandes.filter(function(d){
           if(d.status==="pending")return true; // jamais supprimer les pending
           return (d.createdAt||0)>_2ansAgo;
+        });
+      }
+      if(dataToSerialize.absences){
+        dataToSerialize.absences=dataToSerialize.absences.filter(function(a){
+          return (a.fin||a.debut)>=_2ansAgoStr;
         });
       }
     }
@@ -2514,17 +2514,39 @@ function RA(){
   }
 
   if(archivees.length){
+    // Filtrer sur 2 ans max, grouper par année puis mois
+    var cutoff2ans=new Date();cutoff2ans.setFullYear(cutoff2ans.getFullYear()-2);
+    var archivees2=archivees.filter(function(a){return pd(a.fin)>=cutoff2ans;});
+    // Grouper par "YYYY-MM"
+    var byYM={};
+    archivees2.forEach(function(a){
+      var k=a.fin.substring(0,7); // "YYYY-MM"
+      if(!byYM[k])byYM[k]=[];
+      byYM[k].push(a);
+    });
+    var ymKeys=Object.keys(byYM).sort(function(a,b){return b.localeCompare(a);});
+    var MOIS=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
     var archWrap=document.createElement("div");archWrap.style.cssText="margin-top:18px";
+    var archOpen=localStorage.getItem("abs_arch_open")==="1";
     var archToggle=document.createElement("button");
     archToggle.style.cssText="display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--brd2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;width:100%";
-    archToggle.innerHTML="<span id='arch-arrow'>▶</span> 📦 Absences passées ("+archivees.length+")";
-    var archList=document.createElement("div");archList.id="arch-list";archList.style.display="none";archList.style.marginTop="8px";
+    archToggle.innerHTML="<span id='arch-arrow'>"+(archOpen?"▼":"▶")+"</span> 📦 Absences passées ("+archivees2.length+")";
+    var archList=document.createElement("div");archList.id="arch-list";archList.style.display=archOpen?"block":"none";archList.style.marginTop="8px";
     archToggle.onclick=function(){
       var open=archList.style.display!=="none";
       archList.style.display=open?"none":"block";
       document.getElementById("arch-arrow").textContent=open?"▶":"▼";
+      localStorage.setItem("abs_arch_open",open?"0":"1");
     };
-    archivees.forEach(function(abs){var c=makeCard(abs,true);if(c)archList.appendChild(c);});
+    ymKeys.forEach(function(ym){
+      var parts=ym.split("-");
+      var label=MOIS[parseInt(parts[1],10)]+" "+parts[0];
+      var section=document.createElement("div");section.style.cssText="margin-bottom:12px";
+      var lbl=document.createElement("div");lbl.style.cssText="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;padding:4px 0;border-bottom:1px solid var(--brd2)";
+      lbl.textContent=label;section.appendChild(lbl);
+      byYM[ym].forEach(function(abs){var c=makeCard(abs,true);if(c)section.appendChild(c);});
+      archList.appendChild(section);
+    });
     archWrap.appendChild(archToggle);archWrap.appendChild(archList);el.appendChild(archWrap);
   }
 }
@@ -3576,7 +3598,7 @@ function RABSDEMANDES(){
   updateAbsDemandesDot();
   if(!D.absDemandes)D.absDemandes=[];
   var pending=D.absDemandes.filter(function(d){return d.status==="pending";}).sort(function(a,b){return a.createdAt-b.createdAt;});
-  var done=D.absDemandes.filter(function(d){return d.status!=="pending"&&!d.archived;}).sort(function(a,b){return b.createdAt-a.createdAt;}).slice(0,10);
+  var done=D.absDemandes.filter(function(d){return d.status==="refused"&&!d.archived;}).sort(function(a,b){return b.createdAt-a.createdAt;}).slice(0,10);
   var archived=D.absDemandes.filter(function(d){return d.archived;}).sort(function(a,b){return b.createdAt-a.createdAt;});
 
   var html="";
@@ -3603,7 +3625,7 @@ function RABSDEMANDES(){
   if(done.length){
     var _histOpen=localStorage.getItem("abs_hist_open")!=="0";
     html+="<details "+((_histOpen)?"open":"")+' onToggle="localStorage.setItem(\'abs_hist_open\',this.open?\'1\':\'0\')" style="margin-top:18px">';
-    html+="<summary style='font-size:12px;font-weight:700;color:#6b7c79;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;padding:6px 0'>📋 Historique récent ("+done.length+")</summary>";
+    html+="<summary style='font-size:12px;font-weight:700;color:#6b7c79;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;padding:6px 0'>❌ Refus récents ("+done.length+")</summary>";
     html+="<div style='margin-top:6px'>";
     done.forEach(function(d){
       var sal=D.salaries.find(function(s){return s.id===d.salId;});
