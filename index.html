@@ -501,7 +501,7 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
 </div>
 
 <div class="pg" id="pg-absdemande">
-  <h2 class="stitle">Demande d'absence <span id="abs-version" style="font-size:11px;font-weight:400;color:#9ca3af;font-family:DM Sans,sans-serif">v15oct-f</span></h2>
+  <h2 class="stitle">Demande d'absence <span id="abs-version" style="font-size:11px;font-weight:400;color:#9ca3af;font-family:DM Sans,sans-serif">v15oct-g</span></h2>
   <div style="max-width:480px;padding:20px;background:#fff;border:1px solid var(--brd2);border-radius:12px">
     <div style="margin-bottom:14px">
       <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px">Votre nom</label>
@@ -3555,6 +3555,73 @@ function toggleAbsArchive(){
   if(arrow)arrow.textContent=isOpen?"▾":"▴";
 }
 
+// Push direct du statut d'une décision vers GitHub (lit le token depuis data.json)
+function _pushAbsDecisionToCloud(id, status, _attempt){
+  _attempt = _attempt || 1;
+  fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+    cache:"no-store",
+    headers:{"Accept":"application/vnd.github.v3+json"}
+  })
+  .then(function(r){if(!r.ok)throw new Error("GET_"+r.status);return r.json();})
+  .then(function(data){
+    if(!data||!data.content)throw new Error("GET_empty");
+    var sha=data.sha;
+    var b64=data.content.split("\n").join("");
+    var current;
+    try{current=JSON.parse(decodeURIComponent(escape(atob(b64))));}catch(e){throw new Error("PARSE_"+e.message);}
+    var token=null;
+    if(current._x){try{token=atob(current._x).split("").reverse().join("");}catch(e){}}
+    if(!token&&GH_TOKEN)token=GH_TOKEN;
+    if(!token)throw new Error("NO_TOKEN");
+    // Mettre à jour le statut dans le remote
+    if(!current.absDemandes)current.absDemandes=[];
+    var dem=current.absDemandes.find(function(d){return d.id===id;});
+    if(dem){
+      dem.status=status;
+      // Fusionner aussi les demandes locales de D
+      D.absDemandes.forEach(function(ld){
+        if(!current.absDemandes.find(function(rd){return rd.id===ld.id;})){
+          current.absDemandes.push(ld);
+        } else {
+          // Mettre à jour si changé localement
+          var rd=current.absDemandes.find(function(x){return x.id===ld.id;});
+          if(rd)rd.status=ld.status;
+        }
+      });
+    }
+    // Ajouter l'absence dans D.absences si acceptée
+    if(status==="accepted"&&dem){
+      if(!current.absences)current.absences=[];
+      if(!current.absences.find(function(a){return a.salId===dem.salId&&a.debut===dem.debut&&a.type===dem.type;})){
+        var newAbs={id:"abs_"+Date.now(),salId:dem.salId,debut:dem.debut,fin:dem.fin,type:dem.type};
+        if(dem.heureDebut)newAbs.heureDebut=dem.heureDebut;
+        if(dem.heureFin)newAbs.heureFin=dem.heureFin;
+        current.absences.push(newAbs);
+      }
+    }
+    var json=JSON.stringify(current,function(k,v){if(v===null||v===undefined||v==="")return undefined;return v;});
+    var encoded=btoa(unescape(encodeURIComponent(json)));
+    return fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+      method:"PUT",
+      headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json","Content-Type":"application/json"},
+      body:JSON.stringify({message:"Decision absence "+status,content:encoded,sha:sha})
+    });
+  })
+  .then(function(r){
+    if(!r)return;
+    if(r.status===409||r.status===422){
+      if(_attempt<4){setTimeout(function(){_pushAbsDecisionToCloud(id,status,_attempt+1);},800*_attempt);}
+      return;
+    }
+    if(r.ok)console.log("[decision] push OK statut",status);
+    else r.json().then(function(e){console.error("[decision] push erreur",r.status,e.message);});
+  })
+  .catch(function(e){
+    console.error("[decision] push échec tentative",_attempt,e&&(e.message||String(e)));
+    if(_attempt<4)setTimeout(function(){_pushAbsDecisionToCloud(id,status,_attempt+1);},1000*_attempt);
+  });
+}
+
 function decideAbsDemande(id,status){
   var d=D.absDemandes.find(function(x){return x.id===id;});
   if(!d)return;
@@ -3570,8 +3637,8 @@ function decideAbsDemande(id,status){
   }
   save();
   RABSDEMANDES();
-  // Sauvegarder immédiatement sur GitHub pour que le salarié voie la réponse
-  if(typeof _doGithubSave==="function") _doGithubSave();
+  // Push direct du statut vers GitHub (sans dépendre du GH_TOKEN bureau)
+  _pushAbsDecisionToCloud(id, status);
 
   // Notify salarié via WhatsApp if they have a number
   if(sal&&sal.whatsapp){
