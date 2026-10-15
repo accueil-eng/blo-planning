@@ -921,6 +921,14 @@ function _doGithubSave(){
       dataToSerialize = JSON.parse(JSON.stringify(D));
       // Encoder le token (reverse+base64) pour éviter la détection automatique GitHub
       dataToSerialize._x = btoa(GH_TOKEN.split("").reverse().join(""));
+      // Archivage : supprimer les demandes décidées de plus de 2 ans
+      var _2ansAgo=Date.now()-2*365.25*24*3600*1000;
+      if(dataToSerialize.absDemandes){
+        dataToSerialize.absDemandes=dataToSerialize.absDemandes.filter(function(d){
+          if(d.status==="pending")return true; // jamais supprimer les pending
+          return (d.createdAt||0)>_2ansAgo;
+        });
+      }
     }
     var json = JSON.stringify(dataToSerialize, function(key, val){
       if(val===null||val===undefined)return undefined;
@@ -3312,19 +3320,42 @@ function renderMesDemandes(){
   var salId=(_currentProfile==="salarie")?_salLockedId:(sel?sel.value:"");
   if(!salId){wrap.innerHTML="";return;}
   if(!D.absDemandes)D.absDemandes=[];
+  var today=new Date(); today.setHours(0,0,0,0);
   var mine=D.absDemandes.filter(function(d){return d.salId===salId;}).sort(function(a,b){return b.createdAt-a.createdAt;});
   if(!mine.length){wrap.innerHTML="";return;}
-  var html="<div style='font-size:13px;font-weight:700;color:#475569;margin-bottom:10px'>📋 Statut de vos demandes :</div>";
+
+  // Séparer actives (en cours ou date future/présente) et archivées (décidées + date passée)
+  var actives=[],archivees=[];
   mine.forEach(function(d){
+    var finDate=new Date(d.fin||d.debut); finDate.setHours(23,59,59,999);
+    var decided=(d.status==="accepted"||d.status==="refused");
+    if(decided && finDate<today) archivees.push(d); else actives.push(d);
+  });
+
+  function _renderCard(d){
     var statusColor=d.status==="accepted"?"#16a34a":d.status==="refused"?"#dc2626":"#d97706";
     var statusBg=d.status==="accepted"?"#f0fdf4":d.status==="refused"?"#fef2f2":"#fffbeb";
     var statusBorder=d.status==="accepted"?"#86efac":d.status==="refused"?"#fca5a5":"#fde68a";
     var statusLbl=d.status==="accepted"?"✅ Acceptée":d.status==="refused"?"❌ Refusée":"⏳ Traitement en cours";
-    html+="<div style='background:"+statusBg+";border:1px solid "+statusBorder+";border-radius:8px;padding:10px 14px;margin-bottom:8px'>";
-    html+="<div style='font-size:12px;font-weight:600'>"+ABLBLS[d.type]+" — "+new Date(d.debut).toLocaleDateString("fr-FR")+(d.debut!==d.fin?" au "+new Date(d.fin).toLocaleDateString("fr-FR"):"")+(d.heureDebut&&d.heureFin?" ("+d.heureDebut+"-"+d.heureFin+")":"")+"</div>";
-    html+="<div style='font-size:12px;color:"+statusColor+";font-weight:700;margin-top:4px'>"+statusLbl+"</div>";
-    html+="</div>";
-  });
+    var s="<div style='background:"+statusBg+";border:1px solid "+statusBorder+";border-radius:8px;padding:10px 14px;margin-bottom:8px'>";
+    s+="<div style='font-size:12px;font-weight:600'>"+ABLBLS[d.type]+" — "+new Date(d.debut).toLocaleDateString("fr-FR")+(d.debut!==d.fin?" au "+new Date(d.fin).toLocaleDateString("fr-FR"):"")+(d.heureDebut&&d.heureFin?" ("+d.heureDebut+"-"+d.heureFin+")":"")+"</div>";
+    s+="<div style='font-size:12px;color:"+statusColor+";font-weight:700;margin-top:4px'>"+statusLbl+"</div>";
+    s+="</div>";
+    return s;
+  }
+
+  var html="";
+  if(actives.length){
+    html+="<div style='font-size:13px;font-weight:700;color:#475569;margin-bottom:10px'>📋 Statut de vos demandes :</div>";
+    actives.forEach(function(d){html+=_renderCard(d);});
+  }
+  if(archivees.length){
+    html+="<details style='margin-top:12px'><summary style='font-size:12px;font-weight:600;color:#94a3b8;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px'>";
+    html+="<span>🗂 Archives ("+archivees.length+")</span></summary>";
+    html+="<div style='margin-top:8px;opacity:.75'>";
+    archivees.forEach(function(d){html+=_renderCard(d);});
+    html+="</div></details>";
+  }
   wrap.innerHTML=html;
 }
 
