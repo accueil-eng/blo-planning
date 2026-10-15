@@ -2991,6 +2991,11 @@ var _salLockedId = null;
         GH_TOKEN=_savedToken;
         initW(); // S'assurer que CW est bien initialisé
         RP();RPOINTAGE();renderMesDemandes();
+        // Si des demandes pending existent déjà, démarrer le polling automatiquement
+        if(D.absDemandes){
+          var pending=D.absDemandes.filter(function(d){return d.salId===_salLockedId&&d.status==="pending";});
+          if(pending.length) _startPollingAbsStatut(pending[pending.length-1].id);
+        }
         // Re-rendu différé au cas où quelque chose l'effacerait après
         setTimeout(function(){if(CW)RP();},300);
         var bar=document.getElementById("qr-sync-bar");
@@ -3450,10 +3455,51 @@ function sendAbsDemande(){
 
   // Salarié via QR code : pousse la demande vers le cloud pour notifier les admins
   if(_currentProfile==="salarie"){
-    _pushAbsDemandeToCloud(demande, function(ok,err){_onDone(ok,err);});
+    _pushAbsDemandeToCloud(demande, function(ok,err){
+      _onDone(ok,err);
+      if(ok) _startPollingAbsStatut(demande.id);
+    });
   } else {
     _onDone(true);
   }
+}
+
+// Polling automatique du statut d'une demande — rafraîchit toutes les 30s pendant 2h max
+var _pollingTimer=null;
+function _startPollingAbsStatut(demandeId){
+  if(_pollingTimer)clearInterval(_pollingTimer);
+  var _pollCount=0;
+  var _maxPolls=240; // 240 × 30s = 2h
+  _pollingTimer=setInterval(function(){
+    _pollCount++;
+    if(_pollCount>_maxPolls){clearInterval(_pollingTimer);_pollingTimer=null;return;}
+    fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+      cache:"no-store",
+      headers:{"Accept":"application/vnd.github.v3.raw"}
+    })
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(remote){
+      if(!remote||!remote.absDemandes)return;
+      var dem=remote.absDemandes.find(function(d){return d.id===demandeId;});
+      if(!dem)return;
+      if(dem.status==="pending")return; // pas encore décidé
+      // Réponse reçue ! Mettre à jour D et afficher
+      clearInterval(_pollingTimer);_pollingTimer=null;
+      remote.absDemandes.forEach(function(rd){
+        if(!D.absDemandes)D.absDemandes=[];
+        var ld=D.absDemandes.find(function(x){return x.id===rd.id;});
+        if(ld)ld.status=rd.status; else D.absDemandes.push(rd);
+      });
+      localStorage.setItem(SK,JSON.stringify(D));
+      renderMesDemandes();
+      var lbl=dem.status==="accepted"?"✅ Demande acceptée !":"❌ Demande refusée";
+      var col=dem.status==="accepted"?"#166534":"#991b1b";
+      var bg=dem.status==="accepted"?"#f0fdf4":"#fef2f2";
+      _showAbsStatus("<strong>"+lbl+"</strong>",col,bg);
+      showToast(lbl);
+    })
+    .catch(function(){});
+  },30000); // toutes les 30 secondes
 }
 
 
