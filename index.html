@@ -697,6 +697,33 @@ function showRestoreBackupModal(){
   title.textContent="🗂️ Restaurer une sauvegarde";
   box.appendChild(title);
   // Bouton export tout le localStorage → fichier JSON téléchargeable
+  // Bouton récupérer données GitHub (pour voir ce qu'a enregistré Alexis depuis un autre ordi)
+  if(GH_TOKEN){
+    var fetchGhBtn=document.createElement("button");
+    fetchGhBtn.style.cssText="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #0891b2;background:#f0f9ff;cursor:pointer;font-size:13px;font-family:inherit;color:#0c4a6e;font-weight:600;margin-bottom:8px;";
+    fetchGhBtn.textContent="📡 Récupérer dernières données GitHub (voir saisie d'un autre ordi)";
+    fetchGhBtn.onclick=function(){
+      fetchGhBtn.textContent="⏳ Récupération…";fetchGhBtn.disabled=true;
+      fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+        headers:{"Authorization":"token "+GH_TOKEN,"Accept":"application/vnd.github.v3+json"}
+      }).then(function(r){return r.json();}).then(function(info){
+        var raw=atob(info.content.replace(/\n/g,""));
+        var remote;
+        try{remote=JSON.parse(raw);}catch(e){fetchGhBtn.textContent="❌ JSON invalide";fetchGhBtn.disabled=false;return;}
+        var cells=Object.keys(remote.cells||{}).length;
+        var ds=remote._savedAt?new Date(remote._savedAt):null;
+        var dateStr=ds?ds.toLocaleDateString("fr-FR",{day:"2-digit",month:"long"})+" à "+String(ds.getHours()).padStart(2,"0")+"h"+String(ds.getMinutes()).padStart(2,"0"):"date inconnue";
+        if(!confirm("GitHub contient des données du "+dateStr+" ("+cells+" cellules).\nRemplacer vos données locales ?")){
+          fetchGhBtn.textContent="📡 Récupérer dernières données GitHub (voir saisie d'un autre ordi)";fetchGhBtn.disabled=false;return;
+        }
+        localStorage.setItem(SK+"_backup_prerestore_"+Date.now(),localStorage.getItem(SK)||"{}");
+        localStorage.setItem(SK,JSON.stringify(remote));
+        overlay.remove();
+        location.reload();
+      }).catch(function(){fetchGhBtn.textContent="❌ Erreur réseau";fetchGhBtn.disabled=false;});
+    };
+    box.appendChild(fetchGhBtn);
+  }
   var exportAllBtn=document.createElement("button");
   exportAllBtn.style.cssText="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #059669;background:#f0fdf4;cursor:pointer;font-size:13px;font-family:inherit;color:#065f46;font-weight:600;margin-bottom:14px;";
   exportAllBtn.textContent="📥 Exporter toutes les données (fichier à envoyer)";
@@ -1240,7 +1267,7 @@ function save(){
   // Debounce GitHub save
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(function(){
-    if(_pendingSaveCount>0){_saveAgainNeeded=true;return;} // a save is already in flight, queue another after it completes
+    _pendingSaveCount=0; // reset au cas où un envoi précédent serait resté bloqué
     _doGithubSave();
   }, 2000);
 }
@@ -1253,7 +1280,7 @@ function saveNow(){
   D._savedAt = _lastLocalSaveAt;
   localStorage.setItem(SK, JSON.stringify(D));
   clearTimeout(_saveTimer);
-  if(_pendingSaveCount>0){_saveAgainNeeded=true;return;}
+  _pendingSaveCount=0; // reset au cas où un envoi précédent serait resté bloqué
   _doGithubSave();
 }
 
