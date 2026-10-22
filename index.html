@@ -631,39 +631,66 @@ setInterval(function(){
 
 var NETLIFY_DATA_URL = "https://accueil-eng.github.io/blo-planning/data.json";
 
+function _afterForcedSync(appliedRemote){
+  var btn=document.getElementById("sync-now-btn");
+  if(btn){btn.textContent="🔄";btn.style.opacity="1";btn.disabled=false;}
+  var v=document.getElementById("ver-display");
+  var now=new Date();
+  var t=String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
+  if(v){v.textContent="🔄 Sync à "+t;v.style.color="#0891b2";}
+  RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
+  var activePg=document.querySelector(".pg.on");
+  var activeTab=activePg?activePg.id.replace("pg-",""):"";
+  if(activeTab==="pointage")RPOINTAGE();
+  else if(activeTab==="gantt")RGANTT();
+  else if(activeTab==="rdv")RRDV();
+  else if(activeTab==="indemnites")RINDEM();
+  else if(activeTab==="formation")RF();
+  if(_currentProfile)applyProfile(_currentProfile);
+  if(appliedRemote===false){
+    save();
+    showToast("📤 Local plus récent — mis à jour sur le cloud !");
+  } else {
+    showToast("🔄 Données synchronisées depuis le cloud !");
+  }
+}
+
 function forceSyncNow(){
   var btn=document.getElementById("sync-now-btn");
   if(btn){btn.textContent="⏳";btn.style.opacity=".6";btn.disabled=true;}
-  // NE PAS désactiver _lastLocalSaveAt : la protection doit rester active
-  // Le sync forcé récupère le remote et compare les timestamps
-  // Si local est plus récent → on re-push le local vers le cloud
-  loadFromCloud(function(appliedRemote){
-    if(btn){btn.textContent="🔄";btn.style.opacity="1";btn.disabled=false;}
-    var v=document.getElementById("ver-display");
-    var now=new Date();
-    var t=String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
-    if(v){v.textContent="🔄 Sync à "+t;v.style.color="#0891b2";}
-    RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
-    var activePg=document.querySelector(".pg.on");
-    var activeTab=activePg?activePg.id.replace("pg-",""):"";
-    if(activeTab==="pointage")RPOINTAGE();
-    else if(activeTab==="gantt")RGANTT();
-    else if(activeTab==="rdv")RRDV();
-    else if(activeTab==="indemnites")RINDEM();
-    else if(activeTab==="formation")RF();
-    if(_currentProfile)applyProfile(_currentProfile);
-    if(appliedRemote===false){
-      // Local plus récent : on re-pousse vers le cloud pour que les autres voient nos données
-      save();
-      showToast("📤 Local plus récent — mis à jour sur le cloud !");
-    } else {
-      showToast("🔄 Données synchronisées depuis le cloud !");
-    }
-  });
+  // Sync forcé (bouton) : toujours appliquer le remote même si local plus récent
+  // (l'utilisateur veut explicitement voir ce qu'il y a sur GitHub)
+  loadFromCloud(_afterForcedSync, true);
 }
 
-function loadFromCloud(cb){
+// Auto-polling bureau : toutes les 2 min, récupère le remote silencieusement
+// pour que les modifications d'un autre ordi bureau soient visibles sans action manuelle
+var _bureauPollTimer=null;
+function _startBureauPolling(){
+  if(_bureauPollTimer)clearInterval(_bureauPollTimer);
+  _bureauPollTimer=setInterval(function(){
+    if(!GH_TOKEN)return; // uniquement si token bureau actif
+    loadFromCloud(function(applied){
+      if(applied){
+        // Remote plus récent → rafraîchir l'affichage silencieusement
+        RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
+        var activePg=document.querySelector(".pg.on");
+        var activeTab=activePg?activePg.id.replace("pg-",""):"";
+        if(activeTab==="pointage")RPOINTAGE();
+        else if(activeTab==="gantt")RGANTT();
+        else if(activeTab==="rdv")RRDV();
+        var v=document.getElementById("ver-display");
+        var now=new Date();
+        var t=String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
+        if(v){v.textContent="☁️ Auto-sync à "+t;v.style.color="#0891b2";}
+      }
+    }, false); // false = respecte local-newer (ne pas écraser si on travaille)
+  }, 120000); // toutes les 2 minutes
+}
+
+function loadFromCloud(cb, forceRemote){
   // Retourne true si remote appliqué, false si local conservé
+  // forceRemote=true : ignorer la protection local-newer (sync forcé par l'utilisateur)
   function applyRemote(remote){
     if(!remote)return false;
 
@@ -674,7 +701,7 @@ function loadFromCloud(cb){
     // (demandes soumises via QR mais pas encore poussées sur GitHub)
     var _localPending = (D&&D.absDemandes) ? D.absDemandes.filter(function(d){return d.status==="pending";}) : [];
 
-    if(GH_TOKEN){
+    if(GH_TOKEN && !forceRemote){
       // Bureau : conserver le local si sauvegarde récente ou local plus récent
       var recentlySaved = _lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 45000;
       var localNewer = localSavedAt > 0 && remoteSavedAt > 0 && localSavedAt > remoteSavedAt;
@@ -2894,7 +2921,7 @@ function showProfileModal() {
       if(k==="salarie"){modal.remove();_salLockedId="";applyProfile("salarie");loadFromCloud(function(){TAB("pointage");showToast("\ud83d\udc64 Espace salari\u00e9 — aperçu");});return;}
       modal.remove();
       applyProfile(k);
-      loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👋 Bonjour "+pp.name+" !");});
+      loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👋 Bonjour "+pp.name+" !");if(GH_TOKEN)_startBureauPolling();});
     };})(key,p);
     var av = document.createElement("div");
     av.style.cssText = "width:46px;height:46px;border-radius:50%;background:"+p.color+";display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:#fff;flex-shrink:0";
@@ -3072,7 +3099,7 @@ var _salLockedId = null;
   var saved = localStorage.getItem("current_profile");
   if(saved && PROFILES[saved]){
     applyProfile(saved);
-    loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();});
+    loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();if(GH_TOKEN)_startBureauPolling();});
   } else {
     setTimeout(showProfileModal, 300);
   }
