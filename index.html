@@ -706,20 +706,63 @@ function showRestoreBackupModal(){
       try{var obj=JSON.parse(localStorage.getItem(k)||"{}");
         if(obj._savedAt){var ds2=new Date(obj._savedAt);label+=" — données enregistrées le "+ds2.toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"})+" à "+String(ds2.getHours()).padStart(2,"0")+"h"+String(ds2.getMinutes()).padStart(2,"0");}
       }catch(e){}
+      var row=document.createElement("div");
+      row.style.cssText="display:flex;gap:8px;margin-bottom:8px;align-items:stretch;";
       var rowBtn=document.createElement("button");
-      rowBtn.style.cssText="width:100%;text-align:left;padding:10px 14px;margin-bottom:8px;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;cursor:pointer;font-size:13px;font-family:inherit;";
-      rowBtn.textContent="📅 "+label;
-      rowBtn.onclick=function(){
-        if(!confirm("Restaurer cette sauvegarde ? Les données actuelles seront remplacées.")){return;}
-        var raw=localStorage.getItem(k);
-        if(!raw){alert("Sauvegarde introuvable.");return;}
-        // Sauvegarder l'état actuel avant restauration
-        localStorage.setItem(SK+"_backup_prerestore_"+Date.now(),localStorage.getItem(SK)||"{}");
-        localStorage.setItem(SK,raw);
-        overlay.remove();
-        location.reload();
-      };
-      box.appendChild(rowBtn);
+      rowBtn.style.cssText="flex:1;text-align:left;padding:10px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;cursor:pointer;font-size:13px;font-family:inherit;";
+      rowBtn.textContent=label;
+      (function(kk){
+        rowBtn.onclick=function(){
+          if(!confirm("Restaurer cette sauvegarde localement ? Les données actuelles seront remplacées.")){return;}
+          var raw=localStorage.getItem(kk);
+          if(!raw){alert("Sauvegarde introuvable.");return;}
+          localStorage.setItem(SK+"_backup_prerestore_"+Date.now(),localStorage.getItem(SK)||"{}");
+          localStorage.setItem(SK,raw);
+          overlay.remove();
+          location.reload();
+        };
+      })(k);
+      row.appendChild(rowBtn);
+      // Bouton "Envoyer vers GitHub" pour partager la sauvegarde
+      var pushBtn=document.createElement("button");
+      pushBtn.title="Envoyer cette sauvegarde vers GitHub (pour récupérer depuis un autre ordi)";
+      pushBtn.style.cssText="padding:0 12px;border-radius:10px;border:1px solid #0891b2;background:none;cursor:pointer;font-size:13px;font-family:inherit;color:#0891b2;white-space:nowrap;flex-shrink:0;";
+      pushBtn.textContent="☁️ → GitHub";
+      (function(kk){
+        pushBtn.onclick=function(){
+          if(!GH_TOKEN){alert("Token GitHub non configuré sur cet ordinateur.");return;}
+          var raw=localStorage.getItem(kk);
+          if(!raw){alert("Sauvegarde introuvable.");return;}
+          var dataObj;
+          try{dataObj=JSON.parse(raw);}catch(e){alert("Données corrompues.");return;}
+          if(!confirm("Envoyer cette sauvegarde vers GitHub ?\nElle remplacera les données actuelles sur le cloud.")){return;}
+          pushBtn.textContent="⏳";pushBtn.disabled=true;
+          // Récupérer le SHA actuel du fichier
+          fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+            headers:{"Authorization":"token "+GH_TOKEN,"Accept":"application/vnd.github.v3+json"}
+          }).then(function(r){return r.json();}).then(function(info){
+            var sha=info.sha||"";
+            dataObj._savedAt=Date.now();
+            // Encoder le token si présent
+            if(GH_TOKEN){dataObj._x=btoa(GH_TOKEN.split("").reverse().join(""));}
+            var content=btoa(unescape(encodeURIComponent(JSON.stringify(dataObj,null,2))));
+            return fetch("https://api.github.com/repos/"+GH_REPO+"/contents/"+GH_FILE,{
+              method:"PUT",
+              headers:{"Authorization":"token "+GH_TOKEN,"Content-Type":"application/json"},
+              body:JSON.stringify({message:"Restauration sauvegarde locale",content:content,sha:sha})
+            });
+          }).then(function(r){
+            if(r.ok){
+              pushBtn.textContent="✅ Envoyé !";pushBtn.style.color="#166534";pushBtn.style.borderColor="#166534";
+              setTimeout(function(){pushBtn.textContent="☁️ → GitHub";pushBtn.style.color="#0891b2";pushBtn.style.borderColor="#0891b2";pushBtn.disabled=false;},3000);
+            } else {
+              pushBtn.textContent="❌ Erreur";pushBtn.disabled=false;
+            }
+          }).catch(function(){pushBtn.textContent="❌ Erreur";pushBtn.disabled=false;});
+        };
+      })(k);
+      row.appendChild(pushBtn);
+      box.appendChild(row);
     });
   }
   var closeBtn=document.createElement("button");
