@@ -227,6 +227,7 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
   <span class="sind" id="sind">✓ Sauvegardé</span>
   <span id="ver-display" style="font-size:10px;color:var(--muted);padding:0 8px;flex-shrink:0;white-space:nowrap"></span>
   <button id="sync-now-btn" onclick="forceSyncNow()" title="Synchroniser maintenant" style="height:30px;padding:0 10px;border-radius:20px;border:1px solid #0891b2;background:none;font-size:13px;cursor:pointer;flex-shrink:0;color:#0891b2;display:flex;align-items:center;gap:4px">🔄</button>
+  <button id="push-now-btn" onclick="forcePushNow()" title="Forcer l'envoi vers GitHub maintenant" style="height:30px;padding:0 10px;border-radius:20px;border:1px solid #7c3aed;background:none;font-size:13px;cursor:pointer;flex-shrink:0;color:#7c3aed;display:none;align-items:center;gap:4px">📤</button>
   <button id="restore-backup-btn" onclick="showRestoreBackupModal()" title="Restaurer une sauvegarde locale" style="height:30px;padding:0 10px;border-radius:20px;border:1px solid #d97706;background:none;font-size:13px;cursor:pointer;flex-shrink:0;color:#d97706;display:none;align-items:center;gap:4px">🗂️</button>
   <button id="gh-token-btn" onclick="showGHTokenModal()" title="Configurer synchronisation GitHub" style="position:relative;height:30px;padding:0 12px;border-radius:20px;border:1px solid var(--brd2);background:none;font-size:14px;cursor:pointer;display:none;align-items:center;gap:6px;flex-shrink:0;color:var(--txt)">☁️</button>
   <button id="notif-btn" onclick="showNotifPanel()" style="position:relative;height:30px;padding:0 12px;border-radius:20px;border:1px solid var(--brd2);background:none;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;display:none;align-items:center;gap:6px;flex-shrink:0;color:var(--txt)">🔔<span id="notif-badge" style="position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;display:none">0</span></button>
@@ -654,6 +655,25 @@ function _afterForcedSync(appliedRemote){
   } else {
     showToast("🔄 Données synchronisées depuis le cloud !");
   }
+}
+
+function forcePushNow(){
+  // Force immédiate du push local vers GitHub, sans débounce ni vérification
+  var btn=document.getElementById("push-now-btn");
+  if(btn){btn.textContent="⏳";btn.disabled=true;}
+  if(!GH_TOKEN){
+    showToast("❌ Pas de token GitHub configuré");
+    if(btn){btn.textContent="📤";btn.disabled=false;}
+    return;
+  }
+  _lastLocalSaveAt=Date.now();
+  D._savedAt=_lastLocalSaveAt;
+  localStorage.setItem(SK,JSON.stringify(D));
+  _pendingSaveCount=0; // reset pour éviter blocage
+  _doGithubSave();
+  setTimeout(function(){
+    if(btn){btn.textContent="📤";btn.disabled=false;}
+  },5000);
 }
 
 function forceSyncNow(){
@@ -2963,6 +2983,8 @@ function applyProfile(key) {
   if(syncBtn) syncBtn.style.display = _isBureau ? "flex" : "none";
   var restoreBtn = document.getElementById("restore-backup-btn");
   if(restoreBtn) restoreBtn.style.display = _isBureau ? "flex" : "none";
+  var pushBtn2 = document.getElementById("push-now-btn");
+  if(pushBtn2) pushBtn2.style.display = _isBureau ? "flex" : "none";
 
   // ⚠️ Alerte si token manquant pour un profil bureau (écriture)
   // Ne pas afficher pour le profil salarié (il n'est pas censé avoir le token écriture)
