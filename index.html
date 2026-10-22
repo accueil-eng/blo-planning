@@ -834,12 +834,15 @@ function loadFromCloud(cb, forceRemote){
     var _localPending = (D&&D.absDemandes) ? D.absDemandes.filter(function(d){return d.status==="pending";}) : [];
 
     if(GH_TOKEN && !forceRemote){
-      // Bureau : conserver le local si sauvegarde récente ou local plus récent
-      var recentlySaved = _lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 45000;
-      var localNewer = localSavedAt > 0 && remoteSavedAt > 0 && localSavedAt > remoteSavedAt;
+      // Bureau multi-ordi : règle simple basée uniquement sur les timestamps _savedAt
+      // Si GitHub est plus récent → appliquer (Alexis a saisit sur son ordi)
+      // Si local est plus récent → garder local (on vient de saisir ici)
+      // recentlySaved ignoré : il bloquait la sync quand l'autre ordi venait de pusher
+      var remoteNewer = remoteSavedAt > 0 && remoteSavedAt > localSavedAt;
+      var localNewer  = localSavedAt  > 0 && localSavedAt  > remoteSavedAt;
 
-      if(recentlySaved || localNewer){
-        // Même si local plus récent, fusionner les nouvelles absDemandes du remote
+      if(localNewer){
+        // Local plus récent : garder local, fusionner quand même les absDemandes du remote
         if(remote.absDemandes&&remote.absDemandes.length){
           if(!D.absDemandes)D.absDemandes=[];
           var changed=false;
