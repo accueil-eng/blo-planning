@@ -1129,23 +1129,34 @@ function _doGithubSave(){
       },
       body: JSON.stringify(body)
     })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
+    .then(function(r){
+      var status=r.status;
+      return r.json().then(function(data){return {status:status,data:data};});
+    })
+    .then(function(res){
       _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
-      if(data.content) _ghSha = data.content.sha;
-      var now=new Date();
-      var readable=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
-      var ind2=document.getElementById("sind");
-      if(ind2){ind2.textContent="✅ Sync GitHub";ind2.style.opacity="1";ind2.style.color="";clearTimeout(ind2._t);ind2._t=setTimeout(function(){ind2.style.opacity="0";},3000);}
-      var v=document.getElementById("ver-display");
-      if(v){v.textContent="☁️ Sync "+readable;v.style.color="#0891b2";}
-      if(_saveAgainNeeded){_saveAgainNeeded=false;_doGithubSave();}
+      if(res.status===200||res.status===201){
+        if(res.data.content) _ghSha = res.data.content.sha;
+        var now=new Date();
+        var readable=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
+        var ind2=document.getElementById("sind");
+        if(ind2){ind2.textContent="✅ Sync GitHub";ind2.style.opacity="1";ind2.style.color="#166534";clearTimeout(ind2._t);ind2._t=setTimeout(function(){ind2.style.opacity="0";},4000);}
+        var v=document.getElementById("ver-display");
+        if(v){v.textContent="☁️ Sync "+readable;v.style.color="#0891b2";}
+        if(_saveAgainNeeded){_saveAgainNeeded=false;_doGithubSave();}
+      } else {
+        _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
+        var msg=res.data&&res.data.message?res.data.message:"code "+res.status;
+        var ind3=document.getElementById("sind");
+        if(ind3){ind3.textContent="❌ GitHub : "+msg;ind3.style.opacity="1";ind3.style.color="#dc2626";}
+        showToast("❌ Erreur GitHub : "+msg);
+      }
     })
     .catch(function(e){
       _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
-      console.log("GitHub save error:", e);
       var ind3=document.getElementById("sind");
-      if(ind3){ind3.textContent="⚠️ Erreur sync";ind3.style.opacity="1";}
+      if(ind3){ind3.textContent="❌ GitHub : réseau";ind3.style.opacity="1";ind3.style.color="#dc2626";}
+      showToast("❌ Erreur réseau GitHub");
     });
   } // end _doActualSave
 
