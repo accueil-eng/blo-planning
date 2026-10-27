@@ -2532,7 +2532,7 @@ function printPlanningWeek(){
   setTimeout(function(){w.print();},700);
 }
 
-function printPointage(){
+function printPointage(forcedFilterId){
   // Génère un tableau d'impression propre : uniquement les jours du mois, totaux visibles
   var moisEl=document.getElementById("pt-mois");
   var anEl=document.getElementById("pt-annee");
@@ -2541,7 +2541,30 @@ function printPointage(){
   var mois=moisEl?parseInt(moisEl.value):new Date().getMonth()+1;
   var annee=anEl?parseInt(anEl.value):new Date().getFullYear();
   var _ptPrintSalMode=(_currentProfile==="salarie");
-  var filterId=_ptPrintSalMode?_salLockedId:(salEl?salEl.value:"");
+
+  // Si on n'a pas de forcedFilterId et qu'on est pas en mode salarié, montrer une modal de choix
+  if(forcedFilterId===undefined&&!_ptPrintSalMode){
+    var existing2=document.getElementById("print-pt-modal");if(existing2)existing2.remove();
+    var modal2=document.createElement("div");modal2.id="print-pt-modal";
+    modal2.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center";
+    var box2=document.createElement("div");
+    box2.style.cssText="background:#fff;border-radius:12px;padding:24px;max-width:340px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2)";
+    var curSalId=salEl?salEl.value:"";
+    var curSalNom="";
+    if(curSalId&&salEl){var optSel=salEl.options[salEl.selectedIndex];if(optSel)curSalNom=optSel.text;}
+    var btnSalHtml=curSalId?"<button onclick=\"document.getElementById('print-pt-modal').remove();printPointage('"+curSalId+"')\" style='width:100%;height:38px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;font-size:13px;font-weight:600;cursor:pointer;color:#334155;margin-top:8px'>👤 "+curSalNom+" uniquement</button>":"";
+    box2.innerHTML="<div style='font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:16px'>🖨️ Imprimer le pointage</div>"+
+      "<div style='font-size:12px;color:#64748b;margin-bottom:14px'>"+MNOMS[mois]+" "+annee+"</div>"+
+      "<button onclick=\"document.getElementById('print-pt-modal').remove();printPointage('')\" style='width:100%;height:40px;border:none;border-radius:8px;background:#13201e;color:#fff;font-size:13px;font-weight:700;cursor:pointer'>👥 Tous les salariés</button>"+
+      btnSalHtml+
+      "<button onclick=\"document.getElementById('print-pt-modal').remove()\" style='width:100%;height:36px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;font-size:12px;cursor:pointer;color:#94a3b8;margin-top:10px'>Annuler</button>";
+    modal2.appendChild(box2);
+    modal2.addEventListener("click",function(e){if(e.target===modal2){modal2.remove();}});
+    document.body.appendChild(modal2);
+    return;
+  }
+
+  var filterId=_ptPrintSalMode?_salLockedId:(forcedFilterId!==undefined?forcedFilterId:(salEl?salEl.value:""));
   var salNom=salEl&&salEl.value?(salEl.options[salEl.selectedIndex]||{}).text:"Tous les salariés";
   var title="Pointage "+MNOMS[mois]+" "+annee+(filterId?(" — "+salNom):" — Tous les salariés");
 
