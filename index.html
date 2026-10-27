@@ -2712,10 +2712,11 @@ function printPointage(forcedFilterId){
     "@page{size:A4 landscape;margin:7mm}"+
     "@media print{button{display:none!important}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
 
+  var debugInfo="v27oct-c911ff4 — "+sals.length+" salarié(s)";
   var w=window.open("","_blank");
   if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
   w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+title+"</title><style>"+css+"</style></head><body>"+
-    "<div class='hdr'><span class='logo'>BLO</span><h1>"+title+"</h1><span class='sub'>Imprimé le "+new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+"</span></div>"+
+    "<div class='hdr'><span class='logo'>BLO</span><h1>"+title+"</h1><span class='sub'>Imprimé le "+new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+" — <span style='color:#0891b2'>"+debugInfo+"</span></span></div>"+
     html+"</body></html>");
   w.document.close();
   setTimeout(function(){w.print();},700);
