@@ -227,7 +227,7 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
   <span class="sind" id="sind">✓ Sauvegardé</span>
   <span id="ver-display" style="font-size:10px;color:var(--muted);padding:0 8px;flex-shrink:0;white-space:nowrap"></span>
   <button id="sync-now-btn" onclick="forceSyncNow()" title="Synchroniser maintenant" style="height:30px;padding:0 10px;border-radius:20px;border:1px solid #0891b2;background:none;font-size:13px;cursor:pointer;flex-shrink:0;color:#0891b2;display:flex;align-items:center;gap:4px">🔄</button>
-  <button id="push-now-btn" onclick="forcePushNow()" title="Forcer l'envoi vers GitHub maintenant" style="height:30px;padding:0 10px;border-radius:20px;border:1px solid #7c3aed;background:none;font-size:13px;cursor:pointer;flex-shrink:0;color:#7c3aed;display:none;align-items:center;gap:4px">📤</button>
+  <button id="push-now-btn" onclick="forcePushNow()" title="Envoyer mes données vers GitHub maintenant" style="height:30px;padding:0 12px;border-radius:20px;border:none;background:#16a34a;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;color:#fff;display:none;align-items:center;gap:5px">📤 Envoyer</button>
   <button id="restore-backup-btn" onclick="showRestoreBackupModal()" title="Restaurer une sauvegarde locale" style="height:30px;padding:0 10px;border-radius:20px;border:1px solid #d97706;background:none;font-size:13px;cursor:pointer;flex-shrink:0;color:#d97706;display:none;align-items:center;gap:4px">🗂️</button>
   <button id="gh-token-btn" onclick="showGHTokenModal()" title="Configurer synchronisation GitHub" style="position:relative;height:30px;padding:0 12px;border-radius:20px;border:1px solid var(--brd2);background:none;font-size:14px;cursor:pointer;display:none;align-items:center;gap:6px;flex-shrink:0;color:var(--txt)">☁️</button>
   <button id="notif-btn" onclick="showNotifPanel()" style="position:relative;height:30px;padding:0 12px;border-radius:20px;border:1px solid var(--brd2);background:none;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;display:none;align-items:center;gap:6px;flex-shrink:0;color:var(--txt)">🔔<span id="notif-badge" style="position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;display:none">0</span></button>
@@ -1123,6 +1123,35 @@ window.addEventListener("beforeunload",function(e){
 });
 
 var _ghSaveRetryTimer=null;
+
+// Affiche/masque la bannière d'alerte si dernière sync trop ancienne
+function _updateSyncWarning(showIfOld){
+  var existing=document.getElementById("sync-warning-banner");
+  if(!showIfOld){if(existing)existing.remove();return;}
+  var ts=parseInt(localStorage.getItem("blo_last_github_sync")||"0");
+  var now=Date.now();
+  var minAgo=Math.round((now-ts)/60000);
+  var v=document.getElementById("ver-display");
+  if(ts){
+    var d=new Date(ts);
+    var s=String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
+    if(v&&v.textContent.indexOf("Sync")===-1){v.textContent="☁️ Sync "+s;v.style.color="#0891b2";}
+  }
+  if(!ts||minAgo>30){
+    if(!existing&&GH_TOKEN){
+      var b=document.createElement("div");
+      b.id="sync-warning-banner";
+      b.style.cssText="background:#fff7ed;border-bottom:2px solid #f97316;color:#7c2d12;font-size:13px;font-weight:700;padding:8px 16px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;z-index:100;position:relative";
+      var msg=ts?"⚠️ Dernière synchronisation il y a "+minAgo+" min — pensez à envoyer !":"⚠️ Pas encore synchronisé avec GitHub";
+      b.innerHTML=msg+'&nbsp;&nbsp;<button onclick="forcePushNow();document.getElementById(\'sync-warning-banner\').remove();" style="background:#ea580c;color:#fff;border:none;border-radius:8px;padding:4px 14px;font-size:13px;font-weight:700;cursor:pointer">📤 Envoyer maintenant</button>';
+      var header=document.querySelector("header");
+      if(header)header.insertAdjacentElement("afterend",b);
+    }
+  } else {
+    if(existing)existing.remove();
+  }
+}
+
 function _doGithubSave(){
   // Relire le token depuis localStorage si GH_TOKEN est vide (peut arriver si effacé en mémoire)
   if(!GH_TOKEN){var _stored=localStorage.getItem("gh_token");if(_stored){GH_TOKEN=_stored;}}
@@ -1197,6 +1226,9 @@ function _doGithubSave(){
         if(ind2){ind2.textContent="✅ Sync GitHub";ind2.style.opacity="1";ind2.style.color="#166534";clearTimeout(ind2._t);ind2._t=setTimeout(function(){ind2.style.opacity="0.4";},10000);}
         var v=document.getElementById("ver-display");
         if(v){v.textContent="☁️ Sync "+readable;v.style.color="#0891b2";}
+        // Mémoriser heure dernière sync pour affichage au rechargement
+        localStorage.setItem("blo_last_github_sync",now.getTime()+"");
+        _updateSyncWarning(false);
         if(_saveAgainNeeded){_saveAgainNeeded=false;_doGithubSave();}
       } else {
         _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
@@ -3161,7 +3193,7 @@ function showProfileModal() {
       if(k==="salarie"){modal.remove();_salLockedId="";applyProfile("salarie");loadFromCloud(function(){TAB("pointage");showToast("\ud83d\udc64 Espace salari\u00e9 — aperçu");});return;}
       modal.remove();
       applyProfile(k);
-      loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👋 Bonjour "+pp.name+" !");if(GH_TOKEN)_startBureauPolling();});
+      loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();showToast("👋 Bonjour "+pp.name+" !");if(GH_TOKEN){_startBureauPolling();_updateSyncWarning(true);}});
     };})(key,p);
     var av = document.createElement("div");
     av.style.cssText = "width:46px;height:46px;border-radius:50%;background:"+p.color+";display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:#fff;flex-shrink:0";
@@ -3339,7 +3371,7 @@ var _salLockedId = null;
   var saved = localStorage.getItem("current_profile");
   if(saved && PROFILES[saved]){
     applyProfile(saved);
-    loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();if(GH_TOKEN)_startBureauPolling();});
+    loadFromCloud(function(){RP();RC();RS();RA();RV();RF();RRDV();RGANTT();RPOINTAGE();RINDEM();if(GH_TOKEN){_startBureauPolling();_updateSyncWarning(true);}});
   } else {
     setTimeout(showProfileModal, 300);
   }
