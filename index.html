@@ -1040,7 +1040,11 @@ function loadFromCloud(cb, forceRemote){
       _ghSha=data.sha;
       var b64=data.content.split("\n").join("");
       var json=decodeURIComponent(escape(atob(b64)));
-      applied=applyRemote(JSON.parse(json));
+      var remote=JSON.parse(json);
+      // TOUJOURS extraire le token depuis _x avant la décision local/remote
+      // (évite que GH_TOKEN reste vide quand localNewer=true)
+      if(remote._x){try{var _tkL=atob(remote._x).split("").reverse().join("");if(_tkL){GH_TOKEN=_tkL;localStorage.setItem("gh_token",_tkL);}}catch(e){}}
+      applied=applyRemote(remote);
       _afterApply(applied);
     } else {
       // Token invalide (401/403) → réessayer en lecture publique pour récupérer _x
@@ -1118,7 +1122,10 @@ window.addEventListener("beforeunload",function(e){
   }
 });
 
+var _ghSaveRetryTimer=null;
 function _doGithubSave(){
+  // Relire le token depuis localStorage si GH_TOKEN est vide (peut arriver si effacé en mémoire)
+  if(!GH_TOKEN){var _stored=localStorage.getItem("gh_token");if(_stored){GH_TOKEN=_stored;}}
   if(!GH_TOKEN){
     var ind0=document.getElementById("sind");
     if(ind0){ind0.textContent="⚠️ Pas de token — local seulement";ind0.style.opacity="1";ind0.style.color="#b45309";}
@@ -1187,7 +1194,7 @@ function _doGithubSave(){
         var now=new Date();
         var readable=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
         var ind2=document.getElementById("sind");
-        if(ind2){ind2.textContent="✅ Sync GitHub";ind2.style.opacity="1";ind2.style.color="#166534";clearTimeout(ind2._t);ind2._t=setTimeout(function(){ind2.style.opacity="0";},4000);}
+        if(ind2){ind2.textContent="✅ Sync GitHub";ind2.style.opacity="1";ind2.style.color="#166534";clearTimeout(ind2._t);ind2._t=setTimeout(function(){ind2.style.opacity="0.4";},10000);}
         var v=document.getElementById("ver-display");
         if(v){v.textContent="☁️ Sync "+readable;v.style.color="#0891b2";}
         if(_saveAgainNeeded){_saveAgainNeeded=false;_doGithubSave();}
@@ -1196,14 +1203,20 @@ function _doGithubSave(){
         var msg=res.data&&res.data.message?res.data.message:"code "+res.status;
         var ind3=document.getElementById("sind");
         if(ind3){ind3.textContent="❌ GitHub : "+msg;ind3.style.opacity="1";ind3.style.color="#dc2626";}
-        showToast("❌ Erreur GitHub : "+msg);
+        showToast("❌ Erreur GitHub : "+msg,8000);
+        // Auto-retry après 20 secondes
+        clearTimeout(_ghSaveRetryTimer);
+        _ghSaveRetryTimer=setTimeout(function(){_pendingSaveCount=0;_doGithubSave();},20000);
       }
     })
     .catch(function(e){
       _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
       var ind3=document.getElementById("sind");
       if(ind3){ind3.textContent="❌ GitHub : réseau";ind3.style.opacity="1";ind3.style.color="#dc2626";}
-      showToast("❌ Erreur réseau GitHub");
+      showToast("❌ Erreur réseau GitHub",8000);
+      // Auto-retry après 20 secondes
+      clearTimeout(_ghSaveRetryTimer);
+      _ghSaveRetryTimer=setTimeout(function(){_pendingSaveCount=0;_doGithubSave();},20000);
     });
   } // end _doActualSave
 
@@ -1346,7 +1359,7 @@ if(!D.absDemandes)D.absDemandes=[];
   reader.readAsText(file);
 }
 
-function showToast(msg){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove("on");},3000);}
+function showToast(msg,dur){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove("on");},dur||3000);}
 
 function TAB(n){
   document.querySelectorAll(".tb").forEach(function(b){b.classList.toggle("on",b.getAttribute("onclick").indexOf("'"+n+"'")>=0);});
