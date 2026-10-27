@@ -2566,9 +2566,9 @@ function printPointage(){
     wkInMCols.forEach(function(c,i){c.isFirstOfWeek=(i===0);c.isLastOfWeek=(i===wkInMCols.length-1);cols.push(c);});
   });
 
-  var th=function(s,bg,extra,cs){return "<th"+(cs?" colspan='"+cs+"'":"")+" style='border:1px solid #cbd5e1;padding:2px 3px;font-size:7.5px;font-weight:700;text-align:center;white-space:nowrap"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</th>";};
-  var td=function(s,bg,extra){return "<td style='border:1px solid #e2e8f0;padding:2px 4px;font-size:7.5px;text-align:center;white-space:nowrap"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</td>";};
-  var tdL=function(s,bg){return "<td style='border:1px solid #e2e8f0;padding:2px 6px;font-size:7.5px;font-weight:600;white-space:normal;text-align:left;max-width:110px;overflow:hidden"+(bg?";background:"+bg:"")+">"+s+"</td>";};
+  var th=function(s,bg,extra,cs){return "<th"+(cs?" colspan='"+cs+"'":"")+" style='border:1px solid #cbd5e1;padding:2px 3px;font-size:9px;font-weight:700;text-align:center;white-space:nowrap"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</th>";};
+  var td=function(s,bg,extra){return "<td style='border:1px solid #e2e8f0;padding:2px 4px;font-size:9px;text-align:center;white-space:nowrap"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</td>";};
+  var tdL=function(s,bg){return "<td style='border:1px solid #e2e8f0;padding:2px 6px;font-size:9px;font-weight:600;white-space:normal;text-align:left;max-width:110px;overflow:hidden"+(bg?";background:"+bg:"")+">"+s+"</td>";};
 
   // Groupes de semaines pour la ligne d'en-tête
   var wkGroups={};
@@ -2577,19 +2577,20 @@ function printPointage(){
 
   var html="";
   sals.forEach(function(sal){
+    try{
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
     html+="<div style='margin-bottom:14px;page-break-inside:avoid'>";
     html+="<div style='background:#13201e;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:11px;padding:5px 10px;border-radius:4px 4px 0 0'>"+nomAff+"</div>";
-    html+="<table style='border-collapse:collapse;width:100%;table-layout:fixed;font-size:7.5px'>";
+    html+="<table style='border-collapse:collapse;width:100%;table-layout:fixed;font-size:8px'>";
 
     // Ligne 1 : en-têtes semaines (colspan = nb jours in-month de la semaine + 1 pour total sem)
     html+="<tr>";
-    html+="<th style='border:1px solid #cbd5e1;padding:2px 4px;font-size:7.5px;font-weight:700;text-align:left;background:#e2e8f0;width:120px'>Rubrique</th>";
+    html+="<th style='border:1px solid #cbd5e1;padding:2px 4px;font-size:9px;font-weight:700;text-align:left;background:#e2e8f0;width:120px'>Rubrique</th>";
     wkList.forEach(function(wk){
       var cnt=wkGroups[wk]||0;
       var salV=!!(D.alexisValidations&&D.alexisValidations[sal.id+"|"+wk+"|"+annee]);
       // colspan = nb jours in-month de la semaine + 1 colonne total semaine
-      html+=th("S"+wk+(salV?" ✅":""),"#c7d2fe","color:#3730a3;font-size:7px",cnt+1);
+      html+=th("S"+wk+(salV?" ✅":""),"#c7d2fe","color:#3730a3;font-size:8px",cnt+1);
     });
     html+=th("TOTAL","#fef9c3","color:#92400e;font-weight:800");
     html+="</tr>";
@@ -2599,7 +2600,7 @@ function printPointage(){
     html+="<th style='border:1px solid #cbd5e1;background:#e2e8f0;padding:2px'></th>";
     cols.forEach(function(c){
       var day=["L","M","M","J","V"][c.di];
-      html+=th(day+"<br><span style='font-size:6.5px;color:#64748b'>"+c.dt.getDate()+"</span>",c.isFirstOfWeek||c.isLastOfWeek?"#e8eaf6":"");
+      html+=th(day+"<br><span style='font-size:8px;color:#64748b'>"+c.dt.getDate()+"</span>",c.isFirstOfWeek||c.isLastOfWeek?"#e8eaf6":"");
     });
     wkList.forEach(function(){html+=th("Σ sem","#fef9c3");});
     html+=th("Σ mois","#fef9c3","font-weight:800");
@@ -2668,7 +2669,7 @@ function printPointage(){
     }
     var chIds=Object.keys(chantierMap);
     if(chIds.length){
-      html+="<tr><td colspan='"+(2+cols.length+wkList.length)+"' style='background:#0891b2;color:#fff;font-weight:700;padding:3px 8px;font-size:7.5px'>🏗 Heures chantier</td></tr>";
+      html+="<tr><td colspan='"+(2+cols.length+wkList.length)+"' style='background:#0891b2;color:#fff;font-weight:700;padding:3px 8px;font-size:9px'>🏗 Heures chantier</td></tr>";
       chIds.forEach(function(chId){
         var ch=chantierMap[chId];
         var totalCh=0;var wkTotCh={};wkList.forEach(function(w){wkTotCh[w]=0;});
@@ -2690,22 +2691,21 @@ function printPointage(){
     }
 
     html+="</table></div>";
+    }catch(e){console.error("printPointage err sal",sal&&sal.id,e);html+="<div style='color:red;font-size:10px;padding:4px'>Erreur pour "+((sal&&sal.prenom)||"?")+" — "+e.message+"</div>";}
   });
 
   var css=
     "@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;600;700&display=swap');"+
-    "html,body{margin:0;padding:0;font-family:'DM Sans',sans-serif;font-size:7.5px;color:#13201e}"+
+    "html,body{margin:0;padding:0;font-family:'DM Sans',sans-serif;font-size:9px;color:#13201e}"+
     "body{padding:6px}"+
     ".hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #13201e;margin-bottom:8px;padding-bottom:4px}"+
     ".logo{font-family:Syne,sans-serif;font-weight:800;font-size:16px}"+
-    "h1{font-family:Syne,sans-serif;font-weight:700;font-size:11px;margin:0}"+
-    ".sub{font-size:7px;color:#64748b}"+
+    "h1{font-family:Syne,sans-serif;font-weight:700;font-size:12px;margin:0}"+
+    ".sub{font-size:8px;color:#64748b}"+
     "table{width:100%;table-layout:fixed}"+
     "td,th{overflow:hidden}"+
     "@page{size:A4 landscape;margin:7mm}"+
-    "@media print{button{display:none!important}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}"+
-    /* Réduction auto si trop large */
-    "@media print{body{zoom:0.85}}";
+    "@media print{button{display:none!important}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
 
   var w=window.open("","_blank");
   if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
