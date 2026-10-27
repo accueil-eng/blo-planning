@@ -1137,7 +1137,7 @@ function _updateSyncWarning(showIfOld){
     var s=String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
     if(v&&v.textContent.indexOf("Sync")===-1){v.textContent="☁️ Sync "+s;v.style.color="#0891b2";}
   }
-  if(!ts||minAgo>30){
+  if((!ts||minAgo>30)&&_currentProfile==="alexis"){
     if(!existing&&GH_TOKEN){
       var b=document.createElement("div");
       b.id="sync-warning-banner";
@@ -2568,7 +2568,7 @@ function printPointage(){
 
   var th=function(s,bg,extra,cs){return "<th"+(cs?" colspan='"+cs+"'":"")+" style='border:1px solid #cbd5e1;padding:2px 3px;font-size:7.5px;font-weight:700;text-align:center;white-space:nowrap"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</th>";};
   var td=function(s,bg,extra){return "<td style='border:1px solid #e2e8f0;padding:2px 4px;font-size:7.5px;text-align:center;white-space:nowrap"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</td>";};
-  var tdL=function(s,bg){return "<td style='border:1px solid #e2e8f0;padding:2px 6px;font-size:7.5px;font-weight:600;white-space:nowrap;text-align:left"+(bg?";background:"+bg:"")+">"+s+"</td>";};
+  var tdL=function(s,bg){return "<td style='border:1px solid #e2e8f0;padding:2px 6px;font-size:7.5px;font-weight:600;white-space:normal;text-align:left;max-width:110px;overflow:hidden"+(bg?";background:"+bg:"")+">"+s+"</td>";};
 
   // Groupes de semaines pour la ligne d'en-tête
   var wkGroups={};
@@ -2700,8 +2700,12 @@ function printPointage(){
     ".logo{font-family:Syne,sans-serif;font-weight:800;font-size:16px}"+
     "h1{font-family:Syne,sans-serif;font-weight:700;font-size:11px;margin:0}"+
     ".sub{font-size:7px;color:#64748b}"+
+    "table{width:100%;table-layout:fixed}"+
+    "td,th{overflow:hidden}"+
     "@page{size:A4 landscape;margin:7mm}"+
-    "@media print{button{display:none!important}body{padding:0}}";
+    "@media print{button{display:none!important}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}"+
+    /* Réduction auto si trop large */
+    "@media print{body{zoom:0.85}}";
 
   var w=window.open("","_blank");
   if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
