@@ -2600,34 +2600,34 @@ function printPointage(forcedFilterId){
 
   var html="";
   sals.forEach(function(sal){
+    var empHtml="";// construit séparément — ajouté à html seulement si complet
     try{
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
-    html+="<div style='margin-bottom:14px;page-break-inside:avoid'>";
-    html+="<div style='background:#13201e;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:11px;padding:5px 10px;border-radius:4px 4px 0 0'>"+nomAff+"</div>";
-    html+="<table style='border-collapse:collapse;width:100%;table-layout:fixed;font-size:8px'>";
+    empHtml+="<div style='margin-bottom:14px;page-break-inside:avoid'>";
+    empHtml+="<div style='background:#13201e;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:12px;padding:5px 10px;border-radius:4px 4px 0 0'>"+nomAff+"</div>";
+    empHtml+="<table style='border-collapse:collapse;width:100%;font-size:9px'>";
 
-    // Ligne 1 : en-têtes semaines (colspan = nb jours in-month de la semaine + 1 pour total sem)
-    html+="<tr>";
-    html+="<th style='border:1px solid #cbd5e1;padding:2px 4px;font-size:9px;font-weight:700;text-align:left;background:#e2e8f0;width:120px'>Rubrique</th>";
+    // Ligne 1 : en-têtes semaines
+    empHtml+="<tr>";
+    empHtml+="<th style='border:1px solid #cbd5e1;padding:2px 4px;font-size:9px;font-weight:700;text-align:left;background:#e2e8f0;width:90px'>Rubrique</th>";
     wkList.forEach(function(wk){
       var cnt=wkGroups[wk]||0;
       var salV=!!(D.alexisValidations&&D.alexisValidations[sal.id+"|"+wk+"|"+annee]);
-      // colspan = nb jours in-month de la semaine + 1 colonne total semaine
-      html+=th("S"+wk+(salV?" ✅":""),"#c7d2fe","color:#3730a3;font-size:8px",cnt+1);
+      empHtml+=th("S"+wk+(salV?" ✅":""),"#c7d2fe","color:#3730a3;font-size:8px",cnt+1);
     });
-    html+=th("TOTAL","#fef9c3","color:#92400e;font-weight:800");
-    html+="</tr>";
+    empHtml+=th("TOTAL","#fef9c3","color:#92400e;font-weight:800");
+    empHtml+="</tr>";
 
     // Ligne 2 : dates
-    html+="<tr>";
-    html+="<th style='border:1px solid #cbd5e1;background:#e2e8f0;padding:2px'></th>";
+    empHtml+="<tr>";
+    empHtml+="<th style='border:1px solid #cbd5e1;background:#e2e8f0;padding:2px'></th>";
     cols.forEach(function(c){
       var day=["L","M","M","J","V"][c.di];
-      html+=th(day+"<br><span style='font-size:8px;color:#64748b'>"+c.dt.getDate()+"</span>",c.isFirstOfWeek||c.isLastOfWeek?"#e8eaf6":"");
+      empHtml+=th(day+"<br><span style='font-size:8px;color:#64748b'>"+c.dt.getDate()+"</span>",c.isFirstOfWeek||c.isLastOfWeek?"#e8eaf6":"");
     });
-    wkList.forEach(function(){html+=th("Σ sem","#fef9c3");});
-    html+=th("Σ mois","#fef9c3","font-weight:800");
-    html+="</tr>";
+    wkList.forEach(function(){empHtml+=th("Σ","#fef9c3");});
+    empHtml+=th("Σ mois","#fef9c3","font-weight:800");
+    empHtml+="</tr>";
 
     // Lignes données PT_ROWS
     PT_ROWS.forEach(function(row){
@@ -2636,30 +2636,28 @@ function printPointage(forcedFilterId){
       var wkTotals={};wkList.forEach(function(w){wkTotals[w]=0;});
       var cellVals=cols.map(function(c){
         var v=ptGet(mois,annee,row.id,sal.id,c.wk,c.di);
-        // auto-zone trajet/transport depuis chantier
         if(!v&&(row.id==="trajet"||row.id==="transport")){
-          var _chZ=getChantierForSalDay(sal.id,c.dt);
-          if(_chZ){var _sg=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";v=(_sg==="fontevraud"?_chZ.zoneFontevraud:_chZ.zoneEcouflant)||"";}
+          try{var _chZ=getChantierForSalDay(sal.id,c.dt);
+          if(_chZ){var _sg=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";v=(_sg==="fontevraud"?_chZ.zoneFontevraud:_chZ.zoneEcouflant)||"";}}catch(ez){}
         }
         if(row.type==="check"){var b=(v===true||v==="1"||v===1);if(b){totalMois++;wkTotals[c.wk]=(wkTotals[c.wk]||0)+1;}return b?"✓":"";}
         if(row.type==="zone_dd"){if(v){totalMois++;wkTotals[c.wk]=(wkTotals[c.wk]||0)+1;}return v||"";}
         var n=parseFloat(v)||0;if(n){totalMois+=n;wkTotals[c.wk]=(wkTotals[c.wk]||0)+n;}return n||"";
       });
       var hasData=totalMois>0;
-      html+="<tr style='background:"+(hasData?"#fff":"#fafafa")+"'>";
-      html+=tdL(row.label+(row.unit?" ("+row.unit+")":""),"#f8f7f4");
+      empHtml+="<tr style='background:"+(hasData?"#fff":"#fafafa")+"'>";
+      empHtml+=tdL(row.label+(row.unit?" ("+row.unit+")":""),"#f8f7f4");
       cellVals.forEach(function(v,i){
         var c=cols[i];
-        html+=td(v,c.isFirstOfWeek?"#f5f5ff":c.isLastOfWeek?"#f0f4ff":"");
+        empHtml+=td(v,c.isFirstOfWeek?"#f5f5ff":c.isLastOfWeek?"#f0f4ff":"");
       });
-      wkList.forEach(function(wk){html+=td(wkTotals[wk]||"","#fffde7");});
-      html+=td(totalMois||"","#fef9c3","font-weight:800;color:"+(totalMois?"#92400e":"#aaa"));
-      html+="</tr>";
+      wkList.forEach(function(wk){empHtml+=td(wkTotals[wk]||"","#fffde7");});
+      empHtml+=td(totalMois||"","#fef9c3","font-weight:800;color:"+(totalMois?"#92400e":"#aaa"));
+      empHtml+="</tr>";
     });
 
     // Section chantiers
     var chantierMap={};
-    // Construire la même chantierMap que RPOINTAGE
     (D.chantiers||[]).forEach(function(ch){
       weeks.forEach(function(wk){
         getDatesOfWeek(wk,annee).forEach(function(dt,di){
@@ -2673,26 +2671,9 @@ function printPointage(forcedFilterId){
         });
       });
     });
-    // Auto-chantiers depuis planning
-    if(!_ptPrintSalMode||(D.salaries||[]).find(function(s){return s.id===sal.id&&s.isBureau;})){
-      var chBureauList=(D.chantiers||[]).filter(function(c){return !c.done;});
-      chBureauList.forEach(function(chBureau){
-        weeks.forEach(function(wk){
-          getDatesOfWeek(wk,annee).forEach(function(dt,di){
-            if(di>4)return;
-            if(dt.getMonth()+1!==mois||dt.getFullYear()!==annee)return;
-            if(ptWasStored(mois,annee,"ch_"+chBureau.id,sal.id,wk,di))return;
-            if(getChantierForSalDay&&getChantierForSalDay(sal.id,dt)&&getChantierForSalDay(sal.id,dt).id===chBureau.id){
-              if(!chantierMap[chBureau.id]){chantierMap[chBureau.id]={nom:(chBureau.ref?chBureau.ref+" — ":"")+chBureau.nom,weeks:{}};}
-              if(chantierMap[chBureau.id].weeks[wk+"|"+di]===undefined)chantierMap[chBureau.id].weeks[wk+"|"+di]=(di===4?6:7.25);
-            }
-          });
-        });
-      });
-    }
     var chIds=Object.keys(chantierMap);
     if(chIds.length){
-      html+="<tr><td colspan='"+(2+cols.length+wkList.length)+"' style='background:#0891b2;color:#fff;font-weight:700;padding:3px 8px;font-size:9px'>🏗 Heures chantier</td></tr>";
+      empHtml+="<tr><td colspan='"+(2+cols.length+wkList.length)+"' style='background:#0891b2;color:#fff;font-weight:700;padding:3px 8px;font-size:9px'>🏗 Heures chantier</td></tr>";
       chIds.forEach(function(chId){
         var ch=chantierMap[chId];
         var totalCh=0;var wkTotCh={};wkList.forEach(function(w){wkTotCh[w]=0;});
@@ -2704,17 +2685,18 @@ function printPointage(forcedFilterId){
           if(v){totalCh+=v;wkTotCh[c.wk]=(wkTotCh[c.wk]||0)+v;}
           return v||"";
         });
-        html+="<tr style='background:#f0f9ff'>";
-        html+=tdL(ch.nom,"#dbeafe");
-        cellCh.forEach(function(v,i){html+=td(v,cols[i].isFirstOfWeek?"#e0f0ff":"");});
-        wkList.forEach(function(wk){html+=td(wkTotCh[wk]||"","#fffde7");});
-        html+=td(totalCh||"","#dbeafe","font-weight:800;color:#0369a1");
-        html+="</tr>";
+        empHtml+="<tr style='background:#f0f9ff'>";
+        empHtml+=tdL(ch.nom,"#dbeafe");
+        cellCh.forEach(function(v,i){empHtml+=td(v,cols[i].isFirstOfWeek?"#e0f0ff":"");});
+        wkList.forEach(function(wk){empHtml+=td(wkTotCh[wk]||"","#fffde7");});
+        empHtml+=td(totalCh||"","#dbeafe","font-weight:800;color:#0369a1");
+        empHtml+="</tr>";
       });
     }
 
-    html+="</table></div>";
-    }catch(e){console.error("printPointage err sal",sal&&sal.id,e);html+="<div style='color:red;font-size:10px;padding:4px'>Erreur pour "+((sal&&sal.prenom)||"?")+" — "+e.message+"</div>";}
+    empHtml+="</table></div>";
+    html+=empHtml;// ajouter seulement si tout s'est bien passé
+    }catch(e){console.error("printPointage err sal",sal&&sal.id,e);html+="<div style='background:#fee2e2;color:#991b1b;font-size:10px;padding:6px 10px;border-radius:4px;margin-bottom:8px'>⚠️ Erreur pour "+((sal&&sal.prenom)||"?")+" : "+e.message+"</div>";}
   });
 
   var css=
