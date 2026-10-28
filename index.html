@@ -2632,15 +2632,16 @@ function printPointage(forcedFilterId){
     "@media print{.bar{display:none!important}@page{size:A4 landscape;margin:7mm}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}";
 
   // Écriture de l'entête — chaque document.write est indépendant, évite la troncature d'un seul gros bloc
-  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+title+"</title><style>"+css+"</style></head><body>");
+  var autoZoomJs="window.addEventListener('load',function(){var maxW=0;document.querySelectorAll('table').forEach(function(t){if(t.offsetWidth>maxW)maxW=t.offsetWidth;});var avail=window.innerWidth-24;if(maxW>avail){var z=(avail/maxW).toFixed(3);document.body.style.zoom=z;document.body.style.webkitTextSizeAdjust='none';}});";
+  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>"+title+"</title><style>"+css+"</style><script>"+autoZoomJs+"<\/script></head><body>");
   w.document.write("<div class='bar'><strong>"+title+" — "+imprDate+"</strong><button class='btn-print' onclick='window.print()'>🖨️ Imprimer</button><button class='btn-close' onclick='window.close()'>✕ Fermer</button></div>");
 
   // Écrire chaque salarié séparément — jamais de gros bloc unique
   sals.forEach(function(sal){
     try{
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
-    // Largeurs fixes par type de colonne — garantit que la table tient sur la page
-    var rubW=85,dayW=30,sigW=28,totW=34;
+    // Largeurs fixes par type de colonne
+    var rubW=75,dayW=22,sigW=22,totW=28;
     var tblW=rubW+cols.length*dayW+wkList.length*sigW+totW;
     var empHtml="<div class='emp'>";
     empHtml+="<div class='emp-name'>"+nomAff+"</div>";
