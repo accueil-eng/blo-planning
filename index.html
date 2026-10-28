@@ -2604,18 +2604,38 @@ function printPointage(forcedFilterId){
   cols.forEach(function(c){if(!wkGroups[c.wk])wkGroups[c.wk]=0;wkGroups[c.wk]++;});
   var wkList=weeks.filter(function(w){return wkGroups[w];});
 
-  var html="";
+  // Ouvrir le popup d'abord (doit être fait en contexte clic synchrone)
+  var w=window.open("","_blank","width=1200,height=800");
+  if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
+
+  var imprDate=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+  var css=
+    "body{margin:8px;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#13201e}"+
+    "table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9px}"+
+    "td,th{overflow:hidden;border:1px solid #cbd5e1;padding:2px 3px}"+
+    ".emp{margin-bottom:14px;page-break-inside:avoid}"+
+    ".emp-name{background:#13201e;color:#fff;font-weight:700;font-size:12px;padding:5px 10px}"+
+    ".bar{position:sticky;top:0;background:#13201e;color:#fff;padding:8px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px}"+
+    ".bar button{border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer}"+
+    ".btn-print{background:#22c55e;color:#fff;margin-left:auto}"+
+    ".btn-close{background:transparent;color:#94a3b8;border:1px solid #475569!important;font-weight:400}"+
+    "@media print{.bar{display:none!important}@page{size:A4 landscape;margin:7mm}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}";
+
+  // Écriture de l'entête — chaque document.write est indépendant, évite la troncature d'un seul gros bloc
+  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+title+"</title><style>"+css+"</style></head><body>");
+  w.document.write("<div class='bar'><strong>"+title+" — "+imprDate+"</strong><button class='btn-print' onclick='window.print()'>🖨️ Imprimer</button><button class='btn-close' onclick='window.close()'>✕ Fermer</button></div>");
+
+  // Écrire chaque salarié séparément — jamais de gros bloc unique
   sals.forEach(function(sal){
-    var empHtml="";
     try{
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
-    empHtml+="<div style='margin-bottom:14px;page-break-inside:avoid'>";
-    empHtml+="<div style='background:#13201e;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:12px;padding:5px 10px;border-radius:4px 4px 0 0'>"+nomAff+"</div>";
-    empHtml+="<table style='border-collapse:collapse;width:100%;font-size:9px'>";
+    var empHtml="<div class='emp'>";
+    empHtml+="<div class='emp-name'>"+nomAff+"</div>";
+    empHtml+="<table>";
 
     // Ligne 1 : en-têtes semaines
     empHtml+="<tr>";
-    empHtml+="<th style='border:1px solid #cbd5e1;padding:2px 4px;font-size:9px;font-weight:700;text-align:left;background:#e2e8f0;width:90px'>Rubrique</th>";
+    empHtml+="<th style='text-align:left;background:#e2e8f0;width:90px'>Rubrique</th>";
     wkList.forEach(function(wk){
       var cnt=wkGroups[wk]||0;
       var salV=!!(D.alexisValidations&&D.alexisValidations[sal.id+"|"+wk+"|"+annee]);
@@ -2626,7 +2646,7 @@ function printPointage(forcedFilterId){
 
     // Ligne 2 : dates
     empHtml+="<tr>";
-    empHtml+="<th style='border:1px solid #cbd5e1;background:#e2e8f0;padding:2px'></th>";
+    empHtml+="<th style='background:#e2e8f0'></th>";
     cols.forEach(function(c){
       var day=["L","M","M","J","V"][c.di];
       empHtml+=th(day+"<br><span style='font-size:8px;color:#64748b'>"+c.dt.getDate()+"</span>",c.isFirstOfWeek||c.isLastOfWeek?"#e8eaf6":"");
@@ -2652,7 +2672,7 @@ function printPointage(forcedFilterId){
       });
       var hasData=totalMois>0;
       empHtml+="<tr style='background:"+(hasData?"#fff":"#fafafa")+"'>";
-      empHtml+=tdL(row.label+(row.unit?" ("+row.unit+")":""),"#f8f7f4");
+      empHtml+="<td style='font-weight:600;text-align:left;background:#f8f7f4;max-width:110px'>"+row.label+(row.unit?" ("+row.unit+")":"")+"</td>";
       cellVals.forEach(function(v,i){
         var c=cols[i];
         empHtml+=td(v,c.isFirstOfWeek?"#f5f5ff":c.isLastOfWeek?"#f0f4ff":"");
@@ -2692,7 +2712,7 @@ function printPointage(forcedFilterId){
           return v||"";
         });
         empHtml+="<tr style='background:#f0f9ff'>";
-        empHtml+=tdL(ch.nom,"#dbeafe");
+        empHtml+="<td style='font-weight:600;text-align:left;background:#dbeafe;max-width:110px'>"+ch.nom+"</td>";
         cellCh.forEach(function(v,i){empHtml+=td(v,cols[i].isFirstOfWeek?"#e0f0ff":"");});
         wkList.forEach(function(wk){empHtml+=td(wkTotCh[wk]||"","#fffde7");});
         empHtml+=td(totalCh||"","#dbeafe","font-weight:800;color:#0369a1");
@@ -2701,45 +2721,12 @@ function printPointage(forcedFilterId){
     }
 
     empHtml+="</table></div>";
-    html+=empHtml;
+    w.document.write(empHtml);
     }catch(e){console.error("printPointage err",sal&&sal.prenom,e);}
   });
 
-  var imprDate=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
-
-  // Overlay pleine page dans la page principale — scroll pour voir tous les salariés, Ctrl+P pour imprimer
-  var ovId="_pt-print-overlay";
-  var oldOv=document.getElementById(ovId);if(oldOv)oldOv.remove();
-  var ov=document.createElement("div");
-  ov.id=ovId;
-  ov.style.cssText="position:fixed;inset:0;z-index:99999;background:#fff;overflow-y:auto;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#13201e";
-
-  // Barre de contrôle (masquée à l'impression)
-  var bar=document.createElement("div");
-  bar.id="_pt-print-bar";
-  bar.style.cssText="position:sticky;top:0;background:#13201e;color:#fff;padding:8px 14px;display:flex;align-items:center;gap:10px;z-index:1";
-  bar.innerHTML="<strong style='font-size:13px'>"+title+" — "+imprDate+"</strong>"+
-    "<button onclick='window.print()' style='margin-left:auto;background:#22c55e;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>"+
-    "<button onclick='document.getElementById(\""+ovId+"\").remove()' style='background:transparent;color:#94a3b8;border:1px solid #475569;border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer'>✕ Fermer</button>";
-  ov.appendChild(bar);
-
-  // Contenu
-  var content=document.createElement("div");
-  content.style.cssText="padding:8px;";
-  content.innerHTML=html;
-  ov.appendChild(content);
-
-  // Style pour les tables dans l'overlay + impression
-  var styleEl=document.createElement("style");
-  styleEl.textContent=
-    "#"+ovId+" table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9px}"+
-    "#"+ovId+" td,#"+ovId+" th{overflow:hidden;border:1px solid #cbd5e1;padding:2px 3px}"+
-    "@media print{#_pt-print-bar{display:none!important}body>*:not(#"+ovId+"){display:none!important}#"+ovId+"{position:static!important;overflow:visible!important}"+
-    "@page{size:A4 landscape;margin:7mm}"+
-    "#"+ovId+" *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}";
-  document.head.appendChild(styleEl);
-
-  document.body.appendChild(ov);
+  w.document.write("</body></html>");
+  w.document.close();
 }
 
 function printAbsences(){
