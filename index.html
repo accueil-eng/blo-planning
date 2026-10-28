@@ -2611,7 +2611,7 @@ function printPointage(forcedFilterId){
   var imprDate=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
   var css=
     "html,body{margin:0;padding:0}"+
-    "body{padding:8px;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#13201e;overflow-x:auto}"+
+    "body{padding:8px;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#13201e}"+
     "table{border-collapse:collapse;table-layout:fixed;font-size:9px}"+
     "td,th{overflow:hidden;border:1px solid #cbd5e1;padding:2px 3px}"+
     ".emp{margin-bottom:14px;page-break-inside:avoid}"+
@@ -2680,17 +2680,28 @@ function printPointage(forcedFilterId){
       empHtml+="</tr>";
     });
 
-    // Section chantiers
+    // Section chantiers — même logique que renderPointage
     var chantierMap={};
+    // 1) Auto-détection depuis le planning (même mécanisme que la vue principale)
+    weeks.forEach(function(wk){
+      getDatesOfWeek(wk,annee).forEach(function(dt){
+        var inMch=(dt.getMonth()+1===mois&&dt.getFullYear()===annee);
+        if(!inMch)return;
+        try{getChantierHoursPerDay(sal.id,dt).forEach(function(e){
+          if(!chantierMap[e.chId])chantierMap[e.chId]={nom:e.chNom,weeks:{}};
+          var dk=wk+"|"+(dt.getDay()-1);
+          if(!chantierMap[e.chId].weeks[dk])chantierMap[e.chId].weeks[dk]=e.hours;
+        });}catch(ez){}
+      });
+    });
+    // 2) Entrées manuelles stockées
     (D.chantiers||[]).forEach(function(ch){
       weeks.forEach(function(wk){
         getDatesOfWeek(wk,annee).forEach(function(dt,di){
-          if(di>4)return;
           if(dt.getMonth()+1!==mois||dt.getFullYear()!==annee)return;
           var stored=ptGet(mois,annee,"ch_"+ch.id,sal.id,wk,di);
-          if(ptWasStored(mois,annee,"ch_"+ch.id,sal.id,wk,di)||parseFloat(stored)){
-            if(!chantierMap[ch.id]){chantierMap[ch.id]={nom:(ch.ref?ch.ref+" — ":"")+ch.nom,weeks:{}};}
-            chantierMap[ch.id].weeks[wk+"|"+di]=parseFloat(stored)||0;
+          if(stored!==""){
+            if(!chantierMap[ch.id])chantierMap[ch.id]={nom:(ch.ref?ch.ref+" — ":"")+ch.nom,weeks:{}};
           }
         });
       });
