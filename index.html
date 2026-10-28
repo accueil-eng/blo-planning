@@ -2730,7 +2730,14 @@ function printPointage(forcedFilterId){
           try{var _chZ=getChantierForSalDay(sal.id,c.dt);
           if(_chZ){var _sg=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";v=(_sg==="fontevraud"?_chZ.zoneFontevraud:_chZ.zoneEcouflant)||"";}}catch(ez){}
         }
-        if(row.type==="check"){var b=(v===true||v==="1"||v===1);if(b)totalMois++;return b?"✓":"";}
+        if(row.type==="check"){
+          // Panier auto : même logique que RPOINTAGE
+          if(row.id==="panier"&&(v===""||v===undefined)){
+            try{var _absP2=getAbsForSalDay(sal.id,c.dt);
+            if(!_absP2&&shouldAutoPanier(sal.id,c.dt))v="1";}catch(ez){}
+          }
+          var b=(v===true||v==="1"||v===1);if(b)totalMois++;return b?"✓":"";
+        }
         if(row.type==="zone_dd"){if(v)totalMois++;return v||"";}
         // Auto-fill depuis les absences (css, cp, maladie, formation, ecole, intemp)
         if(!v&&ABS_PT_MAP[row.id]){
