@@ -76,6 +76,7 @@ btnPush.onclick=function(){
   showStatus("⏳ Connexion à GitHub…","info-status");
 
   D._savedAt=new Date().toISOString().replace("T"," ").substring(0,19);
+  D._x=_x;// toujours inclure le token encodé pour que la synchro auto fonctionne
   var json=JSON.stringify(D,null,2);
   var content=btoa(unescape(encodeURIComponent(json)));
 
