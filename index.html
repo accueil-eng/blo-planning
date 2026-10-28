@@ -2605,13 +2605,14 @@ function printPointage(forcedFilterId){
   var wkList=weeks.filter(function(w){return wkGroups[w];});
 
   // Ouvrir le popup d'abord (doit être fait en contexte clic synchrone)
-  var w=window.open("","_blank","width=1200,height=800");
+  var w=window.open("","_blank");
   if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
 
   var imprDate=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
   var css=
-    "body{margin:8px;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#13201e}"+
-    "table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9px}"+
+    "html,body{margin:0;padding:0}"+
+    "body{padding:8px;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#13201e;overflow-x:auto}"+
+    "table{border-collapse:collapse;table-layout:fixed;font-size:9px}"+
     "td,th{overflow:hidden;border:1px solid #cbd5e1;padding:2px 3px}"+
     ".emp{margin-bottom:14px;page-break-inside:avoid}"+
     ".emp-name{background:#13201e;color:#fff;font-weight:700;font-size:12px;padding:5px 10px}"+
@@ -2634,7 +2635,8 @@ function printPointage(forcedFilterId){
     var tblW=rubW+cols.length*dayW+wkList.length*sigW+totW;
     var empHtml="<div class='emp'>";
     empHtml+="<div class='emp-name'>"+nomAff+"</div>";
-    empHtml+="<table style='border-collapse:collapse;table-layout:fixed;font-size:9px;width:"+tblW+"px'>";
+    empHtml+="<div style='overflow-x:auto;width:100%'>";
+    empHtml+="<table style='border-collapse:collapse;table-layout:fixed;font-size:9px;width:"+tblW+"px;min-width:"+tblW+"px'>";
 
     // Une seule ligne d'en-tête — pas de colspan, largeurs explicites sur chaque cellule
     empHtml+="<tr>";
@@ -2716,7 +2718,7 @@ function printPointage(forcedFilterId){
       });
     }
 
-    empHtml+="</table></div>";
+    empHtml+="</table></div></div>";
     w.document.write(empHtml);
     }catch(e){console.error("printPointage err",sal&&sal.prenom,e);}
   });
