@@ -672,6 +672,8 @@ function forcePushNow(){
   _doGithubSave();
   setTimeout(function(){
     if(btn){btn.textContent="📤";btn.disabled=false;}
+    // Après l'envoi, masquer le bouton et la bannière si synchro OK
+    _updateSyncWarning(true);
   },5000);
 }
 
@@ -1136,18 +1138,23 @@ function _updateSyncWarning(showIfOld){
     var s=String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
     if(v&&v.textContent.indexOf("Sync")===-1){v.textContent="☁️ Sync "+s;v.style.color="#0891b2";}
   }
+  var pushBtn=document.getElementById("push-now-btn");
   if((!ts||minAgo>30)&&_currentProfile==="alexis"){
     if(!existing&&GH_TOKEN){
       var b=document.createElement("div");
       b.id="sync-warning-banner";
       b.style.cssText="background:#fff7ed;border-bottom:2px solid #f97316;color:#7c2d12;font-size:13px;font-weight:700;padding:8px 16px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;z-index:100;position:relative";
-      var msg=ts?"⚠️ Dernière synchronisation il y a "+minAgo+" min — pensez à envoyer !":"⚠️ Pas encore synchronisé avec GitHub";
-      b.innerHTML=msg+'&nbsp;&nbsp;<span style="font-size:11px;font-weight:400;color:#9a3412">→ cliquez sur le bouton vert 📤 Envoyer en haut</span>';
+      var msg=ts?"⚠️ Dernière synchronisation il y a "+minAgo+" min":"⚠️ Pas encore synchronisé avec GitHub";
+      b.innerHTML=msg+'&nbsp;&nbsp;<span style="font-size:11px;font-weight:400;color:#9a3412">→ cliquer sur 📤 Envoyer pour forcer</span>';
       var header=document.querySelector("header");
       if(header)header.insertAdjacentElement("afterend",b);
     }
+    // Afficher le bouton vert seulement quand la synchro est en retard
+    if(pushBtn)pushBtn.style.display="flex";
   } else {
     if(existing)existing.remove();
+    // Cacher le bouton vert quand la synchro est OK
+    if(pushBtn)pushBtn.style.display="none";
   }
 }
 
@@ -3172,8 +3179,9 @@ function applyProfile(key) {
   if(syncBtn) syncBtn.style.display = "none";// masqué : le poll auto suffit
   var restoreBtn = document.getElementById("restore-backup-btn");
   if(restoreBtn) restoreBtn.style.display = _isBureau ? "flex" : "none";
+  // Le bouton vert "Envoyer" est géré par _updateSyncWarning (visible seulement si synchro en retard, Alexis uniquement)
   var pushBtn2 = document.getElementById("push-now-btn");
-  if(pushBtn2) pushBtn2.style.display = _isBureau ? "flex" : "none";
+  if(pushBtn2) pushBtn2.style.display = "none"; // masqué par défaut, _updateSyncWarning l'affiche si besoin
 
   // ⚠️ Alerte si token manquant pour un profil bureau (écriture)
   // Ne pas afficher pour le profil salarié (il n'est pas censé avoir le token écriture)
