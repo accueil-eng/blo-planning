@@ -2605,7 +2605,10 @@ function printPointage(forcedFilterId){
   var wkList=weeks.filter(function(w){return wkGroups[w];});
 
   var html="";
+  var _dbgLog=[];
   sals.forEach(function(sal){
+    console.log("🖨️ printPointage — début salarié",sal.prenom,"id=",sal.id);
+    _dbgLog.push("START:"+sal.prenom);
     var empHtml="";// construit séparément — ajouté à html seulement si complet
     try{
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
@@ -2702,7 +2705,13 @@ function printPointage(forcedFilterId){
 
     empHtml+="</table></div>";
     html+=empHtml;// ajouter seulement si tout s'est bien passé
-    }catch(e){console.error("printPointage err sal",sal&&sal.id,e);html+="<div style='background:#fee2e2;color:#991b1b;font-size:10px;padding:6px 10px;border-radius:4px;margin-bottom:8px'>⚠️ Erreur pour "+((sal&&sal.prenom)||"?")+" : "+e.message+"</div>";}
+    console.log("✅ printPointage — fin OK",sal.prenom,"empHtml.len=",empHtml.length);
+    _dbgLog.push("OK:"+sal.prenom+":"+empHtml.length);
+    }catch(e){
+      console.error("❌ printPointage err sal",sal&&sal.id,sal&&sal.prenom,e);
+      _dbgLog.push("ERR:"+((sal&&sal.prenom)||"?")+" — "+e.message);
+      html+="<div style='background:#fee2e2;color:#991b1b;font-size:13px;font-weight:700;padding:14px 16px;border-radius:4px;margin-bottom:12px;border:3px solid #f87171'>⚠️ ERREUR "+((sal&&sal.prenom)||"?")+" : "+e.message+"</div>";
+    }
   });
 
   var css=
@@ -2718,8 +2727,8 @@ function printPointage(forcedFilterId){
     "@page{size:A4 landscape;margin:7mm}"+
     "@media print{button{display:none!important}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
 
-  var debugInfo="v28oct — "+sals.length+" sal: "+sals.map(function(s){return s.prenom;}).join(",")+
-    " — "+cols.length+" jours — "+Object.keys(D.pointages||{}).filter(function(k){return k.includes("2026-10");}).length+" pt";
+  console.log("🖨️ printPointage — boucle terminée. _dbgLog=",_dbgLog);
+  var debugInfo="v29oct — "+sals.length+" sal — html.len="+html.length+" — "+_dbgLog.join(" | ");
   var w=window.open("","_blank");
   if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
   w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+title+"</title><style>"+css+"</style></head><body>"+
