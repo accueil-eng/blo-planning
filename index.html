@@ -2605,11 +2605,8 @@ function printPointage(forcedFilterId){
   var wkList=weeks.filter(function(w){return wkGroups[w];});
 
   var html="";
-  var _dbgLog=[];
   sals.forEach(function(sal){
-    console.log("🖨️ printPointage — début salarié",sal.prenom,"id=",sal.id);
-    _dbgLog.push("START:"+sal.prenom);
-    var empHtml="";// construit séparément — ajouté à html seulement si complet
+    var empHtml="";
     try{
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
     empHtml+="<div style='margin-bottom:14px;page-break-inside:avoid'>";
@@ -2704,14 +2701,8 @@ function printPointage(forcedFilterId){
     }
 
     empHtml+="</table></div>";
-    html+=empHtml;// ajouter seulement si tout s'est bien passé
-    console.log("✅ printPointage — fin OK",sal.prenom,"empHtml.len=",empHtml.length);
-    _dbgLog.push("OK:"+sal.prenom+":"+empHtml.length);
-    }catch(e){
-      console.error("❌ printPointage err sal",sal&&sal.id,sal&&sal.prenom,e);
-      _dbgLog.push("ERR:"+((sal&&sal.prenom)||"?")+" — "+e.message);
-      html+="<div style='background:#fee2e2;color:#991b1b;font-size:13px;font-weight:700;padding:14px 16px;border-radius:4px;margin-bottom:12px;border:3px solid #f87171'>⚠️ ERREUR "+((sal&&sal.prenom)||"?")+" : "+e.message+"</div>";
-    }
+    html+=empHtml;
+    }catch(e){console.error("printPointage err",sal&&sal.prenom,e);}
   });
 
   var css=
@@ -2724,30 +2715,27 @@ function printPointage(forcedFilterId){
     "table{width:100%;table-layout:fixed}"+
     "td,th{overflow:hidden}"+
     "@page{size:A4 landscape;margin:7mm}"+
-    "@media print{button{display:none!important}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
+    "@media print{body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
 
-  console.log("🖨️ printPointage — boucle terminée. _dbgLog=",_dbgLog);
   var imprDate=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
-  var printBtnHtml="<div id='prb' style='position:fixed;top:0;left:0;right:0;z-index:9999;background:#13201e;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:12px;font-family:sans-serif;font-size:13px'>"+
-    "<button onclick='window.print()' style='background:#22c55e;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>"+
-    "<button onclick='window.close()' style='background:transparent;color:#94a3b8;border:1px solid #475569;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer'>✕ Fermer</button>"+
-    "</div><div style='height:50px'></div>";
-  var fullHtml="<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+title+"</title>"+
-    "<style>"+css+"@media print{#prb,#prb+div{display:none!important}}</style></head><body>"+
-    printBtnHtml+
-    "<div class='hdr'><span class='logo'>BLO</span><h1>"+title+"</h1><span class='sub'>Imprimé le "+imprDate+"</span></div>"+
-    html+"</body></html>";
-  // Blob URL : évite les limites de document.write() pour les gros contenus
-  try{
-    var blob=new Blob([fullHtml],{type:"text/html;charset=utf-8"});
-    var blobUrl=URL.createObjectURL(blob);
-    var w=window.open(blobUrl,"_blank");
-    if(!w){URL.revokeObjectURL(blobUrl);showToast("⚠️ Autorisez les popups pour imprimer.");return;}
-    // Libérer le blob après chargement
-    setTimeout(function(){URL.revokeObjectURL(blobUrl);},60000);
-  }catch(e){
-    showToast("⚠️ Erreur ouverture impression : "+e.message);
-  }
+  var hdrHtml="<div class='hdr'><span class='logo'>BLO</span><h1>"+title+"</h1><span class='sub'>Imprimé le "+imprDate+"</span></div>";
+
+  // Iframe cachée dans la page — évite popup blocker et limites document.write
+  var ifrId="_pt-print-iframe";
+  var old=document.getElementById(ifrId);if(old)old.remove();
+  var ifr=document.createElement("iframe");
+  ifr.id=ifrId;
+  ifr.style.cssText="position:fixed;left:-9999px;top:0;width:1200px;height:100vh;border:none;visibility:hidden";
+  document.body.appendChild(ifr);
+  var doc=ifr.contentDocument||ifr.contentWindow.document;
+  doc.open();
+  doc.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+title+"</title><style>"+css+"</style></head><body>"+hdrHtml+html+"</body></html>");
+  doc.close();
+  // Attendre que la mise en page soit faite avant d'imprimer
+  setTimeout(function(){
+    ifr.contentWindow.print();
+    setTimeout(function(){ifr.remove();},5000);
+  },1500);
 }
 
 function printAbsences(){
