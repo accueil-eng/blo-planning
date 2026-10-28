@@ -2572,10 +2572,8 @@ function printPointage(forcedFilterId){
 
   var filterId=_ptPrintSalMode?_salLockedId:(forcedFilterId!==undefined?forcedFilterId:(salEl?salEl.value:""));
   var salNom=salEl&&salEl.value?(salEl.options[salEl.selectedIndex]||{}).text:"Tous les salariés";
-  var title="Pointage "+MNOMS[mois]+" "+annee+(filterId?(" — "+salNom):" — Tous les salariés");
+  var title="Pointage mensuel — "+MNOMS[mois]+" "+annee;
 
-  var weeks=[];
-  try{weeks=getWeeksOfMonth(mois,annee);}catch(e){}
   var sals=D.salaries.filter(function(s){
     if(!s.prenom||!s.prenom.trim())return false;
     if(filterId&&s.id!==filterId)return false;
@@ -2583,156 +2581,182 @@ function printPointage(forcedFilterId){
   });
   if(!sals.length){showToast("Aucun salarié à imprimer.");return;}
 
-  // Construire la liste de (semaine,dayIdx,date) directement depuis les jours du mois
-  // (plus fiable que getDatesOfWeek qui peut décaler sur certains mois)
-  var cols=[];// [{wk,di,dt,isFirstOfWeek,isLastOfWeek}]
+  // Construire la liste de (semaine,dayIdx,date) depuis les jours ouvrés du mois
+  var cols=[];
   var _d=new Date(annee,mois-1,1);
   while(_d.getMonth()===mois-1){
     var _dow=_d.getDay();
-    if(_dow>=1&&_dow<=5){// lundi-vendredi uniquement
+    if(_dow>=1&&_dow<=5){
       var _wk=getISOWeek(_d);
       cols.push({wk:_wk,di:_dow-1,dt:new Date(_d),isFirstOfWeek:false,isLastOfWeek:false});
     }
     _d.setDate(_d.getDate()+1);
   }
-  // Marquer premier/dernier jour de chaque semaine
-  var _lastWk=null,_firstIdx=0;
+  var _lastWk2=null;
   cols.forEach(function(c,i){
-    if(c.wk!==_lastWk){
-      if(_lastWk!==null)cols[i-1].isLastOfWeek=true;
-      c.isFirstOfWeek=true;_lastWk=c.wk;_firstIdx=i;
+    if(c.wk!==_lastWk2){
+      if(_lastWk2!==null)cols[i-1].isLastOfWeek=true;
+      c.isFirstOfWeek=true;_lastWk2=c.wk;
     }
   });
   if(cols.length)cols[cols.length-1].isLastOfWeek=true;
 
-  var th=function(s,bg,extra,cs){return "<th"+(cs?" colspan='"+cs+"'":"")+" style='border:1px solid #cbd5e1;padding:2px 3px;font-size:9px;font-weight:700;text-align:center;overflow:hidden"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</th>";};
-  var td=function(s,bg,extra){return "<td style='border:1px solid #e2e8f0;padding:2px 4px;font-size:9px;text-align:center;overflow:hidden"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</td>";};
-  var tdL=function(s,bg){return "<td style='border:1px solid #e2e8f0;padding:2px 6px;font-size:9px;font-weight:600;white-space:normal;text-align:left;max-width:110px;overflow:hidden"+(bg?";background:"+bg:"")+">"+s+"</td>";};
-
-  // Liste ordonnée des semaines présentes dans cols
+  // Liste ordonnée des semaines
   var wkSeen={},wkList=[];
   cols.forEach(function(c){if(!wkSeen[c.wk]){wkSeen[c.wk]=1;wkList.push(c.wk);}});
 
-  // Ouvrir le popup d'abord (doit être fait en contexte clic synchrone)
+  // Nombre de jours par semaine (pour colspan)
+  var wkColCount={};
+  cols.forEach(function(c){wkColCount[c.wk]=(wkColCount[c.wk]||0)+1;});
+
   var w=window.open("","_blank");
   if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
 
   var imprDate=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+
   var css=
     "html,body{margin:0;padding:0}"+
-    "body{padding:8px;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#13201e}"+
-    "table{border-collapse:collapse;table-layout:fixed;font-size:9px}"+
-    "td,th{overflow:hidden;border:1px solid #cbd5e1;padding:2px 3px}"+
-    ".emp{margin-bottom:14px;page-break-inside:avoid}"+
-    ".emp-name{background:#13201e;color:#fff;font-weight:700;font-size:12px;padding:5px 10px}"+
-    ".bar{position:sticky;top:0;background:#13201e;color:#fff;padding:8px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px}"+
-    ".bar button{border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer}"+
-    ".btn-print{background:#22c55e;color:#fff;margin-left:auto}"+
-    ".btn-close{background:transparent;color:#94a3b8;border:1px solid #475569!important;font-weight:400}"+
+    "body{padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#1e293b;background:#fff}"+
+    ".page-title{font-size:17px;font-weight:700;color:#1e293b;margin-bottom:3px}"+
+    ".page-sub{font-size:10px;color:#64748b;margin-bottom:18px}"+
+    ".emp{margin-bottom:22px;page-break-inside:avoid}"+
+    ".emp-name{font-size:13px;font-weight:700;color:#0891b2;padding:3px 0 3px 0;margin-bottom:5px;border-bottom:2px solid #0891b2;letter-spacing:.4px}"+
+    "table{border-collapse:collapse;font-size:8.5px;width:100%}"+
+    "td,th{overflow:hidden;border:1px solid #cbd5e1;padding:2px 4px;text-align:center}"+
+    ".th-rub{text-align:left;background:#f1f5f9;font-weight:700;font-size:8.5px;white-space:nowrap}"+
+    ".th-tot{background:#fef9c3;font-weight:700;color:#92400e;min-width:30px}"+
+    ".th-wk{background:#e0f2fe;font-weight:700;color:#0369a1;font-size:8px;border-bottom:2px solid #7dd3fc}"+
+    ".th-day{background:#f8fafc;font-size:7.5px;font-weight:600;color:#475569}"+
+    ".td-rub{text-align:left;background:#f8fafc;font-weight:600;font-size:8px;padding:2px 6px;white-space:normal;max-width:130px}"+
+    ".td-tot{background:#fef9c3;font-weight:700;color:#92400e}"+
+    ".td-ch-rub{text-align:left;background:#dbeafe;font-weight:600;font-size:8px;padding:2px 6px}"+
+    ".td-ch-tot{background:#dbeafe;font-weight:700;color:#0369a1}"+
+    ".row-empty td{background:#fafafa}"+
+    ".legend{display:flex;gap:20px;margin-top:8px;font-size:9px;color:#475569;align-items:center}"+
+    ".leg-box{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:middle;border:1px solid #ccc}"+
+    ".bar{position:sticky;top:0;background:#fff;padding:8px 0 10px;display:flex;align-items:center;gap:10px;margin-bottom:14px;border-bottom:2px solid #e2e8f0}"+
+    ".bar-title{font-size:13px;font-weight:700;color:#1e293b;flex:1}"+
+    ".btn-print{border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;background:#0891b2;color:#fff}"+
+    ".btn-close{border:1px solid #cbd5e1;border-radius:6px;padding:7px 16px;font-size:12px;cursor:pointer;background:#fff;color:#64748b}"+
     "@media print{.bar{display:none!important}@page{size:A4 landscape;margin:7mm}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}";
 
-  // Écriture de l'entête — chaque document.write est indépendant, évite la troncature d'un seul gros bloc
-  var autoZoomJs="window.addEventListener('load',function(){var maxW=0;document.querySelectorAll('table').forEach(function(t){if(t.offsetWidth>maxW)maxW=t.offsetWidth;});var avail=window.innerWidth-24;if(maxW>avail){var z=(avail/maxW).toFixed(3);document.body.style.zoom=z;document.body.style.webkitTextSizeAdjust='none';}});";
-  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>"+title+"</title><style>"+css+"</style><script>"+autoZoomJs+"<\/script></head><body>");
-  w.document.write("<div class='bar'><strong>"+title+" — "+imprDate+"</strong><button class='btn-print' onclick='window.print()'>🖨️ Imprimer</button><button class='btn-close' onclick='window.close()'>✕ Fermer</button></div>");
+  var autoZoomJs="window.addEventListener('load',function(){var maxW=0;document.querySelectorAll('table').forEach(function(t){if(t.offsetWidth>maxW)maxW=t.offsetWidth;});var avail=window.innerWidth-24;if(maxW>avail){var z=(avail/maxW).toFixed(3);document.body.style.zoom=z;}});";
 
-  // Écrire chaque salarié séparément — jamais de gros bloc unique
+  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>"+title+"</title><style>"+css+"</style><script>"+autoZoomJs+"<\/script></head><body>");
+  w.document.write(
+    "<div class='bar'>"+
+    "<div class='bar-title'>"+title+"</div>"+
+    "<button class='btn-print' onclick='window.print()'>🖨️ Imprimer</button>"+
+    "<button class='btn-close' onclick='window.close()'>✕ Fermer</button>"+
+    "</div>"+
+    "<div class='page-title'>"+title+"</div>"+
+    "<div class='page-sub'>Imprimé le "+imprDate+" — Fonteneau Rénovation</div>"
+  );
+
+  var JOURS=["Lun","Mar","Mer","Jeu","Ven"];
+
   sals.forEach(function(sal){
     try{
-    var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
-    // Largeurs fixes par type de colonne
-    var rubW=75,dayW=22,sigW=22,totW=28;
-    var tblW=rubW+cols.length*dayW+wkList.length*sigW+totW;
+    var nomAff=(sal.nom?sal.nom.toUpperCase()+" ":"")+sal.prenom;
     var empHtml="<div class='emp'>";
     empHtml+="<div class='emp-name'>"+nomAff+"</div>";
-    empHtml+="<div style='overflow-x:auto;width:100%'>";
-    empHtml+="<table style='border-collapse:collapse;table-layout:fixed;font-size:9px;width:"+tblW+"px;min-width:"+tblW+"px'>";
+    empHtml+="<table>";
 
-    // Une seule ligne d'en-tête — pas de colspan, largeurs explicites sur chaque cellule
+    // ── Ligne 1 entête : Rubrique | Total | S40 (colspan) | S41 (colspan) | ...
     empHtml+="<tr>";
-    empHtml+="<th style='width:"+rubW+"px;text-align:left;background:#e2e8f0;overflow:hidden;padding:2px 4px'>Rubrique</th>";
-    cols.forEach(function(c){
-      var day=["L","M","M","J","V"][c.di];
-      var bg=c.isFirstOfWeek?"#dde1f7":c.isLastOfWeek?"#e8eaf6":"#e2e8f0";
-      empHtml+="<th style='width:"+dayW+"px;background:"+bg+";font-size:8px;text-align:center;overflow:hidden;padding:2px 1px'>"+day+"<br>"+c.dt.getDate()+"</th>";
-    });
+    empHtml+="<th class='th-rub' rowspan='2' style='min-width:120px'>Rubrique</th>";
+    empHtml+="<th class='th-tot' rowspan='2'>Total</th>";
     wkList.forEach(function(wk){
       var salV=!!(D.alexisValidations&&D.alexisValidations[sal.id+"|"+wk+"|"+annee]);
-      empHtml+="<th style='width:"+sigW+"px;background:#c7d2fe;font-size:8px;color:#3730a3;text-align:center;overflow:hidden;padding:2px 1px'>S"+wk+(salV?"✅":"")+"</th>";
+      empHtml+="<th class='th-wk' colspan='"+wkColCount[wk]+"'>S"+wk+(salV?"&nbsp;✅":"")+"</th>";
     });
-    empHtml+="<th style='width:"+totW+"px;background:#fef9c3;font-weight:800;color:#92400e;text-align:center;overflow:hidden;padding:2px 1px'>Σ mois</th>";
     empHtml+="</tr>";
 
-    // Lignes données PT_ROWS
+    // ── Ligne 2 entête : jours avec date
+    empHtml+="<tr>";
+    cols.forEach(function(c){
+      var dd=c.dt.getDate(),mm=c.dt.getMonth()+1;
+      var bdrL=c.isFirstOfWeek?"border-left:2px solid #7dd3fc;":"";
+      empHtml+="<th class='th-day' style='min-width:20px;"+bdrL+"'>"+JOURS[c.di]+"<br>"+dd+"/"+mm+"</th>";
+    });
+    empHtml+="</tr>";
+
+    // ── Section chantiers (avant PT_ROWS comme dans la photo)
+    var chantierMap={};
+    cols.forEach(function(c){
+      try{getChantierHoursPerDay(sal.id,c.dt).forEach(function(e){
+        if(!chantierMap[e.chId])chantierMap[e.chId]={nom:e.chNom,days:{}};
+        var dk=c.wk+"|"+c.di;
+        if(!chantierMap[e.chId].days[dk])chantierMap[e.chId].days[dk]=e.hours;
+      });}catch(ez){}
+    });
+    (D.chantiers||[]).forEach(function(ch){
+      cols.forEach(function(c){
+        var stored=ptGet(mois,annee,"ch_"+ch.id,sal.id,c.wk,c.di);
+        if(stored!==""){
+          if(!chantierMap[ch.id])chantierMap[ch.id]={nom:(ch.ref?ch.ref+" — ":"")+ch.nom,days:{}};
+        }
+      });
+    });
+    var chIds=Object.keys(chantierMap);
+    chIds.forEach(function(chId){
+      var ch=chantierMap[chId];
+      var totalCh=0;
+      var cellCh=cols.map(function(c){
+        var stored=ptGet(mois,annee,"ch_"+chId,sal.id,c.wk,c.di);
+        var ev=ptWasStored(mois,annee,"ch_"+chId,sal.id,c.wk,c.di);
+        var def=ch.days[c.wk+"|"+c.di]||0;
+        var v=parseFloat(ev?stored:def)||0;
+        if(v)totalCh+=v;
+        return v||"";
+      });
+      empHtml+="<tr style='background:#f0f9ff'>";
+      empHtml+="<td class='td-ch-rub'>"+ch.nom+"</td>";
+      empHtml+="<td class='td-ch-tot'>"+totalCh+"</td>";
+      cellCh.forEach(function(v,i){
+        var bdrL=cols[i].isFirstOfWeek?"border-left:2px solid #7dd3fc;":"";
+        empHtml+="<td style='"+bdrL+"color:#0369a1;font-weight:"+(v?"600":"400")+"'>"+v+"</td>";
+      });
+      empHtml+="</tr>";
+    });
+
+    // ── Lignes PT_ROWS
     PT_ROWS.forEach(function(row){
       if(row.bureauOnly&&!sal.isBureau)return;
       var totalMois=0;
-      var wkTotals={};wkList.forEach(function(w){wkTotals[w]=0;});
       var cellVals=cols.map(function(c){
         var v=ptGet(mois,annee,row.id,sal.id,c.wk,c.di);
         if(!v&&(row.id==="trajet"||row.id==="transport")){
           try{var _chZ=getChantierForSalDay(sal.id,c.dt);
           if(_chZ){var _sg=getSiegeForSal(sal)===SIEGE_FONTEVRAUD?"fontevraud":"ecouflant";v=(_sg==="fontevraud"?_chZ.zoneFontevraud:_chZ.zoneEcouflant)||"";}}catch(ez){}
         }
-        if(row.type==="check"){var b=(v===true||v==="1"||v===1);if(b){totalMois++;wkTotals[c.wk]=(wkTotals[c.wk]||0)+1;}return b?"✓":"";}
-        if(row.type==="zone_dd"){if(v){totalMois++;wkTotals[c.wk]=(wkTotals[c.wk]||0)+1;}return v||"";}
-        var n=parseFloat(v)||0;if(n){totalMois+=n;wkTotals[c.wk]=(wkTotals[c.wk]||0)+n;}return n||"";
+        if(row.type==="check"){var b=(v===true||v==="1"||v===1);if(b)totalMois++;return b?"✓":"";}
+        if(row.type==="zone_dd"){if(v)totalMois++;return v||"";}
+        var n=parseFloat(v)||0;if(n)totalMois+=n;return n||"";
       });
       var hasData=totalMois>0;
-      empHtml+="<tr style='background:"+(hasData?"#fff":"#fafafa")+"'>";
-      empHtml+="<td style='font-weight:600;text-align:left;background:#f8f7f4;overflow:hidden;font-size:8px'>"+row.label+(row.unit?" ("+row.unit+")":"")+"</td>";
+      empHtml+="<tr"+(hasData?"":" class='row-empty'")+">";
+      empHtml+="<td class='td-rub'>"+row.label+(row.unit?" ("+row.unit+")":"")+"</td>";
+      if(row.type==="check")
+        empHtml+="<td class='td-tot'>"+(totalMois?totalMois+" j.":"")+"</td>";
+      else
+        empHtml+="<td class='td-tot'>"+(totalMois||"")+"</td>";
       cellVals.forEach(function(v,i){
-        var c=cols[i];
-        empHtml+=td(v,c.isFirstOfWeek?"#f5f5ff":c.isLastOfWeek?"#f0f4ff":"");
+        var bdrL=cols[i].isFirstOfWeek?"border-left:2px solid #bfdbfe;":"";
+        empHtml+="<td style='"+bdrL+"'>"+v+"</td>";
       });
-      wkList.forEach(function(wk){empHtml+=td(wkTotals[wk]||"","#fffde7");});
-      empHtml+=td(totalMois||"","#fef9c3","font-weight:800;color:"+(totalMois?"#92400e":"#aaa"));
       empHtml+="</tr>";
     });
 
-    // Section chantiers — même logique que renderPointage
-    var chantierMap={};
-    // 1) Auto-détection depuis le planning — utilise les dates de cols (déjà filtrées)
-    cols.forEach(function(c){
-      try{getChantierHoursPerDay(sal.id,c.dt).forEach(function(e){
-        if(!chantierMap[e.chId])chantierMap[e.chId]={nom:e.chNom,weeks:{}};
-        var dk=c.wk+"|"+c.di;
-        if(!chantierMap[e.chId].weeks[dk])chantierMap[e.chId].weeks[dk]=e.hours;
-      });}catch(ez){}
-    });
-    // 2) Entrées manuelles stockées
-    (D.chantiers||[]).forEach(function(ch){
-      cols.forEach(function(c){
-        var stored=ptGet(mois,annee,"ch_"+ch.id,sal.id,c.wk,c.di);
-        if(stored!==""){
-          if(!chantierMap[ch.id])chantierMap[ch.id]={nom:(ch.ref?ch.ref+" — ":"")+ch.nom,weeks:{}};
-        }
-      });
-    });
-    var chIds=Object.keys(chantierMap);
-    if(chIds.length){
-      empHtml+="<tr><td colspan='"+(2+cols.length+wkList.length)+"' style='background:#0891b2;color:#fff;font-weight:700;padding:3px 8px;font-size:9px'>🏗 Heures chantier</td></tr>";
-      chIds.forEach(function(chId){
-        var ch=chantierMap[chId];
-        var totalCh=0;var wkTotCh={};wkList.forEach(function(w){wkTotCh[w]=0;});
-        var cellCh=cols.map(function(c){
-          var stored=ptGet(mois,annee,"ch_"+chId,sal.id,c.wk,c.di);
-          var ev=ptWasStored(mois,annee,"ch_"+chId,sal.id,c.wk,c.di);
-          var def=ch.weeks[c.wk+"|"+c.di]||0;
-          var v=parseFloat(ev?stored:def)||0;
-          if(v){totalCh+=v;wkTotCh[c.wk]=(wkTotCh[c.wk]||0)+v;}
-          return v||"";
-        });
-        empHtml+="<tr style='background:#f0f9ff'>";
-        empHtml+="<td style='font-weight:600;text-align:left;background:#dbeafe;overflow:hidden;font-size:8px'>"+ch.nom+"</td>";
-        cellCh.forEach(function(v,i){empHtml+=td(v,cols[i].isFirstOfWeek?"#e0f0ff":"");});
-        wkList.forEach(function(wk){empHtml+=td(wkTotCh[wk]||"","#fffde7");});
-        empHtml+=td(totalCh||"","#dbeafe","font-weight:800;color:#0369a1");
-        empHtml+="</tr>";
-      });
-    }
+    empHtml+="</table>";
 
-    empHtml+="</table></div></div>";
+    // Légende validations
+    empHtml+="<div class='legend'>"+
+      "<span><span class='leg-box' style='background:#dcfce7;border-color:#86efac'></span>Validé salarié</span>"+
+      "<span><span class='leg-box' style='background:#fef9c3;border-color:#fde047'></span>Non validé Bureau</span>"+
+      "</div>";
+
+    empHtml+="</div>";
     w.document.write(empHtml);
     }catch(e){console.error("printPointage err",sal&&sal.prenom,e);}
   });
