@@ -2732,6 +2732,11 @@ function printPointage(forcedFilterId){
         }
         if(row.type==="check"){var b=(v===true||v==="1"||v===1);if(b)totalMois++;return b?"✓":"";}
         if(row.type==="zone_dd"){if(v)totalMois++;return v||"";}
+        // Auto-fill depuis les absences (css, cp, maladie, formation, ecole, intemp)
+        if(!v&&ABS_PT_MAP[row.id]){
+          try{var _absP=getAbsForSalDay(sal.id,c.dt);
+          if(_absP&&ABS_PT_MAP[_absP.type]===row.id)v=String(getAbsAutoHours(_absP));}catch(ez){}
+        }
         var n=parseFloat(v)||0;if(n)totalMois+=n;return n||"";
       });
       var hasData=totalMois>0;
