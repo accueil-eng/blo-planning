@@ -2643,14 +2643,19 @@ function printPointage(forcedFilterId){
   var autoZoomJs="window.addEventListener('load',function(){var maxW=0;document.querySelectorAll('table').forEach(function(t){if(t.offsetWidth>maxW)maxW=t.offsetWidth;});var avail=window.innerWidth-24;if(maxW>avail){var z=(avail/maxW).toFixed(3);document.body.style.zoom=z;}});";
 
   w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>"+title+"</title><style>"+css+"</style><script>"+autoZoomJs+"<\/script></head><body>");
+  var logoUrl="https://accueil-eng.github.io/blo-planning/logo.png";
   w.document.write(
     "<div class='bar'>"+
+    "<img src='"+logoUrl+"' style='height:28px;width:auto;object-fit:contain;margin-right:6px' alt='BLO'>"+
     "<div class='bar-title'>"+title+"</div>"+
     "<button class='btn-print' onclick='window.print()'>🖨️ Imprimer</button>"+
     "<button class='btn-close' onclick='window.close()'>✕ Fermer</button>"+
     "</div>"+
-    "<div class='page-title'>"+title+"</div>"+
-    "<div class='page-sub'>Imprimé le "+imprDate+" — Fonteneau Rénovation</div>"
+    "<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px'>"+
+    "<img src='"+logoUrl+"' style='height:36px;width:auto;object-fit:contain' alt='BLO'>"+
+    "<div><div class='page-title'>"+title+"</div>"+
+    "<div class='page-sub'>Imprimé le "+imprDate+" — Fonteneau Rénovation</div></div>"+
+    "</div>"
   );
 
   var JOURS=["Lun","Mar","Mer","Jeu","Ven"];
