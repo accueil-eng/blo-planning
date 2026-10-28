@@ -2705,37 +2705,41 @@ function printPointage(forcedFilterId){
     }catch(e){console.error("printPointage err",sal&&sal.prenom,e);}
   });
 
-  var css=
-    "html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#13201e}"+
-    "body{padding:6px}"+
-    ".hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #13201e;margin-bottom:8px;padding-bottom:4px}"+
-    ".logo{font-family:Arial Black,Arial,sans-serif;font-weight:800;font-size:16px}"+
-    "h1{font-family:Arial,sans-serif;font-weight:700;font-size:12px;margin:0}"+
-    ".sub{font-size:8px;color:#64748b}"+
-    "table{width:100%;table-layout:fixed}"+
-    "td,th{overflow:hidden}"+
-    "@page{size:A4 landscape;margin:7mm}"+
-    "@media print{body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
-
   var imprDate=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
-  var hdrHtml="<div class='hdr'><span class='logo'>BLO</span><h1>"+title+"</h1><span class='sub'>Imprimé le "+imprDate+"</span></div>";
 
-  // Iframe cachée dans la page — évite popup blocker et limites document.write
-  var ifrId="_pt-print-iframe";
-  var old=document.getElementById(ifrId);if(old)old.remove();
-  var ifr=document.createElement("iframe");
-  ifr.id=ifrId;
-  ifr.style.cssText="position:fixed;left:-9999px;top:0;width:1200px;height:100vh;border:none;visibility:hidden";
-  document.body.appendChild(ifr);
-  var doc=ifr.contentDocument||ifr.contentWindow.document;
-  doc.open();
-  doc.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+title+"</title><style>"+css+"</style></head><body>"+hdrHtml+html+"</body></html>");
-  doc.close();
-  // Attendre que la mise en page soit faite avant d'imprimer
-  setTimeout(function(){
-    ifr.contentWindow.print();
-    setTimeout(function(){ifr.remove();},5000);
-  },1500);
+  // Overlay pleine page dans la page principale — scroll pour voir tous les salariés, Ctrl+P pour imprimer
+  var ovId="_pt-print-overlay";
+  var oldOv=document.getElementById(ovId);if(oldOv)oldOv.remove();
+  var ov=document.createElement("div");
+  ov.id=ovId;
+  ov.style.cssText="position:fixed;inset:0;z-index:99999;background:#fff;overflow-y:auto;font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#13201e";
+
+  // Barre de contrôle (masquée à l'impression)
+  var bar=document.createElement("div");
+  bar.id="_pt-print-bar";
+  bar.style.cssText="position:sticky;top:0;background:#13201e;color:#fff;padding:8px 14px;display:flex;align-items:center;gap:10px;z-index:1";
+  bar.innerHTML="<strong style='font-size:13px'>"+title+" — "+imprDate+"</strong>"+
+    "<button onclick='window.print()' style='margin-left:auto;background:#22c55e;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>"+
+    "<button onclick='document.getElementById(\""+ovId+"\").remove()' style='background:transparent;color:#94a3b8;border:1px solid #475569;border-radius:6px;padding:7px 12px;font-size:12px;cursor:pointer'>✕ Fermer</button>";
+  ov.appendChild(bar);
+
+  // Contenu
+  var content=document.createElement("div");
+  content.style.cssText="padding:8px;";
+  content.innerHTML=html;
+  ov.appendChild(content);
+
+  // Style pour les tables dans l'overlay + impression
+  var styleEl=document.createElement("style");
+  styleEl.textContent=
+    "#"+ovId+" table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9px}"+
+    "#"+ovId+" td,#"+ovId+" th{overflow:hidden;border:1px solid #cbd5e1;padding:2px 3px}"+
+    "@media print{#_pt-print-bar{display:none!important}body>*:not(#"+ovId+"){display:none!important}#"+ovId+"{position:static!important;overflow:visible!important}"+
+    "@page{size:A4 landscape;margin:7mm}"+
+    "#"+ovId+" *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}";
+  document.head.appendChild(styleEl);
+
+  document.body.appendChild(ov);
 }
 
 function printAbsences(){
