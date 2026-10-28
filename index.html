@@ -3170,7 +3170,7 @@ function applyProfile(key) {
   var ghBtn = document.getElementById("gh-token-btn");
   if(ghBtn) ghBtn.style.display = _isBureau ? "flex" : "none";
   var syncBtn = document.getElementById("sync-now-btn");
-  if(syncBtn) syncBtn.style.display = _isBureau ? "flex" : "none";
+  if(syncBtn) syncBtn.style.display = "none";// masqué : le poll auto suffit
   var restoreBtn = document.getElementById("restore-backup-btn");
   if(restoreBtn) restoreBtn.style.display = _isBureau ? "flex" : "none";
   var pushBtn2 = document.getElementById("push-now-btn");
