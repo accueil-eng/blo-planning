@@ -1171,7 +1171,7 @@ function _doGithubSave(){
 
   // Avant de sauvegarder, fusionner les absDemandes remote pour ne pas écraser
   // les demandes poussées par les salariés via QR code
-  function _doActualSave(shaOverride){
+  function _doActualSave(sha){
     // Compress: remove empty/null values to reduce size
     // Injecter le token encodé pour usage par les salariés QR (lecture seule du token depuis data.json)
     var dataToSerialize = D;
