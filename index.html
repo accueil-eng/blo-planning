@@ -2718,7 +2718,8 @@ function printPointage(forcedFilterId){
     "@page{size:A4 landscape;margin:7mm}"+
     "@media print{button{display:none!important}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}";
 
-  var debugInfo="v27oct-c911ff4 — "+sals.length+" salarié(s)";
+  var debugInfo="v28oct — "+sals.length+" sal: "+sals.map(function(s){return s.prenom;}).join(",")+
+    " — "+cols.length+" jours — "+Object.keys(D.pointages||{}).filter(function(k){return k.includes("2026-10");}).length+" pt";
   var w=window.open("","_blank");
   if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
   w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+title+"</title><style>"+css+"</style></head><body>"+
