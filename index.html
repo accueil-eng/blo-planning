@@ -2616,31 +2616,36 @@ function printPointage(forcedFilterId){
 
   var css=
     "html,body{margin:0;padding:0}"+
-    "body{padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#1e293b;background:#fff}"+
-    ".page-title{font-size:17px;font-weight:700;color:#1e293b;margin-bottom:3px}"+
-    ".page-sub{font-size:10px;color:#64748b;margin-bottom:18px}"+
-    ".emp{margin-bottom:22px;page-break-inside:avoid}"+
-    ".emp-name{font-size:13px;font-weight:700;color:#0891b2;padding:3px 0 3px 0;margin-bottom:5px;border-bottom:2px solid #0891b2;letter-spacing:.4px}"+
-    "table{border-collapse:collapse;font-size:12px;width:100%;table-layout:fixed}"+
-    "td,th{overflow:hidden;border:1px solid #cbd5e1;padding:3px 4px;text-align:center}"+
-    ".th-rub{text-align:left;background:#f1f5f9;font-weight:700;font-size:12px;white-space:nowrap;width:150px}"+
-    ".th-tot{background:#fef9c3;font-weight:700;color:#92400e;font-size:12px;width:40px}"+
-    ".th-wk{background:#e0f2fe;font-weight:700;color:#0369a1;font-size:11px;border-bottom:2px solid #7dd3fc}"+
-    ".th-day{background:#f8fafc;font-size:10px;font-weight:600;color:#475569}"+
-    ".td-rub{text-align:left;background:#f8fafc;font-weight:600;font-size:12px;padding:3px 6px;white-space:normal}"+
-    ".td-tot{background:#fef9c3;font-weight:700;color:#92400e;font-size:12px}"+
-    ".td-ch-rub{text-align:left;background:#dbeafe;font-weight:600;font-size:12px;padding:3px 6px}"+
-    ".td-ch-tot{background:#dbeafe;font-weight:700;color:#0369a1;font-size:12px}"+
+    "body{padding:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e293b;background:#fff}"+
+    ".emp{padding:6mm 6mm 4mm;box-sizing:border-box;page-break-after:always}"+
+    ".emp:last-child{page-break-after:auto}"+
+    ".emp-hdr{display:flex;align-items:center;gap:10px;margin-bottom:3mm}"+
+    ".emp-logo{height:30px;width:auto;object-fit:contain}"+
+    ".emp-meta{flex:1}"+
+    ".emp-month{font-size:14px;font-weight:700;color:#1e293b}"+
+    ".emp-sub{font-size:11px;color:#64748b}"+
+    ".emp-name{font-size:16px;font-weight:700;color:#0891b2;margin-bottom:3mm;border-bottom:2px solid #0891b2;padding-bottom:1mm;letter-spacing:.3px}"+
+    "table{border-collapse:collapse;font-size:13px;width:100%;table-layout:fixed}"+
+    "td,th{overflow:hidden;border:1px solid #cbd5e1;padding:3px 5px;text-align:center}"+
+    ".th-rub{text-align:left;background:#f1f5f9;font-weight:700;font-size:13px;white-space:nowrap}"+
+    ".th-tot{background:#fef9c3;font-weight:700;color:#92400e;font-size:13px}"+
+    ".th-wk{background:#e0f2fe;font-weight:700;color:#0369a1;font-size:12px;border-bottom:2px solid #7dd3fc}"+
+    ".th-day{background:#f8fafc;font-size:11px;font-weight:600;color:#475569}"+
+    ".td-rub{text-align:left;background:#f8fafc;font-weight:600;font-size:13px;padding:3px 6px;white-space:normal}"+
+    ".td-tot{background:#fef9c3;font-weight:700;color:#92400e}"+
+    ".td-ch-rub{text-align:left;background:#dbeafe;font-weight:600;font-size:13px;padding:3px 6px}"+
+    ".td-ch-tot{background:#dbeafe;font-weight:700;color:#0369a1}"+
     ".row-empty td{background:#fafafa}"+
-    ".legend{display:flex;gap:20px;margin-top:8px;font-size:10px;color:#475569;align-items:center}"+
-    ".leg-box{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:middle;border:1px solid #ccc}"+
-    ".bar{position:sticky;top:0;background:#fff;padding:8px 0 10px;display:flex;align-items:center;gap:10px;margin-bottom:14px;border-bottom:2px solid #e2e8f0}"+
+    ".legend{display:flex;gap:20px;margin-top:4px;font-size:11px;color:#475569;align-items:center}"+
+    ".leg-box{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:4px;vertical-align:middle;border:1px solid #ccc}"+
+    ".bar{position:fixed;top:0;left:0;right:0;background:#fff;padding:8px 16px;display:flex;align-items:center;gap:10px;border-bottom:2px solid #e2e8f0;z-index:100}"+
     ".bar-title{font-size:14px;font-weight:700;color:#1e293b;flex:1}"+
     ".btn-print{border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;background:#0891b2;color:#fff}"+
     ".btn-close{border:1px solid #cbd5e1;border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;background:#fff;color:#64748b}"+
-    // Scroll horizontal sur écran, pas de zoom qui rapetisse
-    ".tbl-wrap{overflow-x:auto;width:100%}"+
-    "@media print{.bar{display:none!important}@page{size:A4 landscape;margin:6mm}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}";
+    ".bar-spacer{height:52px}"+
+    "@media print{.bar{display:none!important}.bar-spacer{display:none!important}"+
+    "@page{size:A4 landscape;margin:0}"+
+    "*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}";
 
   // Pas d'auto-zoom : on laisse le navigateur gérer le scale à l'impression
   var autoZoomJs="";
@@ -2649,16 +2654,12 @@ function printPointage(forcedFilterId){
   var logoUrl="https://accueil-eng.github.io/blo-planning/logo.png";
   w.document.write(
     "<div class='bar'>"+
-    "<img src='"+logoUrl+"' style='height:28px;width:auto;object-fit:contain;margin-right:6px' alt='BLO'>"+
+    "<img src='"+logoUrl+"' style='height:26px;width:auto;object-fit:contain' alt='BLO'>"+
     "<div class='bar-title'>"+title+"</div>"+
     "<button class='btn-print' onclick='window.print()'>🖨️ Imprimer</button>"+
     "<button class='btn-close' onclick='window.close()'>✕ Fermer</button>"+
     "</div>"+
-    "<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px'>"+
-    "<img src='"+logoUrl+"' style='height:36px;width:auto;object-fit:contain' alt='BLO'>"+
-    "<div><div class='page-title'>"+title+"</div>"+
-    "<div class='page-sub'>Imprimé le "+imprDate+" — Fonteneau Rénovation</div></div>"+
-    "</div>"
+    "<div class='bar-spacer'></div>"
   );
 
   var JOURS=["L","M","M","J","V"];
@@ -2666,18 +2667,26 @@ function printPointage(forcedFilterId){
   sals.forEach(function(sal){
     try{
     var nomAff=(sal.nom?sal.nom.toUpperCase()+" ":"")+sal.prenom;
-    // Calcul largeurs colonnes : A4 landscape ~1046px utilisables (297mm - 12mm marges à 96dpi)
-    var _rubW=150,_totW=42;
-    var _dayW=Math.max(26,Math.floor((1046-_rubW-_totW)/cols.length));
+    // A4 landscape margin:0 → ~1122px utilisables (297mm à 96dpi)
+    // Retirer ~24mm de padding interne (6mm chaque côté) → ~1032px pour le tableau
+    var _rubW=160,_totW=46;
+    var _dayW=Math.max(28,Math.floor((1032-_rubW-_totW)/cols.length));
     var empHtml="<div class='emp'>";
+    // En-tête de page par salarié : logo + mois + nom
+    empHtml+="<div class='emp-hdr'>"+
+      "<img class='emp-logo' src='"+logoUrl+"' alt='BLO'>"+
+      "<div class='emp-meta'>"+
+        "<div class='emp-month'>"+title+"</div>"+
+        "<div class='emp-sub'>Imprimé le "+imprDate+" — Fonteneau Rénovation</div>"+
+      "</div>"+
+    "</div>";
     empHtml+="<div class='emp-name'>"+nomAff+"</div>";
-    empHtml+="<div class='tbl-wrap'>";
-    empHtml+="<table style='min-width:"+(_rubW+_totW+cols.length*_dayW)+"px'>";
+    empHtml+="<table>";
 
     // ── Ligne 1 entête : Rubrique | Total | S40 (colspan) | S41 (colspan) | ...
     empHtml+="<tr>";
-    empHtml+="<th class='th-rub' rowspan='2' style='width:"+_rubW+"px'>Rubrique</th>";
-    empHtml+="<th class='th-tot' rowspan='2' style='width:"+_totW+"px'>Total</th>";
+    empHtml+="<th class='th-rub' rowspan='2' style='width:"+_rubW+"px;min-width:"+_rubW+"px'>Rubrique</th>";
+    empHtml+="<th class='th-tot' rowspan='2' style='width:"+_totW+"px;min-width:"+_totW+"px'>Total</th>";
     wkList.forEach(function(wk){
       var salV=!!(D.alexisValidations&&D.alexisValidations[sal.id+"|"+wk+"|"+annee]);
       empHtml+="<th class='th-wk' colspan='"+wkColCount[wk]+"'>S"+wk+(salV?"&nbsp;✅":"")+"</th>";
@@ -2689,7 +2698,7 @@ function printPointage(forcedFilterId){
     cols.forEach(function(c){
       var dd=c.dt.getDate();
       var bdrL=c.isFirstOfWeek?"border-left:2px solid #7dd3fc;":"";
-      empHtml+="<th class='th-day' style='width:"+_dayW+"px;"+bdrL+"'>"+JOURS[c.di]+"<br>"+dd+"</th>";
+      empHtml+="<th class='th-day' style='width:"+_dayW+"px;min-width:"+_dayW+"px;"+bdrL+"'>"+JOURS[c.di]+"<br>"+dd+"</th>";
     });
     empHtml+="</tr>";
 
@@ -2772,7 +2781,7 @@ function printPointage(forcedFilterId){
       empHtml+="</tr>";
     });
 
-    empHtml+="</table></div>";
+    empHtml+="</table>";
 
     // Légende validations
     empHtml+="<div class='legend'>"+
