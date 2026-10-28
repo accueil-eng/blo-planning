@@ -2595,8 +2595,8 @@ function printPointage(forcedFilterId){
     wkInMCols.forEach(function(c,i){c.isFirstOfWeek=(i===0);c.isLastOfWeek=(i===wkInMCols.length-1);cols.push(c);});
   });
 
-  var th=function(s,bg,extra,cs){return "<th"+(cs?" colspan='"+cs+"'":"")+" style='border:1px solid #cbd5e1;padding:2px 3px;font-size:9px;font-weight:700;text-align:center;white-space:nowrap"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</th>";};
-  var td=function(s,bg,extra){return "<td style='border:1px solid #e2e8f0;padding:2px 4px;font-size:9px;text-align:center;white-space:nowrap"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</td>";};
+  var th=function(s,bg,extra,cs){return "<th"+(cs?" colspan='"+cs+"'":"")+" style='border:1px solid #cbd5e1;padding:2px 3px;font-size:9px;font-weight:700;text-align:center;overflow:hidden"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</th>";};
+  var td=function(s,bg,extra){return "<td style='border:1px solid #e2e8f0;padding:2px 4px;font-size:9px;text-align:center;overflow:hidden"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</td>";};
   var tdL=function(s,bg){return "<td style='border:1px solid #e2e8f0;padding:2px 6px;font-size:9px;font-weight:600;white-space:normal;text-align:left;max-width:110px;overflow:hidden"+(bg?";background:"+bg:"")+">"+s+"</td>";};
 
   // Groupes de semaines pour la ligne d'en-tête
@@ -2631,7 +2631,7 @@ function printPointage(forcedFilterId){
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
     var empHtml="<div class='emp'>";
     empHtml+="<div class='emp-name'>"+nomAff+"</div>";
-    empHtml+="<table>";
+    empHtml+="<table style='border-collapse:collapse;width:100%;table-layout:fixed;font-size:9px'>";
 
     // Ligne 1 : en-têtes semaines
     empHtml+="<tr>";
