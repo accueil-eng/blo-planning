@@ -2621,26 +2621,29 @@ function printPointage(forcedFilterId){
     ".page-sub{font-size:10px;color:#64748b;margin-bottom:18px}"+
     ".emp{margin-bottom:22px;page-break-inside:avoid}"+
     ".emp-name{font-size:13px;font-weight:700;color:#0891b2;padding:3px 0 3px 0;margin-bottom:5px;border-bottom:2px solid #0891b2;letter-spacing:.4px}"+
-    "table{border-collapse:collapse;font-size:10px;width:100%}"+
-    "td,th{overflow:hidden;border:1px solid #cbd5e1;padding:2px 3px;text-align:center}"+
-    ".th-rub{text-align:left;background:#f1f5f9;font-weight:700;font-size:10px;white-space:nowrap}"+
-    ".th-tot{background:#fef9c3;font-weight:700;color:#92400e;min-width:28px;font-size:10px}"+
-    ".th-wk{background:#e0f2fe;font-weight:700;color:#0369a1;font-size:9px;border-bottom:2px solid #7dd3fc}"+
-    ".th-day{background:#f8fafc;font-size:8.5px;font-weight:600;color:#475569;min-width:16px;max-width:22px}"+
-    ".td-rub{text-align:left;background:#f8fafc;font-weight:600;font-size:10px;padding:2px 5px;white-space:normal;max-width:130px}"+
-    ".td-tot{background:#fef9c3;font-weight:700;color:#92400e;font-size:10px}"+
-    ".td-ch-rub{text-align:left;background:#dbeafe;font-weight:600;font-size:10px;padding:2px 5px}"+
-    ".td-ch-tot{background:#dbeafe;font-weight:700;color:#0369a1;font-size:10px}"+
+    "table{border-collapse:collapse;font-size:12px;width:100%;table-layout:fixed}"+
+    "td,th{overflow:hidden;border:1px solid #cbd5e1;padding:3px 4px;text-align:center}"+
+    ".th-rub{text-align:left;background:#f1f5f9;font-weight:700;font-size:12px;white-space:nowrap;width:150px}"+
+    ".th-tot{background:#fef9c3;font-weight:700;color:#92400e;font-size:12px;width:40px}"+
+    ".th-wk{background:#e0f2fe;font-weight:700;color:#0369a1;font-size:11px;border-bottom:2px solid #7dd3fc}"+
+    ".th-day{background:#f8fafc;font-size:10px;font-weight:600;color:#475569}"+
+    ".td-rub{text-align:left;background:#f8fafc;font-weight:600;font-size:12px;padding:3px 6px;white-space:normal}"+
+    ".td-tot{background:#fef9c3;font-weight:700;color:#92400e;font-size:12px}"+
+    ".td-ch-rub{text-align:left;background:#dbeafe;font-weight:600;font-size:12px;padding:3px 6px}"+
+    ".td-ch-tot{background:#dbeafe;font-weight:700;color:#0369a1;font-size:12px}"+
     ".row-empty td{background:#fafafa}"+
-    ".legend{display:flex;gap:20px;margin-top:8px;font-size:9px;color:#475569;align-items:center}"+
+    ".legend{display:flex;gap:20px;margin-top:8px;font-size:10px;color:#475569;align-items:center}"+
     ".leg-box{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:middle;border:1px solid #ccc}"+
     ".bar{position:sticky;top:0;background:#fff;padding:8px 0 10px;display:flex;align-items:center;gap:10px;margin-bottom:14px;border-bottom:2px solid #e2e8f0}"+
-    ".bar-title{font-size:13px;font-weight:700;color:#1e293b;flex:1}"+
-    ".btn-print{border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;background:#0891b2;color:#fff}"+
-    ".btn-close{border:1px solid #cbd5e1;border-radius:6px;padding:7px 16px;font-size:12px;cursor:pointer;background:#fff;color:#64748b}"+
-    "@media print{.bar{display:none!important}@page{size:A4 landscape;margin:7mm}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}";
+    ".bar-title{font-size:14px;font-weight:700;color:#1e293b;flex:1}"+
+    ".btn-print{border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;background:#0891b2;color:#fff}"+
+    ".btn-close{border:1px solid #cbd5e1;border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;background:#fff;color:#64748b}"+
+    // Scroll horizontal sur écran, pas de zoom qui rapetisse
+    ".tbl-wrap{overflow-x:auto;width:100%}"+
+    "@media print{.bar{display:none!important}@page{size:A4 landscape;margin:6mm}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}";
 
-  var autoZoomJs="window.addEventListener('load',function(){var maxW=0;document.querySelectorAll('table').forEach(function(t){if(t.offsetWidth>maxW)maxW=t.offsetWidth;});var avail=window.innerWidth-24;if(maxW>avail){var z=(avail/maxW).toFixed(3);document.body.style.zoom=z;}});";
+  // Pas d'auto-zoom : on laisse le navigateur gérer le scale à l'impression
+  var autoZoomJs="";
 
   w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>"+title+"</title><style>"+css+"</style><script>"+autoZoomJs+"<\/script></head><body>");
   var logoUrl="https://accueil-eng.github.io/blo-planning/logo.png";
@@ -2663,14 +2666,18 @@ function printPointage(forcedFilterId){
   sals.forEach(function(sal){
     try{
     var nomAff=(sal.nom?sal.nom.toUpperCase()+" ":"")+sal.prenom;
+    // Calcul largeurs colonnes : A4 landscape ~1046px utilisables (297mm - 12mm marges à 96dpi)
+    var _rubW=150,_totW=42;
+    var _dayW=Math.max(26,Math.floor((1046-_rubW-_totW)/cols.length));
     var empHtml="<div class='emp'>";
     empHtml+="<div class='emp-name'>"+nomAff+"</div>";
-    empHtml+="<table>";
+    empHtml+="<div class='tbl-wrap'>";
+    empHtml+="<table style='min-width:"+(_rubW+_totW+cols.length*_dayW)+"px'>";
 
     // ── Ligne 1 entête : Rubrique | Total | S40 (colspan) | S41 (colspan) | ...
     empHtml+="<tr>";
-    empHtml+="<th class='th-rub' rowspan='2' style='min-width:120px'>Rubrique</th>";
-    empHtml+="<th class='th-tot' rowspan='2'>Total</th>";
+    empHtml+="<th class='th-rub' rowspan='2' style='width:"+_rubW+"px'>Rubrique</th>";
+    empHtml+="<th class='th-tot' rowspan='2' style='width:"+_totW+"px'>Total</th>";
     wkList.forEach(function(wk){
       var salV=!!(D.alexisValidations&&D.alexisValidations[sal.id+"|"+wk+"|"+annee]);
       empHtml+="<th class='th-wk' colspan='"+wkColCount[wk]+"'>S"+wk+(salV?"&nbsp;✅":"")+"</th>";
@@ -2682,7 +2689,7 @@ function printPointage(forcedFilterId){
     cols.forEach(function(c){
       var dd=c.dt.getDate();
       var bdrL=c.isFirstOfWeek?"border-left:2px solid #7dd3fc;":"";
-      empHtml+="<th class='th-day' style='"+bdrL+"'>"+JOURS[c.di]+"<br>"+dd+"</th>";
+      empHtml+="<th class='th-day' style='width:"+_dayW+"px;"+bdrL+"'>"+JOURS[c.di]+"<br>"+dd+"</th>";
     });
     empHtml+="</tr>";
 
@@ -2765,7 +2772,7 @@ function printPointage(forcedFilterId){
       empHtml+="</tr>";
     });
 
-    empHtml+="</table>";
+    empHtml+="</table></div>";
 
     // Légende validations
     empHtml+="<div class='legend'>"+
