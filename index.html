@@ -2629,30 +2629,26 @@ function printPointage(forcedFilterId){
   sals.forEach(function(sal){
     try{
     var nomAff=(sal.nom?sal.nom+" ":"")+sal.prenom;
+    // Largeurs fixes par type de colonne — garantit que la table tient sur la page
+    var rubW=85,dayW=30,sigW=28,totW=34;
+    var tblW=rubW+cols.length*dayW+wkList.length*sigW+totW;
     var empHtml="<div class='emp'>";
     empHtml+="<div class='emp-name'>"+nomAff+"</div>";
-    empHtml+="<table style='border-collapse:collapse;width:100%;table-layout:fixed;font-size:9px'>";
+    empHtml+="<table style='border-collapse:collapse;table-layout:fixed;font-size:9px;width:"+tblW+"px'>";
 
-    // Ligne 1 : en-têtes semaines
+    // Une seule ligne d'en-tête — pas de colspan, largeurs explicites sur chaque cellule
     empHtml+="<tr>";
-    empHtml+="<th style='text-align:left;background:#e2e8f0;width:90px'>Rubrique</th>";
-    wkList.forEach(function(wk){
-      var cnt=wkGroups[wk]||0;
-      var salV=!!(D.alexisValidations&&D.alexisValidations[sal.id+"|"+wk+"|"+annee]);
-      empHtml+=th("S"+wk+(salV?" ✅":""),"#c7d2fe","color:#3730a3;font-size:8px",cnt+1);
-    });
-    empHtml+=th("TOTAL","#fef9c3","color:#92400e;font-weight:800");
-    empHtml+="</tr>";
-
-    // Ligne 2 : dates
-    empHtml+="<tr>";
-    empHtml+="<th style='background:#e2e8f0'></th>";
+    empHtml+="<th style='width:"+rubW+"px;text-align:left;background:#e2e8f0;overflow:hidden;padding:2px 4px'>Rubrique</th>";
     cols.forEach(function(c){
       var day=["L","M","M","J","V"][c.di];
-      empHtml+=th(day+"<br><span style='font-size:8px;color:#64748b'>"+c.dt.getDate()+"</span>",c.isFirstOfWeek||c.isLastOfWeek?"#e8eaf6":"");
+      var bg=c.isFirstOfWeek?"#dde1f7":c.isLastOfWeek?"#e8eaf6":"#e2e8f0";
+      empHtml+="<th style='width:"+dayW+"px;background:"+bg+";font-size:8px;text-align:center;overflow:hidden;padding:2px 1px'>"+day+"<br>"+c.dt.getDate()+"</th>";
     });
-    wkList.forEach(function(){empHtml+=th("Σ","#fef9c3");});
-    empHtml+=th("Σ mois","#fef9c3","font-weight:800");
+    wkList.forEach(function(wk){
+      var salV=!!(D.alexisValidations&&D.alexisValidations[sal.id+"|"+wk+"|"+annee]);
+      empHtml+="<th style='width:"+sigW+"px;background:#c7d2fe;font-size:8px;color:#3730a3;text-align:center;overflow:hidden;padding:2px 1px'>S"+wk+(salV?"✅":"")+"</th>";
+    });
+    empHtml+="<th style='width:"+totW+"px;background:#fef9c3;font-weight:800;color:#92400e;text-align:center;overflow:hidden;padding:2px 1px'>Σ mois</th>";
     empHtml+="</tr>";
 
     // Lignes données PT_ROWS
@@ -2672,7 +2668,7 @@ function printPointage(forcedFilterId){
       });
       var hasData=totalMois>0;
       empHtml+="<tr style='background:"+(hasData?"#fff":"#fafafa")+"'>";
-      empHtml+="<td style='font-weight:600;text-align:left;background:#f8f7f4;max-width:110px'>"+row.label+(row.unit?" ("+row.unit+")":"")+"</td>";
+      empHtml+="<td style='font-weight:600;text-align:left;background:#f8f7f4;overflow:hidden;font-size:8px'>"+row.label+(row.unit?" ("+row.unit+")":"")+"</td>";
       cellVals.forEach(function(v,i){
         var c=cols[i];
         empHtml+=td(v,c.isFirstOfWeek?"#f5f5ff":c.isLastOfWeek?"#f0f4ff":"");
@@ -2712,7 +2708,7 @@ function printPointage(forcedFilterId){
           return v||"";
         });
         empHtml+="<tr style='background:#f0f9ff'>";
-        empHtml+="<td style='font-weight:600;text-align:left;background:#dbeafe;max-width:110px'>"+ch.nom+"</td>";
+        empHtml+="<td style='font-weight:600;text-align:left;background:#dbeafe;overflow:hidden;font-size:8px'>"+ch.nom+"</td>";
         cellCh.forEach(function(v,i){empHtml+=td(v,cols[i].isFirstOfWeek?"#e0f0ff":"");});
         wkList.forEach(function(wk){empHtml+=td(wkTotCh[wk]||"","#fffde7");});
         empHtml+=td(totalCh||"","#dbeafe","font-weight:800;color:#0369a1");
