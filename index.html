@@ -2583,26 +2583,35 @@ function printPointage(forcedFilterId){
   });
   if(!sals.length){showToast("Aucun salarié à imprimer.");return;}
 
-  // Construire la liste de (semaine,dayIdx,date) uniquement pour les jours dans le mois
+  // Construire la liste de (semaine,dayIdx,date) directement depuis les jours du mois
+  // (plus fiable que getDatesOfWeek qui peut décaler sur certains mois)
   var cols=[];// [{wk,di,dt,isFirstOfWeek,isLastOfWeek}]
-  weeks.forEach(function(wk){
-    var dates=getDatesOfWeek(wk,annee);
-    var wkInMCols=[];
-    dates.forEach(function(dt,di){
-      if(di>4)return;
-      if(dt.getMonth()+1===mois&&dt.getFullYear()===annee) wkInMCols.push({wk:wk,di:di,dt:dt});
-    });
-    wkInMCols.forEach(function(c,i){c.isFirstOfWeek=(i===0);c.isLastOfWeek=(i===wkInMCols.length-1);cols.push(c);});
+  var _d=new Date(annee,mois-1,1);
+  while(_d.getMonth()===mois-1){
+    var _dow=_d.getDay();
+    if(_dow>=1&&_dow<=5){// lundi-vendredi uniquement
+      var _wk=getISOWeek(_d);
+      cols.push({wk:_wk,di:_dow-1,dt:new Date(_d),isFirstOfWeek:false,isLastOfWeek:false});
+    }
+    _d.setDate(_d.getDate()+1);
+  }
+  // Marquer premier/dernier jour de chaque semaine
+  var _lastWk=null,_firstIdx=0;
+  cols.forEach(function(c,i){
+    if(c.wk!==_lastWk){
+      if(_lastWk!==null)cols[i-1].isLastOfWeek=true;
+      c.isFirstOfWeek=true;_lastWk=c.wk;_firstIdx=i;
+    }
   });
+  if(cols.length)cols[cols.length-1].isLastOfWeek=true;
 
   var th=function(s,bg,extra,cs){return "<th"+(cs?" colspan='"+cs+"'":"")+" style='border:1px solid #cbd5e1;padding:2px 3px;font-size:9px;font-weight:700;text-align:center;overflow:hidden"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</th>";};
   var td=function(s,bg,extra){return "<td style='border:1px solid #e2e8f0;padding:2px 4px;font-size:9px;text-align:center;overflow:hidden"+(bg?";background:"+bg:"")+(extra?";"+extra:"")+">"+s+"</td>";};
   var tdL=function(s,bg){return "<td style='border:1px solid #e2e8f0;padding:2px 6px;font-size:9px;font-weight:600;white-space:normal;text-align:left;max-width:110px;overflow:hidden"+(bg?";background:"+bg:"")+">"+s+"</td>";};
 
-  // Groupes de semaines pour la ligne d'en-tête
-  var wkGroups={};
-  cols.forEach(function(c){if(!wkGroups[c.wk])wkGroups[c.wk]=0;wkGroups[c.wk]++;});
-  var wkList=weeks.filter(function(w){return wkGroups[w];});
+  // Liste ordonnée des semaines présentes dans cols
+  var wkSeen={},wkList=[];
+  cols.forEach(function(c){if(!wkSeen[c.wk]){wkSeen[c.wk]=1;wkList.push(c.wk);}});
 
   // Ouvrir le popup d'abord (doit être fait en contexte clic synchrone)
   var w=window.open("","_blank");
@@ -2682,28 +2691,21 @@ function printPointage(forcedFilterId){
 
     // Section chantiers — même logique que renderPointage
     var chantierMap={};
-    // 1) Auto-détection depuis le planning (même mécanisme que la vue principale)
-    weeks.forEach(function(wk){
-      getDatesOfWeek(wk,annee).forEach(function(dt){
-        var inMch=(dt.getMonth()+1===mois&&dt.getFullYear()===annee);
-        if(!inMch)return;
-        try{getChantierHoursPerDay(sal.id,dt).forEach(function(e){
-          if(!chantierMap[e.chId])chantierMap[e.chId]={nom:e.chNom,weeks:{}};
-          var dk=wk+"|"+(dt.getDay()-1);
-          if(!chantierMap[e.chId].weeks[dk])chantierMap[e.chId].weeks[dk]=e.hours;
-        });}catch(ez){}
-      });
+    // 1) Auto-détection depuis le planning — utilise les dates de cols (déjà filtrées)
+    cols.forEach(function(c){
+      try{getChantierHoursPerDay(sal.id,c.dt).forEach(function(e){
+        if(!chantierMap[e.chId])chantierMap[e.chId]={nom:e.chNom,weeks:{}};
+        var dk=c.wk+"|"+c.di;
+        if(!chantierMap[e.chId].weeks[dk])chantierMap[e.chId].weeks[dk]=e.hours;
+      });}catch(ez){}
     });
     // 2) Entrées manuelles stockées
     (D.chantiers||[]).forEach(function(ch){
-      weeks.forEach(function(wk){
-        getDatesOfWeek(wk,annee).forEach(function(dt,di){
-          if(dt.getMonth()+1!==mois||dt.getFullYear()!==annee)return;
-          var stored=ptGet(mois,annee,"ch_"+ch.id,sal.id,wk,di);
-          if(stored!==""){
-            if(!chantierMap[ch.id])chantierMap[ch.id]={nom:(ch.ref?ch.ref+" — ":"")+ch.nom,weeks:{}};
-          }
-        });
+      cols.forEach(function(c){
+        var stored=ptGet(mois,annee,"ch_"+ch.id,sal.id,c.wk,c.di);
+        if(stored!==""){
+          if(!chantierMap[ch.id])chantierMap[ch.id]={nom:(ch.ref?ch.ref+" — ":"")+ch.nom,weeks:{}};
+        }
       });
     });
     var chIds=Object.keys(chantierMap);
