@@ -5258,7 +5258,7 @@ function RGANTT(){
 
     // ── Lignes sous-traitants ──
     (ch.sousTraitants||[]).forEach(function(st,sti){
-      var bgST="#fffbeb";
+      var bgST=ch.color+"22";
       var trST=document.createElement("tr");
       var tdSTN=document.createElement("td");
       tdSTN.style.cssText="border:1px solid #e2e8f0;padding:3px 8px;white-space:nowrap;position:sticky;left:0;background:"+bgST+";z-index:1;min-width:"+LW+"px;font-size:11px;color:#92400e";
