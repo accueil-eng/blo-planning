@@ -5292,9 +5292,40 @@ function RGANTT(){
     });
   });
 
+  // ── Index semaine → alertes pour la barre de charge ──
+  // alertesConflits[wi] = [{prenom}]   alertesAbsences[wi] = [{prenom, icon}]
+  var alertesConflits={};
+  var alertesAbsences={};
+  // Parcourir tous les chantiers (pas seulement filtrés) pour récupérer les alertes
+  allChantiers.forEach(function(c1){
+    (c1.phases||[]).forEach(function(p1,pi1){
+      var key=c1.id+"_"+pi1;
+      weeks.forEach(function(w,wi){
+        // Conflits
+        if(conflictWeeks[key+"_"+wi]){
+          if(!alertesConflits[wi])alertesConflits[wi]=[];
+          (conflictMap[key]||[]).forEach(function(cf){
+            if(!alertesConflits[wi].find(function(x){return x.prenom===cf.salPrenom;}))
+              alertesConflits[wi].push({prenom:cf.salPrenom});
+          });
+        }
+        // Absences
+        if(absenceWeeks[key+"_"+wi]){
+          if(!alertesAbsences[wi])alertesAbsences[wi]=[];
+          (absenceMap[key]||[]).forEach(function(ab){
+            var wE=new Date(w.getTime()+7*24*60*60*1000);
+            var aS=new Date(ab.debut),aE=new Date(ab.fin);
+            if(w<aE&&wE>aS&&!alertesAbsences[wi].find(function(x){return x.prenom===ab.salPrenom;}))
+              alertesAbsences[wi].push({prenom:ab.salPrenom,icon:ab.icon});
+          });
+        }
+      });
+    });
+  });
+
   // ── Ligne charge effectifs (barres hebdomadaires) ──
   var cap=Math.max(1,(D.salaries||[]).filter(function(s){return !s.quitte;}).length||5);
-  var ROW_H=80;var BAR_MAX=64;
+  var ROW_H=120;var BAR_MAX=64;
   var trC=document.createElement("tr");
   trC.style.borderTop="3px solid #000";
   var tdCN=document.createElement("td");
@@ -5321,15 +5352,30 @@ function RGANTT(){
       bar.title=val+"/"+cap+" S"+getISOWeek(w);
       td.appendChild(bar);
     }
-    // Label haut : dispo ou saturé
+    // Label charge (val/cap) en bas de la zone texte
     var topLbl=document.createElement("div");
-    topLbl.style.cssText="position:absolute;top:3px;left:0;right:0;text-align:center;font-size:8px;line-height:1.2;color:"+(pctCap>1?"#dc2626":pctCap>=0.8?"#ea580c":"#15803d")+";font-weight:700";
-    if(val===0){topLbl.innerHTML="<span style='font-size:9px'>✓ "+cap+"</span><br><span style='color:#86efac;font-weight:400'>-dispo-</span>";}
-    else if(pctCap>1){topLbl.innerHTML="<span>▲ "+val+"/"+cap+"</span><br><span style='font-size:7px'>surcharge</span>";}
-    else if(pctCap>=0.8){topLbl.innerHTML="<span>● "+val+"/"+cap+"</span><br><span style='font-size:7px'>saturé</span>";}
-    else{topLbl.innerHTML="<span>✓ "+val+"/"+cap+"</span><br><span style='font-size:7px;color:#86efac'>-dispo-</span>";}
+    topLbl.style.cssText="position:absolute;bottom:"+(barH+2)+"px;left:0;right:0;text-align:center;font-size:8px;line-height:1.2;color:"+(pctCap>1?"#dc2626":pctCap>=0.8?"#ea580c":"#15803d")+";font-weight:700;z-index:1";
+    if(val===0){topLbl.innerHTML="<span style='font-size:9px;color:#86efac'>✓</span>";}
+    else if(pctCap>1){topLbl.innerHTML="▲"+val+"/"+cap;}
+    else{topLbl.innerHTML=val+"/"+cap;}
     td.appendChild(topLbl);
-    if(isNowC){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5;z-index:2";td.appendChild(tl);}
+    // Noms verticaux : conflits (rouge) puis absences (orange)
+    var alertes=[];
+    (alertesConflits[wi]||[]).forEach(function(x){alertes.push({prenom:x.prenom,color:"#dc2626",icon:"⚠️"});});
+    (alertesAbsences[wi]||[]).forEach(function(x){alertes.push({prenom:x.prenom,color:"#d97706",icon:x.icon});});
+    if(alertes.length>0){
+      var vertWrap=document.createElement("div");
+      vertWrap.style.cssText="position:absolute;top:2px;left:0;right:0;display:flex;flex-direction:row;justify-content:center;gap:1px;z-index:2";
+      alertes.forEach(function(a){
+        var vt=document.createElement("div");
+        vt.style.cssText="writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:8px;font-weight:700;color:"+a.color+";line-height:1;white-space:nowrap;overflow:hidden;max-height:70px";
+        vt.textContent=a.icon+" "+a.prenom;
+        vt.title=a.prenom;
+        vertWrap.appendChild(vt);
+      });
+      td.appendChild(vertWrap);
+    }
+    if(isNowC){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5;z-index:3";td.appendChild(tl);}
     trC.appendChild(td);
   });
   tbody.appendChild(trC);
