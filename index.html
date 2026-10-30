@@ -5376,6 +5376,23 @@ function RGANTT(){
       td.appendChild(vertWrap);
     }
     if(isNowC){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5;z-index:3";td.appendChild(tl);}
+    // Tooltip survol riche si conflits ou absences
+    if(alertes.length>0){
+      var tip=document.createElement("div");
+      var tipHtml="<div style='font-weight:700;margin-bottom:4px;border-bottom:1px solid #e2e8f0;padding-bottom:3px'>S"+getISOWeek(w)+"</div>";
+      (alertesConflits[wi]||[]).forEach(function(x){
+        tipHtml+="<div style='color:#dc2626;margin:2px 0'>⚠️ <b>"+x.prenom+"</b> — doublon chantier</div>";
+      });
+      (alertesAbsences[wi]||[]).forEach(function(x){
+        tipHtml+="<div style='color:#d97706;margin:2px 0'>"+x.icon+" <b>"+x.prenom+"</b> — absent</div>";
+      });
+      tip.innerHTML=tipHtml;
+      tip.style.cssText="display:none;position:fixed;z-index:9999;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);padding:8px 12px;font-size:11px;color:#1e293b;min-width:160px;pointer-events:none;white-space:nowrap";
+      document.body.appendChild(tip);
+      td.addEventListener("mouseenter",function(e){tip.style.display="block";tip.style.left=(e.clientX+12)+"px";tip.style.top=(e.clientY-10)+"px";});
+      td.addEventListener("mousemove",function(e){tip.style.left=(e.clientX+12)+"px";tip.style.top=(e.clientY-10)+"px";});
+      td.addEventListener("mouseleave",function(){tip.style.display="none";});
+    }
     trC.appendChild(td);
   });
   tbody.appendChild(trC);
