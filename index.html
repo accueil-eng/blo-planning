@@ -5033,6 +5033,8 @@ function RGANTT(){
     });
   });
 
+  var allChantiers=D.chantiers||[];
+
   // ── Calcul des absences par salarié par semaine ──
   // absIcon[type] → emoji
   var absIcon={cp:"🏖",conge:"🏖",maladie:"🤒",css:"🤒",arret:"🤒",formation:"📚",ecole:"📚",intemp:"🌧",intemperies:"🌧",autre:"🚫"};
@@ -5071,7 +5073,6 @@ function RGANTT(){
   // conflictWeeks[chId+"_"+phIdx+"_"+wi] = true  → barre rouge cette semaine
   var conflictMap={};
   var conflictWeeks={};
-  var allChantiers=D.chantiers||[];
   allChantiers.forEach(function(c1){
     (c1.phases||[]).forEach(function(p1,pi1){
       if(!p1.debut||!p1.fin||(p1.salariesIds||[]).length===0)return;
