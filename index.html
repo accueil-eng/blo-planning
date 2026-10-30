@@ -5338,11 +5338,9 @@ function RGANTT(){
   if(_prevScrollLeft||_prevScrollTop){wrap.scrollLeft=_prevScrollLeft;wrap.scrollTop=_prevScrollTop;}
   if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> Réel</span>"+"<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d948899;border:1px solid #0d9488cc;border-radius:3px;vertical-align:middle'></span> Phase</span>"+"<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(135deg,#0d9488,#0d9488 3px,rgba(255,255,255,.5) 3px,rgba(255,255,255,.5) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Sous-traitant</span>"+"<span style='margin-right:12px;white-space:nowrap'><span style='display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;vertical-align:middle'></span>/<span style='display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;vertical-align:middle'></span>/<span style='display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;vertical-align:middle'></span> Charge</span>"+"<span style='color:#dc2626'>| Aujourd'hui</span>";
 
-  // ── Carte de charge mensuelle ──
-  _renderChargeCard(gWrap, chantiers, startDate, endDate);
 }
 
-function _renderChargeCard(gWrap, chantiers, startDate, endDate){
+function _renderChargeCard_DISABLED(gWrap, chantiers, startDate, endDate){
   var months=[];
   var cur=new Date(startDate.getFullYear(),startDate.getMonth(),1);
   var end2=new Date(endDate.getFullYear(),endDate.getMonth(),1);
