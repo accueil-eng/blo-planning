@@ -4938,6 +4938,11 @@ function RGANTT(){
     cur2=new Date(cur2.getTime()+7*24*60*60*1000);
   }
 
+  // Préserver la position de scroll avant de reconstruire (le polling auto peut appeler RGANTT sans action utilisateur)
+  var _prevScrollLeft=0,_prevScrollTop=0;
+  var _prevInner=gWrap.querySelector("div[style*='overflow-x']");
+  if(_prevInner){_prevScrollLeft=_prevInner.scrollLeft;_prevScrollTop=_prevInner.scrollTop;}
+
   gWrap.innerHTML="";
   if(!chantiers.length){
     gWrap.innerHTML="<div class='empty'><p>Renseignez des dates dans les fiches chantiers.</p></div>";
@@ -5146,6 +5151,8 @@ function RGANTT(){
   tbody.appendChild(trC);
 
   tbl.appendChild(tbody);wrap.appendChild(tbl);gWrap.appendChild(wrap);
+  // Restaurer la position de scroll (après rendu DOM)
+  if(_prevScrollLeft||_prevScrollTop){wrap.scrollLeft=_prevScrollLeft;wrap.scrollTop=_prevScrollTop;}
   if(legend)legend.innerHTML="<span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:repeating-linear-gradient(45deg,#0d9488,#0d9488 3px,rgba(255,255,255,.6) 3px,rgba(255,255,255,.6) 6px);border:1px solid #0d9488;border-radius:3px;vertical-align:middle'></span> Prévisionnel</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#0d9488;border-radius:3px;vertical-align:middle'></span> Réel</span><span style='margin-right:12px'><span style='display:inline-block;width:20px;height:10px;background:#7c3aed;border-radius:3px;vertical-align:middle'></span> Phase</span><span style='margin-right:12px;white-space:nowrap'><span style='display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;vertical-align:middle'></span>/<span style='display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;vertical-align:middle'></span>/<span style='display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;vertical-align:middle'></span> Charge effectifs</span><span style='color:#dc2626'>| Aujourd'hui</span>";
 
   // ── Carte de charge mensuelle ──
