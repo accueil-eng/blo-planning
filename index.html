@@ -2229,15 +2229,13 @@ function editCh(id){
   }
   var fZoneE=mkRow("Zone (indemnités)",mkZoneSelect(ch.zoneEcouflant||""));
   var fDeb=mkRow("📅 Date début réelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebut||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fDebPrev=mkRow("📅 Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebutPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fFinPrev=mkRow("📅 Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateFinPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fHEst=mkRow("⏱ Heures estimées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresEst||"",min:0,placeholder:"ex: 120",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fHReal=mkRow("⏱ Heures réalisées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresReal||"",min:0,placeholder:"ex: 98",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:6px";
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
     if(!fNom.value.trim()){alert("Nom requis");return;}
-    ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;
+    ch.ref=fRef.value.trim();ch.nom=fNom.value.trim();ch.adresse=fAdr.value.trim();ch.cp=fCp.value.trim();ch.ville=fVille.value.trim();ch.dateDebut=fDeb.value;ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;ch.zoneEcouflant=fZoneE.value||null;
     saveNow();modal.remove();RC();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
@@ -4639,7 +4637,7 @@ function RANALYSE(){
   var table=document.createElement("table");
   table.style.cssText="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:24px";
   var thead=table.createTHead();var hr=thead.insertRow();
-  ["Chantier","Début réel","Début prévu","Fin prévue","H. est.","H. réal.","Écart H.","Devis","Coût MO","Coût total","Facturé","Encaissé","Marge","Renta.",""].forEach(function(h){
+  ["Chantier","Début réel","Jalons","H. est.","H. réal.","Écart H.","Devis","Coût MO","Coût total","Facturé","Encaissé","Marge","Renta.",""].forEach(function(h){
     var th=document.createElement("th");th.textContent=h;
     th.style.cssText="padding:8px 10px;text-align:left;background:#e2e8f0;border:1px solid var(--brd);font-size:11px;font-weight:600;white-space:nowrap";
     hr.appendChild(th);
@@ -4653,9 +4651,9 @@ function RANALYSE(){
     tdNom.appendChild(dot);tdNom.appendChild(document.createTextNode((ch.ref?ch.ref+" — ":"")+ch.nom));
     // Dates
     var fmt=function(d){return d?new Date(d).toLocaleDateString("fr-FR"):"—";};
-    [ch.dateDebut,ch.dateDebutPrev,ch.dateFinPrev].forEach(function(d){
-      var td=tr.insertCell();td.style.cssText="padding:8px 10px;border:1px solid var(--brd);color:var(--muted)";td.textContent=fmt(d);
-    });
+    var tdDeb=tr.insertCell();tdDeb.style.cssText="padding:8px 10px;border:1px solid var(--brd);color:var(--muted)";tdDeb.textContent=fmt(ch.dateDebut);
+    var tdJal=tr.insertCell();tdJal.style.cssText="padding:8px 10px;border:1px solid var(--brd);color:#7c3aed;font-size:11px";
+    tdJal.innerHTML=(ch.jalons||[]).filter(function(j){return j.nom&&j.date;}).map(function(j){return "◆ "+j.nom+": "+fmt(j.date);}).join("<br>")||"<span style='color:#94a3b8'>—</span>";
     // Heures estimées
     var tdEst=tr.insertCell();tdEst.style.cssText="padding:8px 10px;border:1px solid var(--brd);text-align:right";
     tdEst.textContent=ch.heuresEst!=null?ch.heuresEst+"h":"—";
@@ -4810,11 +4808,6 @@ function addChantierFromGantt(){
   }
   var fZoneE2=mkRow("Zone (indemnités)",mkZoneSelect2());
 
-  // Date previsionnel
-  var sep=document.createElement("div");sep.style.cssText="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:8px;margin-top:4px;padding:4px 8px;background:#ede9fe;border-radius:5px";sep.textContent="Période prévisionnelle";box.appendChild(sep);
-  var fDP=mkRow("Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fFP=mkRow("Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-
   // Color picker
   var fColor=mkRow("Couleur",document.createElement("div"));
   fColor.style.cssText="flex:1";
@@ -4835,8 +4828,7 @@ function addChantierFromGantt(){
       adresse:fAdr.value.trim(),
       cp:fCp.value.trim(),
       ville:fVille.value.trim(),
-      dateDebutPrev:fDP.value,
-      dateFinPrev:fFP.value,
+      jalons:[],
       zoneEcouflant:fZoneE2.value||null,
       color:scGantt
     };
@@ -4859,30 +4851,56 @@ function editGanttDates(id){
   var modal=document.createElement("div");modal.id="gantt-edit-modal";
   modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
   var box=document.createElement("div");
-  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:400px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif";
+  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:440px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif;max-height:90vh;overflow-y:auto";
   var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:4px;color:#13201e";
   title.textContent="✏️ "+(ch.ref?ch.ref+" - ":"")+ch.nom;
   var sub=document.createElement("div");sub.style.cssText="font-size:11px;color:#6b7c79;margin-bottom:16px";
   sub.textContent=(ch.adresse||"")+(ch.cp?" "+ch.cp:"")+(ch.ville?" "+ch.ville:"");
   box.appendChild(title);box.appendChild(sub);
-  function mkRow(label,input){
-    var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:10px";
-    var lbl=document.createElement("label");lbl.style.cssText="font-size:12px;font-weight:500;width:150px;flex-shrink:0;color:#475569";lbl.textContent=label;
-    row.appendChild(lbl);row.appendChild(input);box.appendChild(row);return input;
+
+  // ── Début réel ──
+  var sep2=document.createElement("div");sep2.style.cssText="font-size:11px;font-weight:700;color:#0891b2;margin-bottom:8px;padding:4px 8px;background:#e0f2fe;border-radius:5px";sep2.textContent="Début réel";box.appendChild(sep2);
+  var rowDR=document.createElement("div");rowDR.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:14px";
+  var lblDR=document.createElement("label");lblDR.style.cssText="font-size:12px;font-weight:500;width:150px;flex-shrink:0;color:#475569";lblDR.textContent="Date de début réel";
+  var fDR=document.createElement("input");fDR.type="date";fDR.value=ch.dateDebut||"";fDR.style.cssText="flex:1;height:32px;border:1px solid #7dd3fc;border-radius:6px;padding:0 8px;font-size:12px;outline:none";
+  rowDR.appendChild(lblDR);rowDR.appendChild(fDR);box.appendChild(rowDR);
+
+  // ── Jalons ──
+  var sepJ=document.createElement("div");sepJ.style.cssText="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:8px;padding:4px 8px;background:#ede9fe;border-radius:5px;display:flex;align-items:center;justify-content:space-between";
+  sepJ.innerHTML="<span>◆ Jalons</span>";
+  var addJBtn=document.createElement("button");addJBtn.style.cssText="font-size:10px;background:#7c3aed;color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer";addJBtn.textContent="+ Ajouter";
+  sepJ.appendChild(addJBtn);box.appendChild(sepJ);
+
+  var jalonsWrap=document.createElement("div");jalonsWrap.style.cssText="margin-bottom:14px";box.appendChild(jalonsWrap);
+  var jalons=(ch.jalons||[]).map(function(j){return {nom:j.nom||"",date:j.date||""};});
+
+  function renderJalons(){
+    jalonsWrap.innerHTML="";
+    if(jalons.length===0){
+      var empty=document.createElement("div");empty.style.cssText="font-size:11px;color:#94a3b8;font-style:italic;margin-bottom:6px;padding:4px 0";empty.textContent="Aucun jalon — cliquez « + Ajouter » pour en créer";
+      jalonsWrap.appendChild(empty);return;
+    }
+    jalons.forEach(function(j,ji){
+      var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:6px;margin-bottom:6px";
+      var nomI=document.createElement("input");nomI.type="text";nomI.value=j.nom;nomI.placeholder="Nom du jalon";nomI.style.cssText="flex:1;height:30px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none";
+      nomI.oninput=function(){jalons[ji].nom=nomI.value;};
+      var dateI=document.createElement("input");dateI.type="date";dateI.value=j.date;dateI.style.cssText="width:130px;height:30px;border:1px solid #c4b5fd;border-radius:6px;padding:0 6px;font-size:12px;outline:none";
+      dateI.onchange=function(){jalons[ji].date=dateI.value;};
+      var del=document.createElement("button");del.style.cssText="height:28px;width:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:5px;cursor:pointer;font-size:14px;flex-shrink:0";del.textContent="✕";
+      del.onclick=function(){jalons.splice(ji,1);renderJalons();};
+      row.appendChild(nomI);row.appendChild(dateI);row.appendChild(del);
+      jalonsWrap.appendChild(row);
+    });
   }
-  var sep=document.createElement("div");sep.style.cssText="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:8px;padding:4px 8px;background:#ede9fe;border-radius:5px";sep.textContent="Période prévisionnelle";box.appendChild(sep);
-  var fDP=mkRow("Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebutPrev||ch.dateDebut||"",style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fFP=mkRow("Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateFinPrev||"",style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var sep2=document.createElement("div");sep2.style.cssText="font-size:11px;font-weight:700;color:#0891b2;margin-bottom:8px;margin-top:4px;padding:4px 8px;background:#e0f2fe;border-radius:5px";sep2.textContent="Début réel (renseigné quand le chantier commence)";box.appendChild(sep2);
-  var fDR=mkRow("Début réel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebut||"",style:"flex:1;height:32px;border:1px solid #7dd3fc;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:10px";
+  addJBtn.onclick=function(){jalons.push({nom:"",date:""});renderJalons();};
+  renderJalons();
+
+  // ── Boutons ──
+  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:4px";
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
-    ch.dateDebutPrev=fDP.value;
-    ch.dateFinPrev=fFP.value;
     ch.dateDebut=fDR.value;
-    // If real start date filled, update dateDebutPrev too if empty
-    if(fDR.value&&!ch.dateDebutPrev)ch.dateDebutPrev=fDR.value;
+    ch.jalons=jalons.filter(function(j){return j.nom||j.date;});
     save();modal.remove();RGANTT();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
@@ -4890,7 +4908,7 @@ function editGanttDates(id){
   btnRow.appendChild(okBtn);btnRow.appendChild(cancelBtn);box.appendChild(btnRow);
   modal.appendChild(box);document.body.appendChild(modal);
   modal.onclick=function(e){if(e.target===modal)modal.remove();};
-  fDP.focus();
+  fDR.focus();
 }
 
 function _ganttLabel(){
@@ -5037,9 +5055,8 @@ function RGANTT(){
     var tdD=document.createElement("td");
     tdD.style.cssText="border-top:2px solid #000;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:4px 8px;font-size:10px;min-width:"+DW+"px;background:"+bg;
     var hh="";
-    if(ch.dateDebutPrev&&ch.dateFinPrev)hh+="<div style='color:#7c3aed'>□ "+fmt2(ch.dateDebutPrev)+" → "+fmt2(ch.dateFinPrev)+"</div>";
-    else if(ch.dateDebutPrev)hh+="<div style='color:#7c3aed'>□ Début: "+fmt2(ch.dateDebutPrev)+"</div>";
     if(ch.dateDebut)hh+="<div style='color:"+ch.color+";font-weight:600'>■ Réel: "+fmt2(ch.dateDebut)+"</div>";
+    (ch.jalons||[]).forEach(function(j){if(j.nom&&j.date)hh+="<div style='color:#7c3aed'>◆ "+j.nom+": "+fmt2(j.date)+"</div>";});
     if(!hh)hh="<span style='color:#94a3b8;font-style:italic'>— dates à saisir —</span>";
     tdD.innerHTML=hh;
     var eb3=document.createElement("button");eb3.className="btn";eb3.style.cssText="font-size:10px;padding:1px 5px;margin-top:2px;display:block";eb3.textContent="✏️ dates";
@@ -5047,26 +5064,29 @@ function RGANTT(){
     tdD.appendChild(eb3);
     tr.appendChild(tdD);
 
-    var chS=ch.dateDebutPrev?new Date(ch.dateDebutPrev):null;
-    var chE=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
     var chR=ch.dateDebut?new Date(ch.dateDebut):null;
+    var chJalons=(ch.jalons||[]).filter(function(j){return j.date;}).map(function(j){return {nom:j.nom||"Jalon",d:new Date(j.date)};});
 
     weeks.forEach(function(w){
       var wE=new Date(w.getTime()+7*24*60*60*1000);
       var td=document.createElement("td");
       var isNow2=(w<=today&&today<wE);
       td.style.cssText="border-top:2px solid #000;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:32px;position:relative;background:"+(isNow2?"#fce7f3":bg);
-      if(chS&&chE&&w<chE&&wE>chS){
-        var b=document.createElement("div");
-        var isFstP=w<=chS&&wE>chS;var isLstP=w<chE&&wE>=chE;
-        b.style.cssText="position:absolute;top:4px;height:10px;background:repeating-linear-gradient(45deg,"+ch.color+","+ch.color+" 3px,rgba(255,255,255,.55) 3px,rgba(255,255,255,.55) 6px);opacity:.85;border-radius:"+(isFstP?"5px 0 0 5px":isLstP?"0 5px 5px 0":"0")+";left:"+(isFstP?"3":"0")+"px;right:"+(isLstP?"3":"0")+"px;border:1px solid "+ch.color;
-        td.appendChild(b);
-      }
-      if(chR&&w<(chE||new Date(9e12))&&wE>chR){
+      // Barre réelle (haut)
+      if(chR&&wE>chR){
         var bR=document.createElement("div");var isFstR=w<=chR&&wE>chR;
-        bR.style.cssText="position:absolute;top:18px;height:10px;background:"+ch.color+";opacity:1;left:"+(isFstR?"3":"0")+"px;right:2px;border-radius:"+(isFstR?"5px 0 0 5px":"0")+";box-shadow:0 1px 3px rgba(0,0,0,.2)";
+        bR.style.cssText="position:absolute;top:4px;height:10px;background:"+ch.color+";opacity:1;left:"+(isFstR?"3":"0")+"px;right:2px;border-radius:"+(isFstR?"5px 0 0 5px":"0")+";box-shadow:0 1px 3px rgba(0,0,0,.2)";
         td.appendChild(bR);
       }
+      // Losanges jalons (bas)
+      chJalons.forEach(function(j){
+        if(j.d>=w&&j.d<wE){
+          var dm=document.createElement("div");
+          dm.title=j.nom+" ("+fmt2(j.d.toISOString().slice(0,10))+")";
+          dm.style.cssText="position:absolute;bottom:3px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:"+ch.color+";border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)";
+          td.appendChild(dm);
+        }
+      });
       if(isNow2){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.4";td.appendChild(tl);}
       tr.appendChild(td);
     });
@@ -5193,9 +5213,10 @@ function _renderChargeCard(gWrap, chantiers, startDate, endDate){
         });
         return eff;
       } else {
-        var pS2=ch.dateDebutPrev?new Date(ch.dateDebutPrev):ch.dateDebut?new Date(ch.dateDebut):null;
-        var pE2=ch.dateFinPrev?new Date(ch.dateFinPrev):null;
-        return (pS2&&pE2&&pS2<=mEnd&&pE2>=mStart)?1:0;
+        // Fallback sur jalons : chantier actif si au moins un jalon dans le mois ou dateDebut <= mEnd
+        var pS2=ch.dateDebut?new Date(ch.dateDebut):null;
+        var jalonsM=(ch.jalons||[]).some(function(j){if(!j.date)return false;var jd=new Date(j.date);return jd>=mStart&&jd<=mEnd;});
+        return (jalonsM||(pS2&&pS2<=mEnd))?1:0;
       }
     });
   });
@@ -5377,8 +5398,6 @@ function editChAnalyse(id){
     row.appendChild(lbl);row.appendChild(input);box.appendChild(row);return input;
   }
   var fDeb=mkRow("📅 Début réel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebut||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fDebPrev=mkRow("📅 Début prévisionnel",Object.assign(document.createElement("input"),{type:"date",value:ch.dateDebutPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var fFinPrev=mkRow("📅 Fin prévisionnelle",Object.assign(document.createElement("input"),{type:"date",value:ch.dateFinPrev||"",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fHEst=mkRow("⏱ Heures estimées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresEst||"",min:0,placeholder:"ex: 120",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var fHReal=mkRow("⏱ Heures réalisées",Object.assign(document.createElement("input"),{type:"number",value:ch.heuresReal||"",min:0,placeholder:"ex: 98",style:"flex:1;height:32px;border:1px solid #c0cccb;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   // Separator
@@ -5392,7 +5411,7 @@ function editChAnalyse(id){
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:6px";
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
-    ch.dateDebut=fDeb.value;ch.dateDebutPrev=fDebPrev.value;ch.dateFinPrev=fFinPrev.value;
+    ch.dateDebut=fDeb.value;
     ch.heuresEst=fHEst.value?parseFloat(fHEst.value):null;
     ch.heuresReal=fHReal.value?parseFloat(fHReal.value):null;
     ch.devis=fDevis.value?parseFloat(fDevis.value):null;
