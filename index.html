@@ -5098,7 +5098,9 @@ function RGANTT(){
       var tdPName=document.createElement("td");
       var bgPh=ri%2===0?"#fef9c3":"#dde3ee";
       tdPName.style.cssText="border:1px solid #e2e8f0;padding:3px 8px 3px 22px;white-space:nowrap;position:sticky;left:0;background:"+bgPh+";z-index:1;min-width:"+LW+"px;font-size:11px;color:#3730a3";
-      tdPName.innerHTML="<span style='margin-right:5px;color:"+ch.color+"'>↳</span><b>"+ph.nom+"</b><span style='color:#6b7280;margin-left:6px;font-size:10px'>"+ph.effectif+" pers.</span>";
+      var phNames=(ph.salariesIds||[]).map(function(sid){var s=(D.salaries||[]).find(function(x){return x.id===sid;});return s?s.prenom||s.nom:"?";}).join(", ");
+      var phLabel=phNames||((ph.effectif||1)+" pers.");
+      tdPName.innerHTML="<span style='margin-right:5px;color:"+ch.color+"'>↳</span><b>"+ph.nom+"</b><span style='color:#6b7280;margin-left:6px;font-size:10px'>"+phLabel+"</span>";
       var delPh=document.createElement("button");delPh.title="Supprimer";
       delPh.style.cssText="margin-left:6px;border:none;background:none;color:#dc2626;cursor:pointer;font-size:11px;padding:0 2px";
       delPh.textContent="✕";
@@ -5127,7 +5129,7 @@ function RGANTT(){
           var bp=document.createElement("div");
           var isFP=w<=pS&&wE>pS;var isLP=w<pE&&wE>=pE;
           bp.style.cssText="position:absolute;top:5px;height:12px;background:"+ch.color+";opacity:.75;border-radius:"+(isFP?"5px 0 0 5px":isLP?"0 5px 5px 0":"0")+";left:"+(isFP?"3":"0")+"px;right:"+(isLP?"3":"0")+"px";
-          bp.title=ph.nom+" ("+ph.effectif+" pers.)";
+          bp.title=ph.nom+(phNames?" — "+phNames:" ("+ph.effectif+" pers.)");
           td.appendChild(bp);
         }
         if(isNow3){var tl2=document.createElement("div");tl2.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.4";td.appendChild(tl2);}
@@ -5349,12 +5351,13 @@ function editGanttPhase(chId, phaseIdx){
   var ch=D.chantiers.find(function(c){return c.id===chId;});if(!ch)return;
   if(!ch.phases)ch.phases=[];
   var isNew=(phaseIdx===null||phaseIdx===undefined);
-  var ph=isNew?{nom:"",debut:"",fin:"",effectif:1}:Object.assign({},ch.phases[phaseIdx]);
+  var ph=isNew?{nom:"",debut:"",fin:"",salariesIds:[],effectif:1}:Object.assign({},ch.phases[phaseIdx]);
+  var selIds=(ph.salariesIds||[]).slice();
   var existing=document.getElementById("gantt-phase-modal");if(existing)existing.remove();
   var modal=document.createElement("div");modal.id="gantt-phase-modal";
   modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
   var box=document.createElement("div");
-  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:380px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif";
+  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:420px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif;max-height:90vh;overflow-y:auto";
   var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:14px;color:#3730a3";
   title.textContent=(isNew?"➕ Nouvelle phase — ":"✏️ Modifier phase — ")+(ch.ref?ch.ref+" ":"")+ch.nom;
   box.appendChild(title);
@@ -5362,11 +5365,37 @@ function editGanttPhase(chId, phaseIdx){
   var iNom=mkRow("Nom de la phase",Object.assign(document.createElement("input"),{type:"text",value:ph.nom,placeholder:"ex: Maçonnerie",style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var iDeb=mkRow("Date début",Object.assign(document.createElement("input"),{type:"date",value:ph.debut,style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
   var iFin=mkRow("Date fin",Object.assign(document.createElement("input"),{type:"date",value:ph.fin,style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
-  var iEff=mkRow("Effectif (personnes)",Object.assign(document.createElement("input"),{type:"number",value:ph.effectif||1,min:1,max:20,style:"flex:1;height:32px;border:1px solid #c4b5fd;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+
+  // ── Sélection salariés ──
+  var sepS=document.createElement("div");sepS.style.cssText="font-size:11px;font-weight:700;color:#3730a3;margin-bottom:8px;padding:4px 8px;background:#ede9fe;border-radius:5px;display:flex;align-items:center;justify-content:space-between";
+  var cptSpan=document.createElement("span");
+  function updateCpt(){cptSpan.textContent=selIds.length?" ("+selIds.length+" sél.)":" (aucun)";}
+  sepS.innerHTML="<span>👷 Salariés affectés</span>";sepS.appendChild(cptSpan);updateCpt();
+  box.appendChild(sepS);
+
+  var salsWrap=document.createElement("div");salsWrap.style.cssText="border:1px solid #e2e8f0;border-radius:8px;max-height:200px;overflow-y:auto;margin-bottom:12px";
+  var actifs=(D.salaries||[]).filter(function(s){return !s.quitte;}).sort(function(a,b){return (a.prenom||"").localeCompare(b.prenom||"");});
+  if(!actifs.length){
+    var empty=document.createElement("div");empty.style.cssText="padding:10px;font-size:11px;color:#94a3b8;font-style:italic";empty.textContent="Aucun salarié actif";salsWrap.appendChild(empty);
+  } else {
+    actifs.forEach(function(s){
+      var row=document.createElement("label");row.style.cssText="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:12px";
+      row.onmouseenter=function(){row.style.background="#f8f7ff";};row.onmouseleave=function(){row.style.background="";};
+      var cb=document.createElement("input");cb.type="checkbox";cb.value=s.id;cb.checked=selIds.indexOf(s.id)>=0;
+      cb.style.cssText="width:15px;height:15px;accent-color:#7c3aed;cursor:pointer;flex-shrink:0";
+      cb.onchange=function(){if(cb.checked){if(selIds.indexOf(s.id)<0)selIds.push(s.id);}else{selIds=selIds.filter(function(id){return id!==s.id;});}updateCpt();};
+      var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:8px;height:8px;border-radius:50%;background:"+(s.color||"#6b7280")+";flex-shrink:0";
+      var name=document.createElement("span");name.textContent=(s.prenom||"")+(s.nom?" "+s.nom:"");
+      row.appendChild(cb);row.appendChild(dot);row.appendChild(name);
+      salsWrap.appendChild(row);
+    });
+  }
+  box.appendChild(salsWrap);
+
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:4px";
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#3730a3;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
-    var nph={nom:iNom.value.trim(),debut:iDeb.value,fin:iFin.value,effectif:parseInt(iEff.value)||1};
+    var nph={nom:iNom.value.trim(),debut:iDeb.value,fin:iFin.value,salariesIds:selIds.slice(),effectif:selIds.length||1};
     if(!nph.nom){alert("Saisissez un nom de phase.");return;}
     if(isNew)ch.phases.push(nph);else ch.phases[phaseIdx]=nph;
     save();modal.remove();RGANTT();
