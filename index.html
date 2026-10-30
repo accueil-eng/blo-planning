@@ -4991,7 +4991,7 @@ function RGANTT(){
   weeks.forEach(function(w){
     var wk=getISOWeek(w);
     var isNow=(w<=today&&today<new Date(w.getTime()+7*24*60*60*1000));
-    var th=mkTH("S"+wk,isNow?"#fffde8":"#f1f5f9",isNow?"#92400e":"#64748b",WW);
+    var th=mkTH("S"+wk,isNow?"#fce7f3":"#f1f5f9",isNow?"#9d174d":"#64748b",WW);
     th.style.fontSize="9px";th.style.padding="2px 0";
     if(isNow)th.style.fontWeight="700";
     tr1.appendChild(th);
@@ -5054,7 +5054,7 @@ function RGANTT(){
       var wE=new Date(w.getTime()+7*24*60*60*1000);
       var td=document.createElement("td");
       var isNow2=(w<=today&&today<wE);
-      td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:32px;position:relative;background:"+(isNow2?"#fffde8":bg);
+      td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:32px;position:relative;background:"+(isNow2?"#fce7f3":bg);
       if(chS&&chE&&w<chE&&wE>chS){
         var b=document.createElement("div");
         var isFstP=w<=chS&&wE>chS;var isLstP=w<chE&&wE>=chE;
@@ -5101,7 +5101,7 @@ function RGANTT(){
         var wE=new Date(w.getTime()+7*24*60*60*1000);
         var td=document.createElement("td");
         var isNow3=(w<=today&&today<wE);
-        td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;height:22px;position:relative;background:"+(isNow3?"#fffde8":bgPh);
+        td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;height:22px;position:relative;background:"+(isNow3?"#fce7f3":bgPh);
         if(pS&&pE&&w<pE&&wE>pS){
           var bp=document.createElement("div");
           var isFP=w<=pS&&wE>pS;var isLP=w<pE&&wE>=pE;
@@ -5134,7 +5134,7 @@ function RGANTT(){
     var pctCap=val/cap;
     var td=document.createElement("td");
     var isNowC=(w<=today&&today<new Date(w.getTime()+7*24*60*60*1000));
-    td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;background:"+(isNowC?"#fffde8":"#f0fdf4")+";position:relative;height:"+ROW_H+"px;overflow:hidden;vertical-align:bottom";
+    td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;background:"+(isNowC?"#fce7f3":"#f0fdf4")+";position:relative;height:"+ROW_H+"px;overflow:hidden;vertical-align:bottom";
     // Barre
     var barColor=pctCap>1?"#ef4444":pctCap>=0.8?"#f97316":pctCap>=0.5?"#eab308":"#22c55e";
     var barH=val>0?Math.max(6,Math.round(Math.min(pctCap,1)*BAR_MAX)):0;
