@@ -5359,21 +5359,7 @@ function RGANTT(){
     else if(pctCap>1){topLbl.innerHTML="▲"+val+"/"+cap;}
     else{topLbl.innerHTML=val+"/"+cap;}
     td.appendChild(topLbl);
-    // Noms verticaux : absences uniquement (orange)
     var alertes=[];
-    (alertesAbsences[wi]||[]).forEach(function(x){alertes.push({prenom:x.prenom,color:"#d97706",icon:x.icon});});
-    if(alertes.length>0){
-      var vertWrap=document.createElement("div");
-      vertWrap.style.cssText="position:absolute;top:2px;left:0;right:0;display:flex;flex-direction:row;justify-content:center;gap:1px;z-index:2";
-      alertes.forEach(function(a){
-        var vt=document.createElement("div");
-        vt.style.cssText="writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:8px;font-weight:700;color:"+a.color+";line-height:1;white-space:nowrap;overflow:hidden;max-height:110px";
-        vt.textContent=a.icon+" "+a.prenom;
-        vt.title=a.prenom;
-        vertWrap.appendChild(vt);
-      });
-      td.appendChild(vertWrap);
-    }
     if(isNowC){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5;z-index:3";td.appendChild(tl);}
     // Tooltip survol riche si conflits ou absences
     if(alertes.length>0){
