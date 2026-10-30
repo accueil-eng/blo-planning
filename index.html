@@ -5033,6 +5033,49 @@ function RGANTT(){
     });
   });
 
+  // ── Calcul des conflits salariés (doublon sur même période) ──
+  // conflictMap[chId+"_"+phIdx] = [{salPrenom, autreChantierNom}]
+  // conflictWeeks[chId+"_"+phIdx+"_"+wi] = true  → barre rouge cette semaine
+  var conflictMap={};
+  var conflictWeeks={};
+  var allChantiers=D.chantiers||[];
+  allChantiers.forEach(function(c1){
+    (c1.phases||[]).forEach(function(p1,pi1){
+      if(!p1.debut||!p1.fin||(p1.salariesIds||[]).length===0)return;
+      var d1=new Date(p1.debut),f1=new Date(p1.fin);
+      allChantiers.forEach(function(c2){
+        if(c2.id===c1.id)return;
+        (c2.phases||[]).forEach(function(p2){
+          if(!p2.debut||!p2.fin||(p2.salariesIds||[]).length===0)return;
+          var d2=new Date(p2.debut),f2=new Date(p2.fin);
+          if(d1>f2||f1<d2)return; // pas de chevauchement global
+          (p1.salariesIds||[]).forEach(function(sid){
+            if(!(p2.salariesIds||[]).find(function(x){return x===sid;}))return;
+            var sal=(D.salaries||[]).find(function(s){return s.id===sid;});
+            var key=c1.id+"_"+pi1;
+            if(!conflictMap[key])conflictMap[key]=[];
+            // Eviter les doublons dans la liste
+            var already=conflictMap[key].find(function(x){return x.salId===sid&&x.autreId===c2.id;});
+            if(!already){
+              conflictMap[key].push({
+                salId:sid,
+                salPrenom:sal?(sal.prenom||sal.nom):"?",
+                autreChantierNom:(c2.ref?c2.ref+" - ":"")+c2.nom
+              });
+            }
+            // Marquer les semaines en conflit pour cette phase
+            weeks.forEach(function(w,wi){
+              var wE=new Date(w.getTime()+7*24*60*60*1000);
+              var wInP1=w<f1&&wE>d1;
+              var wInP2=w<f2&&wE>d2;
+              if(wInP1&&wInP2)conflictWeeks[key+"_"+wi]=true;
+            });
+          });
+        });
+      });
+    });
+  });
+
   chantiers.forEach(function(ch,ri){
     var bg=ri%2===0?"#fffde8":"#e8edf2";
 
@@ -5103,9 +5146,22 @@ function RGANTT(){
       var tdPName=document.createElement("td");
       var bgPh=ri%2===0?"#fef9c3":"#dde3ee";
       tdPName.style.cssText="border:1px solid #e2e8f0;padding:3px 8px 3px 22px;white-space:nowrap;position:sticky;left:0;background:"+bgPh+";z-index:1;min-width:"+LW+"px;font-size:11px;color:#3730a3";
-      var phNames=(ph.salariesIds||[]).map(function(sid){var s=(D.salaries||[]).find(function(x){return x.id===sid;});return s?s.prenom||s.nom:"?";}).join(", ");
-      var phLabel=phNames||((ph.effectif||1)+" pers.");
-      tdPName.innerHTML="<span style='margin-right:5px;color:"+ch.color+"'>↳</span><b>"+ph.nom+"</b><span style='color:#6b7280;margin-left:6px;font-size:10px'>"+phLabel+"</span>";
+      var phConflicts=conflictMap[ch.id+"_"+phi]||[];
+      var conflictSalIds=phConflicts.map(function(x){return x.salId;});
+      var phNamesHtml=(ph.salariesIds||[]).map(function(sid){
+        var s=(D.salaries||[]).find(function(x){return x.id===sid;});
+        var prenom=s?s.prenom||s.nom:"?";
+        var isConflict=conflictSalIds.indexOf(sid)>=0;
+        if(isConflict){
+          var cfs=phConflicts.filter(function(x){return x.salId===sid;});
+          var tooltip=prenom+" aussi sur : "+cfs.map(function(x){return x.autreChantierNom;}).join(", ");
+          return "<span style='color:#dc2626;font-weight:700' title='"+tooltip+"'>⚠️ "+prenom+"</span>";
+        }
+        return "<span>"+prenom+"</span>";
+      }).join("<span style='color:#9ca3af'>, </span>");
+      var phLabel=phNamesHtml||((ph.effectif||1)+" pers.");
+      var conflictBadge=phConflicts.length>0?"<span style='margin-left:5px;color:#dc2626;font-size:10px;font-weight:700' title='"+phConflicts.map(function(x){return x.salPrenom+" → "+x.autreChantierNom;}).join(" | ")+"'>⚠️ doublon</span>":"";
+      tdPName.innerHTML="<span style='margin-right:5px;color:"+ch.color+"'>↳</span><b>"+ph.nom+"</b>"+conflictBadge+"<span style='color:#6b7280;margin-left:6px;font-size:10px'>"+phLabel+"</span>";
       var delPh=document.createElement("button");delPh.title="Supprimer";
       delPh.style.cssText="margin-left:6px;border:none;background:none;color:#dc2626;cursor:pointer;font-size:11px;padding:0 2px";
       delPh.textContent="✕";
@@ -5125,7 +5181,7 @@ function RGANTT(){
 
       var pS=ph.debut?new Date(ph.debut):null;
       var pE=ph.fin?new Date(ph.fin):null;
-      weeks.forEach(function(w){
+      weeks.forEach(function(w,wi){
         var wE=new Date(w.getTime()+7*24*60*60*1000);
         var td=document.createElement("td");
         var isNow3=(w<=today&&today<wE);
@@ -5133,9 +5189,18 @@ function RGANTT(){
         if(pS&&pE&&w<pE&&wE>pS){
           var bp=document.createElement("div");
           var isFP=w<=pS&&wE>pS;var isLP=w<pE&&wE>=pE;
-          bp.style.cssText="position:absolute;top:5px;height:12px;background:"+ch.color+"99;border-radius:"+(isFP?"5px 0 0 5px":isLP?"0 5px 5px 0":"0")+";left:"+(isFP?"3":"0")+"px;right:"+(isLP?"3":"0")+"px;border:1px solid "+ch.color+"cc";
-          bp.title=ph.nom+(phNames?" — "+phNames:" ("+ph.effectif+" pers.)");
+          var isWConflict=!!conflictWeeks[ch.id+"_"+phi+"_"+wi];
+          var bpBorder=isWConflict?"2px solid #dc2626":"1px solid "+ch.color+"cc";
+          bp.style.cssText="position:absolute;top:5px;height:12px;background:"+ch.color+"99;border-radius:"+(isFP?"5px 0 0 5px":isLP?"0 5px 5px 0":"0")+";left:"+(isFP?"3":"0")+"px;right:"+(isLP?"3":"0")+"px;border:"+bpBorder;
+          var plainNames=(ph.salariesIds||[]).map(function(sid){var s=(D.salaries||[]).find(function(x){return x.id===sid;});return s?s.prenom||s.nom:"?";}).join(", ");
+          bp.title=ph.nom+(plainNames?" — "+plainNames:" ("+ph.effectif+" pers.)")+(isWConflict?" ⚠️ doublon cette semaine":"");
           td.appendChild(bp);
+          // Surimpression rouge sur les semaines en conflit
+          if(isWConflict){
+            var ov=document.createElement("div");
+            ov.style.cssText="position:absolute;top:5px;height:12px;left:"+(isFP?"3":"0")+"px;right:"+(isLP?"3":"0")+"px;background:repeating-linear-gradient(135deg,rgba(220,38,38,.25),rgba(220,38,38,.25) 3px,transparent 3px,transparent 6px);border-radius:"+(isFP?"5px 0 0 5px":isLP?"0 5px 5px 0":"0");
+            td.appendChild(ov);
+          }
         }
         if(isNow3){var tl2=document.createElement("div");tl2.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.4";td.appendChild(tl2);}
         trPh.appendChild(td);
