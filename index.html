@@ -2878,20 +2878,26 @@ function printGantt(){
 
   var ganttCss=
     "@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');"+
+    // Forcer l'impression des couleurs de fond (barres Gantt, en-têtes colorés)
+    "*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}"+
     "body{font-family:'DM Sans',sans-serif;background:#f1f5f9;padding:12px;font-size:10px;color:#13201e;margin:0}"+
     ".header-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;border-bottom:2px solid #13201e;padding-bottom:6px}"+
     ".logo-txt{font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:#13201e}"+
     "h1{font-size:13px;font-weight:700;margin:0;font-family:Syne,sans-serif}"+
     ".subtitle{font-size:10px;color:#6b7c79}"+
-    // Tableau Gantt - styles inline préservés mais on fixe le fond général
+    // Tableau Gantt : supprimer overflow et sticky (incompatibles avec l'impression)
     "div[style*='overflow-x']{overflow:visible!important;max-height:none!important}"+
     "table{border-collapse:collapse;font-size:9px}"+
+    // Les th/td sticky posent problème à l'impression : les désactiver
+    "th[style*='position:sticky'],td[style*='position:sticky']{position:static!important}"+
     "th,td{border:1px solid #cbd5e1!important;padding:3px 4px!important;white-space:nowrap}"+
+    // Les td avec position:relative et height doivent être préservées pour les barres absolues
+    "td[style*='position:relative']{position:relative!important;overflow:visible!important}"+
     // Légende
     "#gantt-legend,div[id='gantt-legend']{display:flex;gap:12px;margin-bottom:8px;font-size:10px;color:#475569;flex-wrap:wrap;align-items:center}"+
     // Carte de charge mensuelle
     "div[style*='background:#1e293b']{color:#fff!important}"+
-    // Boutons ajout phase déjà retirés
+    // Boutons masqués
     "@page{size:A3 landscape;margin:8mm}"+
     "@media print{body{padding:4px}button{display:none!important}}";
 
