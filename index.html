@@ -5050,6 +5050,11 @@ function RGANTT(){
     addPh.textContent="+ phase";
     addPh.onclick=(function(cid){return function(e){e.stopPropagation();editGanttPhase(cid,null);RGANTT();};})(ch.id);
     tdN.appendChild(addPh);
+    var addST=document.createElement("button");addST.title="Ajouter un sous-traitant";
+    addST.style.cssText="margin-left:4px;border:1px solid #f59e0b;background:none;color:#b45309;border-radius:4px;font-size:10px;padding:1px 5px;cursor:pointer;vertical-align:middle";
+    addST.textContent="+ ST";
+    addST.onclick=(function(cid){return function(e){e.stopPropagation();editGanttST(cid,null);RGANTT();};})(ch.id);
+    tdN.appendChild(addST);
     tr.appendChild(tdN);
 
     var tdD=document.createElement("td");
@@ -5136,6 +5141,41 @@ function RGANTT(){
         trPh.appendChild(td);
       });
       tbody.appendChild(trPh);
+    });
+
+    // ── Lignes sous-traitants ──
+    (ch.sousTraitants||[]).forEach(function(st,sti){
+      var bgST="#fffbeb";
+      var trST=document.createElement("tr");
+      var tdSTN=document.createElement("td");
+      tdSTN.style.cssText="border:1px solid #e2e8f0;padding:3px 8px;white-space:nowrap;position:sticky;left:0;background:"+bgST+";z-index:1;min-width:"+LW+"px;font-size:11px;color:#92400e";
+      var editST=document.createElement("button");editST.style.cssText="margin-right:5px;border:none;background:none;cursor:pointer;font-size:11px;padding:0";editST.textContent="✏️";
+      editST.onclick=(function(cid,sidx){return function(e){e.stopPropagation();editGanttST(cid,sidx);}})(ch.id,sti);
+      tdSTN.appendChild(editST);
+      tdSTN.appendChild(document.createTextNode("🔧 "+st.nom));
+      trST.appendChild(tdSTN);
+      var tdSTD=document.createElement("td");
+      tdSTD.style.cssText="border:1px solid #e2e8f0;padding:3px 8px;font-size:10px;min-width:"+DW+"px;background:"+bgST+";color:#92400e";
+      tdSTD.textContent=(st.debut&&st.fin)?fmt2(st.debut)+" → "+fmt2(st.fin):st.debut?fmt2(st.debut):"";
+      trST.appendChild(tdSTD);
+      var stS=st.debut?new Date(st.debut):null;
+      var stE=st.fin?new Date(st.fin):null;
+      weeks.forEach(function(w){
+        var wE=new Date(w.getTime()+7*24*60*60*1000);
+        var td=document.createElement("td");
+        var isNowST=(w<=today&&today<wE);
+        td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;height:22px;position:relative;background:"+(isNowST?"#fce7f3":bgST);
+        if(stS&&stE&&w<stE&&wE>stS){
+          var bs=document.createElement("div");
+          var isFST=w<=stS&&wE>stS;var isLST=w<stE&&wE>=stE;
+          bs.style.cssText="position:absolute;top:5px;height:12px;background:repeating-linear-gradient(135deg,#f59e0b,#f59e0b 3px,rgba(255,255,255,.5) 3px,rgba(255,255,255,.5) 6px);border-radius:"+(isFST?"5px 0 0 5px":isLST?"0 5px 5px 0":"0")+";left:"+(isFST?"3":"0")+"px;right:"+(isLST?"3":"0")+"px;border:1px solid #f59e0b";
+          bs.title=st.nom;
+          td.appendChild(bs);
+        }
+        if(isNowST){var tl3=document.createElement("div");tl3.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.4";td.appendChild(tl3);}
+        trST.appendChild(td);
+      });
+      tbody.appendChild(trST);
     });
   });
 
@@ -5408,6 +5448,43 @@ function editGanttPhase(chId, phaseIdx){
   setTimeout(function(){iNom.focus();},50);
 }
 
+function editGanttST(chId, stIdx){
+  var ch=D.chantiers.find(function(c){return c.id===chId;});if(!ch)return;
+  if(!ch.sousTraitants)ch.sousTraitants=[];
+  var isNew=(stIdx===null||stIdx===undefined);
+  var st=isNew?{nom:"",debut:"",fin:""}:Object.assign({},ch.sousTraitants[stIdx]);
+  var existing=document.getElementById("gantt-st-modal");if(existing)existing.remove();
+  var modal=document.createElement("div");modal.id="gantt-st-modal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
+  var box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:14px;padding:24px 28px;max-width:400px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:DM Sans,sans-serif";
+  var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:14px;color:#92400e";
+  title.textContent=(isNew?"➕ Nouveau sous-traitant — ":"✏️ Modifier sous-traitant — ")+(ch.ref?ch.ref+" ":"")+ch.nom;
+  box.appendChild(title);
+  function mkRow(label,inp){var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px;margin-bottom:10px";var lbl=document.createElement("label");lbl.style.cssText="font-size:12px;font-weight:500;width:130px;flex-shrink:0;color:#475569";lbl.textContent=label;row.appendChild(lbl);row.appendChild(inp);box.appendChild(row);return inp;}
+  var iNom=mkRow("Entreprise / nom",Object.assign(document.createElement("input"),{type:"text",value:st.nom,placeholder:"ex: Maçonnerie Dupont",style:"flex:1;height:32px;border:1px solid #fcd34d;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var iDeb=mkRow("Date début",Object.assign(document.createElement("input"),{type:"date",value:st.debut,style:"flex:1;height:32px;border:1px solid #fcd34d;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var iFin=mkRow("Date fin",Object.assign(document.createElement("input"),{type:"date",value:st.fin,style:"flex:1;height:32px;border:1px solid #fcd34d;border-radius:6px;padding:0 8px;font-size:12px;outline:none"}));
+  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:8px";
+  var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#92400e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
+  okBtn.onclick=function(){
+    var nst={nom:iNom.value.trim(),debut:iDeb.value,fin:iFin.value};
+    if(!nst.nom){alert("Saisissez un nom.");return;}
+    if(isNew)ch.sousTraitants.push(nst);else ch.sousTraitants[stIdx]=nst;
+    save();modal.remove();RGANTT();
+  };
+  if(!isNew){
+    var delBtn=document.createElement("button");delBtn.style.cssText="height:36px;padding:0 14px;background:#fee2e2;border:none;color:#dc2626;border-radius:8px;font-size:13px;cursor:pointer";delBtn.textContent="Supprimer";
+    delBtn.onclick=function(){if(confirm("Supprimer ce sous-traitant ?")){ch.sousTraitants.splice(stIdx,1);save();modal.remove();RGANTT();}};
+    btnRow.appendChild(delBtn);
+  }
+  var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
+  cancelBtn.onclick=function(){modal.remove();};
+  btnRow.appendChild(okBtn);btnRow.appendChild(cancelBtn);box.appendChild(btnRow);
+  modal.appendChild(box);document.body.appendChild(modal);
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+  setTimeout(function(){iNom.focus();},50);
+}
 
 function editChAnalyse(id){
   var ch=D.chantiers.find(function(c){return c.id===id;});if(!ch)return;
