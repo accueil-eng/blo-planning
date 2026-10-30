@@ -5020,8 +5020,9 @@ function RGANTT(){
 
     // ── Ligne principale chantier ──
     var tr=document.createElement("tr");
+    tr.style.borderTop="2px solid #000";
     var tdN=document.createElement("td");
-    tdN.style.cssText="border:1px solid #e2e8f0;padding:5px 8px;font-weight:700;white-space:nowrap;position:sticky;left:0;background:"+bg+";z-index:1;min-width:"+LW+"px;font-size:12px";
+    tdN.style.cssText="border-top:2px solid #000;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:5px 8px;font-weight:700;white-space:nowrap;position:sticky;left:0;background:"+bg+";z-index:1;min-width:"+LW+"px;font-size:12px";
     var dot=document.createElement("span");dot.style.cssText="display:inline-block;width:9px;height:9px;border-radius:50%;background:"+ch.color+";margin-right:6px;vertical-align:middle";
     tdN.appendChild(dot);
     tdN.appendChild(document.createTextNode((ch.ref?ch.ref+" - ":"")+ch.nom));
@@ -5034,7 +5035,7 @@ function RGANTT(){
     tr.appendChild(tdN);
 
     var tdD=document.createElement("td");
-    tdD.style.cssText="border:1px solid #e2e8f0;padding:4px 8px;font-size:10px;min-width:"+DW+"px;background:"+bg;
+    tdD.style.cssText="border-top:2px solid #000;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:4px 8px;font-size:10px;min-width:"+DW+"px;background:"+bg;
     var hh="";
     if(ch.dateDebutPrev&&ch.dateFinPrev)hh+="<div style='color:#7c3aed'>□ "+fmt2(ch.dateDebutPrev)+" → "+fmt2(ch.dateFinPrev)+"</div>";
     else if(ch.dateDebutPrev)hh+="<div style='color:#7c3aed'>□ Début: "+fmt2(ch.dateDebutPrev)+"</div>";
@@ -5054,7 +5055,7 @@ function RGANTT(){
       var wE=new Date(w.getTime()+7*24*60*60*1000);
       var td=document.createElement("td");
       var isNow2=(w<=today&&today<wE);
-      td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:32px;position:relative;background:"+(isNow2?"#fce7f3":bg);
+      td.style.cssText="border-top:2px solid #000;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:0;width:"+WW+"px;min-width:"+WW+"px;height:32px;position:relative;background:"+(isNow2?"#fce7f3":bg);
       if(chS&&chE&&w<chE&&wE>chS){
         var b=document.createElement("div");
         var isFstP=w<=chS&&wE>chS;var isLstP=w<chE&&wE>=chE;
