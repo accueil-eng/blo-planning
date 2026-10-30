@@ -5033,6 +5033,39 @@ function RGANTT(){
     });
   });
 
+  // ── Calcul des absences par salarié par semaine ──
+  // absIcon[type] → emoji
+  var absIcon={cp:"🏖",conge:"🏖",maladie:"🤒",css:"🤒",arret:"🤒",formation:"📚",ecole:"📚",intemp:"🌧",intemperies:"🌧",autre:"🚫"};
+  // absenceMap[chId+"_"+phIdx] = [{salId, salPrenom, icon, debut, fin, type}]
+  // absenceWeeks[chId+"_"+phIdx+"_"+wi] = true
+  var absenceMap={};
+  var absenceWeeks={};
+  allChantiers.forEach(function(c1){
+    (c1.phases||[]).forEach(function(p1,pi1){
+      if(!p1.debut||!p1.fin||(p1.salariesIds||[]).length===0)return;
+      var d1=new Date(p1.debut),f1=new Date(p1.fin);
+      (p1.salariesIds||[]).forEach(function(sid){
+        (D.absences||[]).forEach(function(ab){
+          if(ab.salId!==sid)return;
+          var aS=new Date(ab.debut),aE=new Date(ab.fin);
+          if(d1>aE||f1<aS)return; // pas de chevauchement
+          var sal=(D.salaries||[]).find(function(s){return s.id===sid;});
+          var key=c1.id+"_"+pi1;
+          if(!absenceMap[key])absenceMap[key]=[];
+          var already=absenceMap[key].find(function(x){return x.salId===sid&&x.debut===ab.debut;});
+          if(!already){
+            var t=(ab.type||"autre").toLowerCase();
+            absenceMap[key].push({salId:sid,salPrenom:sal?(sal.prenom||sal.nom):"?",icon:absIcon[t]||"🚫",debut:ab.debut,fin:ab.fin,type:ab.type||"absence"});
+          }
+          weeks.forEach(function(w,wi){
+            var wE=new Date(w.getTime()+7*24*60*60*1000);
+            if(w<aE&&wE>aS&&w<f1&&wE>d1)absenceWeeks[key+"_"+wi]=true;
+          });
+        });
+      });
+    });
+  });
+
   // ── Calcul des conflits salariés (doublon sur même période) ──
   // conflictMap[chId+"_"+phIdx] = [{salPrenom, autreChantierNom}]
   // conflictWeeks[chId+"_"+phIdx+"_"+wi] = true  → barre rouge cette semaine
@@ -5147,6 +5180,7 @@ function RGANTT(){
       var bgPh=ri%2===0?"#fef9c3":"#dde3ee";
       tdPName.style.cssText="border:1px solid #e2e8f0;padding:3px 8px 3px 22px;white-space:nowrap;position:sticky;left:0;background:"+bgPh+";z-index:1;min-width:"+LW+"px;font-size:11px;color:#3730a3";
       var phConflicts=conflictMap[ch.id+"_"+phi]||[];
+      var phAbsences=absenceMap[ch.id+"_"+phi]||[];
       var conflictSalIds=phConflicts.map(function(x){return x.salId;});
       var phNamesHtml=(ph.salariesIds||[]).map(function(sid){
         var s=(D.salaries||[]).find(function(x){return x.id===sid;});
@@ -5156,6 +5190,12 @@ function RGANTT(){
           var cfs=phConflicts.filter(function(x){return x.salId===sid;});
           var tooltip=prenom+" aussi sur : "+cfs.map(function(x){return x.autreChantierNom;}).join(", ");
           return "<span style='color:#dc2626;font-weight:700' title='"+tooltip+"'>⚠️ "+prenom+"</span>";
+        }
+        var absSal=phAbsences.filter(function(x){return x.salId===sid;});
+        if(absSal.length>0){
+          var icon=absSal[0].icon;
+          var tooltip=prenom+" absent : "+absSal.map(function(x){return x.icon+" "+x.type+" ("+new Date(x.debut).toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" → "+new Date(x.fin).toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+")";}).join(", ");
+          return "<span style='color:#d97706;font-weight:700' title='"+tooltip+"'>"+icon+" "+prenom+"</span>";
         }
         return "<span>"+prenom+"</span>";
       }).join("<span style='color:#9ca3af'>, </span>");
@@ -5200,6 +5240,13 @@ function RGANTT(){
             var ov=document.createElement("div");
             ov.style.cssText="position:absolute;top:5px;height:12px;left:"+(isFP?"3":"0")+"px;right:"+(isLP?"3":"0")+"px;background:repeating-linear-gradient(135deg,rgba(220,38,38,.25),rgba(220,38,38,.25) 3px,transparent 3px,transparent 6px);border-radius:"+(isFP?"5px 0 0 5px":isLP?"0 5px 5px 0":"0");
             td.appendChild(ov);
+          }
+          // Surimpression orange sur les semaines d'absence
+          var isWAbsence=!!absenceWeeks[ch.id+"_"+phi+"_"+wi];
+          if(isWAbsence&&!isWConflict){
+            var ovA=document.createElement("div");
+            ovA.style.cssText="position:absolute;top:5px;height:12px;left:"+(isFP?"3":"0")+"px;right:"+(isLP?"3":"0")+"px;background:repeating-linear-gradient(45deg,rgba(217,119,6,.3),rgba(217,119,6,.3) 3px,transparent 3px,transparent 6px);border-radius:"+(isFP?"5px 0 0 5px":isLP?"0 5px 5px 0":"0");
+            td.appendChild(ovA);
           }
         }
         if(isNow3){var tl2=document.createElement("div");tl2.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.4";td.appendChild(tl2);}
