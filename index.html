@@ -881,11 +881,11 @@ function loadFromCloud(cb, forceRemote){
     // (demandes soumises via QR mais pas encore poussées sur GitHub)
     var _localPending = (D&&D.absDemandes) ? D.absDemandes.filter(function(d){return d.status==="pending";}) : [];
 
-    if(GH_TOKEN && !forceRemote){
-      // Bureau multi-ordi : règle simple basée uniquement sur les timestamps _savedAt
-      // Si GitHub est plus récent → appliquer (Alexis a saisit sur son ordi)
-      // Si local est plus récent → garder local (on vient de saisir ici)
-      // recentlySaved ignoré : il bloquait la sync quand l'autre ordi venait de pusher
+    if(!forceRemote){
+      // Protection des données locales basée sur les timestamps _savedAt
+      // Si local est plus récent → garder local (on vient de saisir ici), même sans token
+      // Si GitHub est plus récent → appliquer (autre ordi a pushé)
+      // Note: la protection s'applique toujours, token ou pas, pour éviter les pertes de données
       var remoteNewer = remoteSavedAt > 0 && remoteSavedAt > localSavedAt;
       var localNewer  = localSavedAt  > 0 && localSavedAt  > remoteSavedAt;
 
@@ -1240,11 +1240,17 @@ function _doGithubSave(){
         _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
         var msg=res.data&&res.data.message?res.data.message:"code "+res.status;
         var ind3=document.getElementById("sind");
-        if(ind3){ind3.textContent="❌ GitHub : "+msg;ind3.style.opacity="1";ind3.style.color="#dc2626";}
-        showToast("❌ Erreur GitHub : "+msg,8000);
-        // Auto-retry après 20 secondes
+        if(ind3){ind3.textContent="⏳ GitHub : conflit, nouvelle tentative...";ind3.style.opacity="1";ind3.style.color="#d97706";}
+        // Conflit SHA (409/422) → réessayer immédiatement avec un nouveau SHA
+        // Autre erreur → réessayer après 8 secondes
         clearTimeout(_ghSaveRetryTimer);
-        _ghSaveRetryTimer=setTimeout(function(){_pendingSaveCount=0;_doGithubSave();},20000);
+        var retryDelay=(res.status===409||res.status===422)?500:8000;
+        if(res.status!==401&&res.status!==403){
+          _ghSaveRetryTimer=setTimeout(function(){_pendingSaveCount=0;_ghSha=null;_doGithubSave();},retryDelay);
+        } else {
+          if(ind3){ind3.textContent="❌ GitHub : "+msg;ind3.style.opacity="1";ind3.style.color="#dc2626";}
+          showToast("❌ Erreur GitHub : "+msg,8000);
+        }
       }
     })
     .catch(function(e){
@@ -1410,7 +1416,7 @@ function TAB(n){
   if(n==="planning")RP();if(n==="chantiers")RC();if(n==="salaries")RS();if(n==="absences"){RA();RABSDEMANDES();}if(n==="vehicules")RV();
   if(n==="pointage")RPOINTAGE();
   // Auto-sync when opening RDV tab
-  if(n==="rdv"){loadFromCloud(function(){RRDV();});}
+  if(n==="rdv"){RRDV();}
   if(n==="gantt"){RGANTT();}
   if(n==="bilan"){RBILAN();}
   if(n==="rttrecap"){RRTTRECAP();}
@@ -1657,7 +1663,7 @@ function _showMultiDayModal(sid,ck,fromCk,startDay,sal){
         chObj.dateDebut=dates[minDay].toISOString().split("T")[0];
       }
     }
-    modal.remove();save();RP();RC();RANALYSE();
+    modal.remove();saveNow();RP();RC();RANALYSE();
   };
   var cancelBtn=document.createElement("button");
   cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";
@@ -2983,13 +2989,13 @@ function confirmGroupAbs(){
     D.absences.push({id:"abs_"+Date.now()+"_"+salId,salId:salId,debut:debut,fin:fin,type:type});
   });
   if(typeof _cleanedAbsenceMonths!=="undefined")_cleanedAbsenceMonths={};
-  save();
+  saveNow();
   document.getElementById("group-abs-modal").remove();
   showToast("✅ "+checked.length+" absence(s) créée(s) !");
   RA();
 }
 
-function addAbs(){var salId=document.getElementById("absal").value,debut=document.getElementById("abd").value,fin=document.getElementById("abf").value,type=document.getElementById("abt").value;var heureDebut=document.getElementById("abhd").value,heureFin=document.getElementById("abhf").value;if(!salId||!debut||!fin){alert("Remplir tous les champs.");return;}if(debut>fin){alert("Date fin après début.");return;}var entry={id:"abs_"+Date.now(),salId:salId,debut:debut,fin:fin,type:type};if(heureDebut)entry.heureDebut=heureDebut;if(heureFin)entry.heureFin=heureFin;D.absences.push(entry);if(typeof _cleanedAbsenceMonths!=="undefined")_cleanedAbsenceMonths={};save();document.getElementById("absal").value="";document.getElementById("abd").value="";document.getElementById("abf").value="";document.getElementById("abhd").value="";document.getElementById("abhf").value="";RA();}
+function addAbs(){var salId=document.getElementById("absal").value,debut=document.getElementById("abd").value,fin=document.getElementById("abf").value,type=document.getElementById("abt").value;var heureDebut=document.getElementById("abhd").value,heureFin=document.getElementById("abhf").value;if(!salId||!debut||!fin){alert("Remplir tous les champs.");return;}if(debut>fin){alert("Date fin après début.");return;}var entry={id:"abs_"+Date.now(),salId:salId,debut:debut,fin:fin,type:type};if(heureDebut)entry.heureDebut=heureDebut;if(heureFin)entry.heureFin=heureFin;D.absences.push(entry);if(typeof _cleanedAbsenceMonths!=="undefined")_cleanedAbsenceMonths={};saveNow();document.getElementById("absal").value="";document.getElementById("abd").value="";document.getElementById("abf").value="";document.getElementById("abhd").value="";document.getElementById("abhf").value="";RA();}
 function delAbs(id){D.absences=D.absences.filter(function(a){return a.id!==id;});save();RA();}
 function RA(){
   rafSel();var el=document.getElementById("abslist");
@@ -4360,7 +4366,7 @@ function editRDV(id){
     if(!fNom.value.trim()){alert("Nom requis");return;}
     rdv.date=fDate.value;rdv.nom=fNom.value.trim();rdv.adresse=fAdr.value.trim();
     rdv.tel=fTel.value.trim();rdv.mail=fMail.value.trim();rdv.travaux=fTrav.value.trim();rdv.obs=fObs.value.trim();
-    save();modal.remove();RRDV();
+    saveNow();modal.remove();RRDV();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
@@ -4378,7 +4384,7 @@ function addFormation(){
   var delai=parseInt(document.getElementById("fdelai").value);
   if(!D.formations)D.formations=[];
   D.formations.push({id:"form_"+Date.now(),salId:salId,nom:nom,date:document.getElementById("fdeb").value,org:document.getElementById("forg").value.trim(),renouv:renouv,delai:delai,obs:document.getElementById("fobs").value.trim(),nextdeb:document.getElementById("fnextdeb").value,nextfin:document.getElementById("fnextfin").value});
-  save();
+  saveNow();
   document.getElementById("fnom").value="";document.getElementById("fdeb").value="";document.getElementById("forg").value="";
   document.getElementById("frenouv").value="non";document.getElementById("fdelai").value="1";
   document.getElementById("fobs").value="";document.getElementById("fnextdeb").value="";document.getElementById("fnextfin").value="";
@@ -4492,7 +4498,7 @@ function editFormation(id){
     if(!fNom.value.trim()){alert("Intitulé requis");return;}
     f.salId=fSal.value;f.nom=fNom.value.trim();f.date=fDate.value;f.org=fOrg.value.trim();
     f.renouv=fRen.value;f.delai=parseInt(fDelai.value);f.obs=fObs.value.trim();f.nextdeb=fNextDeb.value;f.nextfin=fNextFin.value;
-    save();modal.remove();RF();
+    saveNow();modal.remove();RF();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
@@ -4833,7 +4839,7 @@ function addChantierFromGantt(){
       color:scGantt
     };
     D.chantiers.push(newCh);
-    save();modal.remove();
+    saveNow();modal.remove();
     RC();RGANTT();
     showToast("✅ Chantier "+newCh.ref+" créé !");
   };
@@ -4901,7 +4907,7 @@ function editGanttDates(id){
   okBtn.onclick=function(){
     ch.dateDebut=fDR.value;
     ch.jalons=jalons.filter(function(j){return j.nom||j.date;});
-    save();modal.remove();RGANTT();
+    saveNow();modal.remove();RGANTT();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
@@ -5600,7 +5606,7 @@ function editGanttPhase(chId, phaseIdx){
     var nph={nom:iNom.value.trim(),debut:iDeb.value,fin:iFin.value,salariesIds:selIds.slice(),effectif:selIds.length||1};
     if(!nph.nom){alert("Saisissez un nom de phase.");return;}
     if(isNew)ch.phases.push(nph);else ch.phases[phaseIdx]=nph;
-    save();modal.remove();RGANTT();
+    saveNow();modal.remove();RGANTT();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
@@ -5633,11 +5639,11 @@ function editGanttST(chId, stIdx){
     var nst={nom:iNom.value.trim(),debut:iDeb.value,fin:iFin.value};
     if(!nst.nom){alert("Saisissez un nom.");return;}
     if(isNew)ch.sousTraitants.push(nst);else ch.sousTraitants[stIdx]=nst;
-    save();modal.remove();RGANTT();
+    saveNow();modal.remove();RGANTT();
   };
   if(!isNew){
     var delBtn=document.createElement("button");delBtn.style.cssText="height:36px;padding:0 14px;background:#fee2e2;border:none;color:#dc2626;border-radius:8px;font-size:13px;cursor:pointer";delBtn.textContent="Supprimer";
-    delBtn.onclick=function(){if(confirm("Supprimer ce sous-traitant ?")){ch.sousTraitants.splice(stIdx,1);save();modal.remove();RGANTT();}};
+    delBtn.onclick=function(){if(confirm("Supprimer ce sous-traitant ?")){ch.sousTraitants.splice(stIdx,1);saveNow();modal.remove();RGANTT();}};
     btnRow.appendChild(delBtn);
   }
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
@@ -5688,7 +5694,7 @@ function editChAnalyse(id){
     ch.coutMat=fMat.value?parseFloat(fMat.value):null;
     ch.coutST=fST.value?parseFloat(fST.value):null;
     ch.coutFrais=fFrais.value?parseFloat(fFrais.value):null;
-    save();modal.remove();RANALYSE();
+    saveNow();modal.remove();RANALYSE();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
   cancelBtn.onclick=function(){modal.remove();};
