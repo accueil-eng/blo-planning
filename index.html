@@ -5359,9 +5359,8 @@ function RGANTT(){
     else if(pctCap>1){topLbl.innerHTML="▲"+val+"/"+cap;}
     else{topLbl.innerHTML=val+"/"+cap;}
     td.appendChild(topLbl);
-    // Noms verticaux : conflits (rouge) puis absences (orange)
+    // Noms verticaux : absences uniquement (orange)
     var alertes=[];
-    (alertesConflits[wi]||[]).forEach(function(x){alertes.push({prenom:x.prenom,color:"#dc2626",icon:"⚠️"});});
     (alertesAbsences[wi]||[]).forEach(function(x){alertes.push({prenom:x.prenom,color:"#d97706",icon:x.icon});});
     if(alertes.length>0){
       var vertWrap=document.createElement("div");
