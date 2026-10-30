@@ -5360,6 +5360,8 @@ function RGANTT(){
     else{topLbl.innerHTML=val+"/"+cap;}
     td.appendChild(topLbl);
     var alertes=[];
+    (alertesConflits[wi]||[]).forEach(function(x){alertes.push({prenom:x.prenom,color:"#dc2626",icon:"⚠️"});});
+    (alertesAbsences[wi]||[]).forEach(function(x){alertes.push({prenom:x.prenom,color:"#d97706",icon:x.icon});});
     if(isNowC){var tl=document.createElement("div");tl.style.cssText="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#dc2626;opacity:.5;z-index:3";td.appendChild(tl);}
     // Tooltip survol riche si conflits ou absences
     if(alertes.length>0){
