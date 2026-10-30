@@ -5016,7 +5016,7 @@ function RGANTT(){
   });
 
   chantiers.forEach(function(ch,ri){
-    var bg=ri%2===0?"#fff":"#f8f7f4";
+    var bg=ri%2===0?"#ffffff":"#e8edf2";
 
     // ── Ligne principale chantier ──
     var tr=document.createElement("tr");
@@ -5075,7 +5075,8 @@ function RGANTT(){
     (ch.phases||[]).forEach(function(ph,phi){
       var trPh=document.createElement("tr");
       var tdPName=document.createElement("td");
-      tdPName.style.cssText="border:1px solid #e2e8f0;padding:3px 8px 3px 22px;white-space:nowrap;position:sticky;left:0;background:#f0f4ff;z-index:1;min-width:"+LW+"px;font-size:11px;color:#3730a3";
+      var bgPh=ri%2===0?"#eef2ff":"#dde3ee";
+      tdPName.style.cssText="border:1px solid #e2e8f0;padding:3px 8px 3px 22px;white-space:nowrap;position:sticky;left:0;background:"+bgPh+";z-index:1;min-width:"+LW+"px;font-size:11px;color:#3730a3";
       tdPName.innerHTML="<span style='margin-right:5px;color:"+ch.color+"'>↳</span><b>"+ph.nom+"</b><span style='color:#6b7280;margin-left:6px;font-size:10px'>"+ph.effectif+" pers.</span>";
       var delPh=document.createElement("button");delPh.title="Supprimer";
       delPh.style.cssText="margin-left:6px;border:none;background:none;color:#dc2626;cursor:pointer;font-size:11px;padding:0 2px";
@@ -5090,7 +5091,7 @@ function RGANTT(){
       trPh.appendChild(tdPName);
 
       var tdPD=document.createElement("td");
-      tdPD.style.cssText="border:1px solid #e2e8f0;padding:3px 8px;font-size:10px;min-width:"+DW+"px;background:#f0f4ff;color:#4338ca";
+      tdPD.style.cssText="border:1px solid #e2e8f0;padding:3px 8px;font-size:10px;min-width:"+DW+"px;background:"+bgPh+";color:#4338ca";
       tdPD.textContent=fmt2(ph.debut)+" → "+fmt2(ph.fin);
       trPh.appendChild(tdPD);
 
@@ -5100,7 +5101,7 @@ function RGANTT(){
         var wE=new Date(w.getTime()+7*24*60*60*1000);
         var td=document.createElement("td");
         var isNow3=(w<=today&&today<wE);
-        td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;height:22px;position:relative;background:"+(isNow3?"#fef9c3":"#f0f4ff");
+        td.style.cssText="border:1px solid #e2e8f0;padding:0;width:"+WW+"px;height:22px;position:relative;background:"+(isNow3?"#fef9c3":bgPh);
         if(pS&&pE&&w<pE&&wE>pS){
           var bp=document.createElement("div");
           var isFP=w<=pS&&wE>pS;var isLP=w<pE&&wE>=pE;
