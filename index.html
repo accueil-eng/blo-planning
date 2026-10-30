@@ -5152,7 +5152,7 @@ function RGANTT(){
       var editST=document.createElement("button");editST.style.cssText="margin-right:5px;border:none;background:none;cursor:pointer;font-size:11px;padding:0";editST.textContent="✏️";
       editST.onclick=(function(cid,sidx){return function(e){e.stopPropagation();editGanttST(cid,sidx);}})(ch.id,sti);
       tdSTN.appendChild(editST);
-      tdSTN.appendChild(document.createTextNode("🔧 "+st.nom));
+      tdSTN.appendChild(document.createTextNode("🔧 STT - "+st.nom));
       trST.appendChild(tdSTN);
       var tdSTD=document.createElement("td");
       tdSTD.style.cssText="border:1px solid #e2e8f0;padding:3px 8px;font-size:10px;min-width:"+DW+"px;background:"+bgST+";color:#92400e";
