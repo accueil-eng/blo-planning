@@ -5160,7 +5160,7 @@ function RGANTT(){
         return "<span>"+prenom+"</span>";
       }).join("<span style='color:#9ca3af'>, </span>");
       var phLabel=phNamesHtml||((ph.effectif||1)+" pers.");
-      var conflictBadge=phConflicts.length>0?"<span style='margin-left:5px;color:#dc2626;font-size:10px;font-weight:700' title='"+phConflicts.map(function(x){return x.salPrenom+" → "+x.autreChantierNom;}).join(" | ")+"'>⚠️ doublon</span>":"";
+      var conflictBadge=phConflicts.length>0?"<span style='margin-left:5px;color:#dc2626;font-size:10px;font-weight:700' title='"+phConflicts.map(function(x){return x.salPrenom+" → "+x.autreChantierNom;}).join(" | ")+"'>⚠️</span>":"";
       tdPName.innerHTML="<span style='margin-right:5px;color:"+ch.color+"'>↳</span><b>"+ph.nom+"</b>"+conflictBadge+"<span style='color:#6b7280;margin-left:6px;font-size:10px'>"+phLabel+"</span>";
       var delPh=document.createElement("button");delPh.title="Supprimer";
       delPh.style.cssText="margin-left:6px;border:none;background:none;color:#dc2626;cursor:pointer;font-size:11px;padding:0 2px";
@@ -5193,7 +5193,7 @@ function RGANTT(){
           var bpBorder=isWConflict?"2px solid #dc2626":"1px solid "+ch.color+"cc";
           bp.style.cssText="position:absolute;top:5px;height:12px;background:"+ch.color+"99;border-radius:"+(isFP?"5px 0 0 5px":isLP?"0 5px 5px 0":"0")+";left:"+(isFP?"3":"0")+"px;right:"+(isLP?"3":"0")+"px;border:"+bpBorder;
           var plainNames=(ph.salariesIds||[]).map(function(sid){var s=(D.salaries||[]).find(function(x){return x.id===sid;});return s?s.prenom||s.nom:"?";}).join(", ");
-          bp.title=ph.nom+(plainNames?" — "+plainNames:" ("+ph.effectif+" pers.)")+(isWConflict?" ⚠️ doublon cette semaine":"");
+          bp.title=ph.nom+(plainNames?" — "+plainNames:" ("+ph.effectif+" pers.)")+(isWConflict?" ⚠️ conflit cette semaine":"");
           td.appendChild(bp);
           // Surimpression rouge sur les semaines en conflit
           if(isWConflict){
