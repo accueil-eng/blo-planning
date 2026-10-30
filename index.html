@@ -5075,7 +5075,7 @@ function RGANTT(){
     (ch.phases||[]).forEach(function(ph,phi){
       var trPh=document.createElement("tr");
       var tdPName=document.createElement("td");
-      var bgPh=ri%2===0?"#eef2ff":"#dde3ee";
+      var bgPh=ri%2===0?"#fef9c3":"#dde3ee";
       tdPName.style.cssText="border:1px solid #e2e8f0;padding:3px 8px 3px 22px;white-space:nowrap;position:sticky;left:0;background:"+bgPh+";z-index:1;min-width:"+LW+"px;font-size:11px;color:#3730a3";
       tdPName.innerHTML="<span style='margin-right:5px;color:"+ch.color+"'>↳</span><b>"+ph.nom+"</b><span style='color:#6b7280;margin-left:6px;font-size:10px'>"+ph.effectif+" pers.</span>";
       var delPh=document.createElement("button");delPh.title="Supprimer";
