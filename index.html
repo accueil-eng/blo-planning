@@ -972,6 +972,12 @@ function loadFromCloud(cb, forceRemote){
     _savedAt=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
     var v=document.getElementById("ver-display");
     if(v){v.textContent="☁️ Chargé le "+_savedAt;v.style.color="#0891b2";}
+    // Chargement réussi depuis GitHub = synchronisation établie → mettre à jour le timestamp
+    // pour éviter que la bannière de sync s'affiche inutilement (elle ne doit apparaître
+    // que si Alexis a des changements locaux non poussés depuis longtemps, pas au simple chargement)
+    if(applied){
+      localStorage.setItem("blo_last_github_sync", now.getTime()+"");
+    }
     if(cb)cb(applied);
   }
 
