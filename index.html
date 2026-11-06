@@ -2743,7 +2743,8 @@ function printPointage(forcedFilterId){
     cols.forEach(function(c){
       var dd=c.dt.getDate();
       var bdrL=c.isFirstOfWeek?"border-left:2px solid #7dd3fc;":"";
-      empHtml+="<th class='th-day' style='width:"+_dayW+"px;min-width:"+_dayW+"px;"+bdrL+"'>"+JOURS[c.di]+"<br>"+dd+"</th>";
+      var ferBg=isFerie(c.dt)?"background:#e5e7eb;color:#9ca3af;":"";
+      empHtml+="<th class='th-day' style='width:"+_dayW+"px;min-width:"+_dayW+"px;"+bdrL+ferBg+"'>"+JOURS[c.di]+"<br>"+dd+(isFerie(c.dt)?"<br><small>F</small>":"")+"</th>";
     });
     empHtml+="</tr>";
 
@@ -2769,6 +2770,7 @@ function printPointage(forcedFilterId){
       var ch=chantierMap[chId];
       var totalCh=0;
       var cellCh=cols.map(function(c){
+        if(isFerie(c.dt))return ""; // Jour férié : pas d'affectation chantier
         var stored=ptGet(mois,annee,"ch_"+chId,sal.id,c.wk,c.di);
         var ev=ptWasStored(mois,annee,"ch_"+chId,sal.id,c.wk,c.di);
         var def=ch.days[c.wk+"|"+c.di]||0;
@@ -2781,7 +2783,8 @@ function printPointage(forcedFilterId){
       empHtml+="<td class='td-ch-tot'>"+totalCh+"</td>";
       cellCh.forEach(function(v,i){
         var bdrL=cols[i].isFirstOfWeek?"border-left:2px solid #7dd3fc;":"";
-        empHtml+="<td style='"+bdrL+"color:#0369a1;font-weight:"+(v?"600":"400")+"'>"+v+"</td>";
+        var ferBg=isFerie(cols[i].dt)?"background:#e5e7eb;":"";
+        empHtml+="<td style='"+bdrL+ferBg+"color:#0369a1;font-weight:"+(v?"600":"400")+"'>"+v+"</td>";
       });
       empHtml+="</tr>";
     });
@@ -2791,6 +2794,7 @@ function printPointage(forcedFilterId){
       if(row.bureauOnly&&!sal.isBureau)return;
       var totalMois=0;
       var cellVals=cols.map(function(c){
+        if(isFerie(c.dt))return ""; // Jour férié : pas de valeur
         var v=ptGet(mois,annee,row.id,sal.id,c.wk,c.di);
         if(!v&&(row.id==="trajet"||row.id==="transport")){
           try{var _chZ=getChantierForSalDay(sal.id,c.dt);
@@ -2821,7 +2825,8 @@ function printPointage(forcedFilterId){
         empHtml+="<td class='td-tot'>"+(totalMois||"")+"</td>";
       cellVals.forEach(function(v,i){
         var bdrL=cols[i].isFirstOfWeek?"border-left:2px solid #bfdbfe;":"";
-        empHtml+="<td style='"+bdrL+"'>"+v+"</td>";
+        var ferBg=isFerie(cols[i].dt)?"background:#e5e7eb;":"";
+        empHtml+="<td style='"+bdrL+ferBg+"'>"+v+"</td>";
       });
       empHtml+="</tr>";
     });
@@ -5777,6 +5782,39 @@ var PT_ROWS = [
 var PT_ZONES = ["Z1A","Z1B","Z2","Z3","Z4","Z5","Z6","Z7","Z8","Z9","Z10"];
 var PT_DAYS  = ["L","M","M","J","V"];
 
+// ── Jours fériés français ──────────────────────────────────────────────────
+function getEasterDate(y){
+  var a=y%19,b=Math.floor(y/100),c=y%100;
+  var d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25);
+  var g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30;
+  var i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7;
+  var m=Math.floor((a+11*h+22*l)/451);
+  var month=Math.floor((h+l-7*m+114)/31);
+  var day=((h+l-7*m+114)%31)+1;
+  return new Date(y,month-1,day);
+}
+function isFerie(dt){
+  var d=dt.getDate(),m=dt.getMonth()+1,y=dt.getFullYear();
+  // Fériés fixes
+  if(m===1&&d===1)return true;   // Jour de l'An
+  if(m===5&&d===1)return true;   // Fête du Travail
+  if(m===5&&d===8)return true;   // Victoire 1945
+  if(m===7&&d===14)return true;  // Fête Nationale
+  if(m===8&&d===15)return true;  // Assomption
+  if(m===11&&d===1)return true;  // Toussaint
+  if(m===11&&d===11)return true; // Armistice
+  if(m===12&&d===25)return true; // Noël
+  // Fériés variables (basés sur Pâques)
+  var easter=getEasterDate(y);
+  var eT=easter.getTime(),DAY=86400000;
+  var t=new Date(y,m-1,d).getTime();
+  if(t===eT+DAY)return true;    // Lundi de Pâques
+  if(t===eT+39*DAY)return true; // Ascension
+  if(t===eT+50*DAY)return true; // Lundi de Pentecôte
+  return false;
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 function ptKey(mois,annee,section,salId,semaine,col){
   return annee+"-"+("0"+mois).slice(-2)+"|"+section+"|"+salId+"|S"+semaine+"|"+col;
 }
@@ -6581,7 +6619,10 @@ function RPOINTAGE(){
       var dates=getDatesOfWeek(wk,annee);
       dates.forEach(function(dt,di){
         var inM=(dt.getMonth()+1===mois&&dt.getFullYear()===annee);
-        html+="<th style='"+thStyle()+"width:36px;opacity:"+(inM?1:0.35)+"'>"+PT_DAYS[di]+"<br><span style='font-size:9px;color:#64748b'>"+dt.getDate()+"/"+(dt.getMonth()+1)+"</span></th>";
+        var isFer=inM&&isFerie(dt);
+        var ferBg=isFer?"background:#e5e7eb;":"";
+        var ferColor=isFer?"color:#9ca3af;":"color:#64748b;";
+        html+="<th style='"+thStyle()+"width:36px;opacity:"+(inM?1:0.35)+";"+ferBg+"'>"+PT_DAYS[di]+"<br><span style='font-size:9px;"+ferColor+"'>"+dt.getDate()+"/"+(dt.getMonth()+1)+(isFer?"<br><span style='font-size:8px'>🗓F</span>":"")+"</span></th>";
       });
       html+="<th style='"+thStyle()+"width:45px;background:#fef9c3'>Total</th>";
     });
@@ -6602,6 +6643,7 @@ function RPOINTAGE(){
           var dt2=dates2[d];
           var inM0=(dt2.getMonth()+1===mois&&dt2.getFullYear()===annee);
           if(!inM0)continue;
+          if(isFerie(dt2))continue; // Jour férié : non compté dans les totaux
           if(row.type==="zone_dd"){
             var zv=ptGet(mois,annee,row.id,sal.id,wk,d);
             // Auto-zone trajet et transport depuis le chantier si pas de valeur saisie
@@ -6653,6 +6695,12 @@ function RPOINTAGE(){
         var dates=getDatesOfWeek(wk,annee);
         var wkTotal=0;
         dates.forEach(function(dt,di){
+          // Jour férié : cellule grisée non éditable, aucune valeur
+          var _inM_=(dt.getMonth()+1===mois&&dt.getFullYear()===annee);
+          if(_inM_&&isFerie(dt)){
+            html+="<td style='"+tdStyle()+"background:#e5e7eb;cursor:default' title='Jour férié'></td>";
+            return;
+          }
           var val=ptGet(mois,annee,row.id,sal.id,wk,di);
           if(row.type==="rtt"){
             var inMonthR=(dt.getMonth()+1===mois&&dt.getFullYear()===annee);
@@ -7735,6 +7783,7 @@ function shouldAutoPanier(salId,dt){
   if(sal&&sal.noPanier)return false;
   // Alexis Parpaillon : jamais de panier (sécurité par nom)
   if(sal&&sal.prenom&&sal.prenom.toLowerCase().includes("alexis")&&sal.nom&&sal.nom.toLowerCase().includes("parpaillon"))return false;
+  if(isFerie(dt))return false; // Jour férié : pas de panier
   var dow=dt.getDay();
   return dow>=1&&dow<=5; // Jours ouvrés uniquement (1=lundi … 5=vendredi)
 }
