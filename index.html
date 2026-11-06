@@ -4930,8 +4930,11 @@ function editGanttDates(id){
   var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px;margin-top:4px";
   var okBtn=document.createElement("button");okBtn.style.cssText="flex:1;height:36px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";okBtn.textContent="Enregistrer";
   okBtn.onclick=function(){
-    ch.dateDebut=fDR.value;
-    ch.jalons=jalons.filter(function(j){return j.nom||j.date;});
+    // Re-fetch ch depuis D courant (D peut avoir été remplacé par le timer 60s pendant que le modal était ouvert)
+    var chNow=D.chantiers.find(function(c){return c.id===id;});
+    if(!chNow){modal.remove();return;}
+    chNow.dateDebut=fDR.value;
+    chNow.jalons=jalons.filter(function(j){return j.nom||j.date;});
     saveNow();modal.remove();RGANTT();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
@@ -5644,7 +5647,11 @@ function editGanttPhase(chId, phaseIdx){
   okBtn.onclick=function(){
     var nph={nom:iNom.value.trim(),debut:iDeb.value,fin:iFin.value,salariesIds:selIds.slice(),effectif:selIds.length||1};
     if(!nph.nom){alert("Saisissez un nom de phase.");return;}
-    if(isNew)ch.phases.push(nph);else ch.phases[phaseIdx]=nph;
+    // Re-fetch ch depuis D courant (D peut avoir été remplacé par le timer 60s pendant que le modal était ouvert)
+    var chNow=D.chantiers.find(function(c){return c.id===chId;});
+    if(!chNow){modal.remove();return;}
+    if(!chNow.phases)chNow.phases=[];
+    if(isNew)chNow.phases.push(nph);else chNow.phases[phaseIdx]=nph;
     saveNow();modal.remove();RGANTT();
   };
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
@@ -5677,12 +5684,16 @@ function editGanttST(chId, stIdx){
   okBtn.onclick=function(){
     var nst={nom:iNom.value.trim(),debut:iDeb.value,fin:iFin.value};
     if(!nst.nom){alert("Saisissez un nom.");return;}
-    if(isNew)ch.sousTraitants.push(nst);else ch.sousTraitants[stIdx]=nst;
+    // Re-fetch ch depuis D courant (D peut avoir été remplacé par le timer 60s pendant que le modal était ouvert)
+    var chNow=D.chantiers.find(function(c){return c.id===chId;});
+    if(!chNow){modal.remove();return;}
+    if(!chNow.sousTraitants)chNow.sousTraitants=[];
+    if(isNew)chNow.sousTraitants.push(nst);else chNow.sousTraitants[stIdx]=nst;
     saveNow();modal.remove();RGANTT();
   };
   if(!isNew){
     var delBtn=document.createElement("button");delBtn.style.cssText="height:36px;padding:0 14px;background:#fee2e2;border:none;color:#dc2626;border-radius:8px;font-size:13px;cursor:pointer";delBtn.textContent="Supprimer";
-    delBtn.onclick=function(){if(confirm("Supprimer ce sous-traitant ?")){ch.sousTraitants.splice(stIdx,1);saveNow();modal.remove();RGANTT();}};
+    delBtn.onclick=function(){if(confirm("Supprimer ce sous-traitant ?")){var chD=D.chantiers.find(function(c){return c.id===chId;});if(chD&&chD.sousTraitants)chD.sousTraitants.splice(stIdx,1);saveNow();modal.remove();RGANTT();}};
     btnRow.appendChild(delBtn);
   }
   var cancelBtn=document.createElement("button");cancelBtn.style.cssText="height:36px;padding:0 14px;background:none;border:1px solid #c0cccb;border-radius:8px;font-size:13px;cursor:pointer";cancelBtn.textContent="Annuler";
