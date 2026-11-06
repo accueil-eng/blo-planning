@@ -889,6 +889,24 @@ function loadFromCloud(cb, forceRemote){
       var remoteNewer = remoteSavedAt > 0 && remoteSavedAt > localSavedAt;
       var localNewer  = localSavedAt  > 0 && localSavedAt  > remoteSavedAt;
 
+      // Protection supplémentaire : si des changements locaux ne sont pas encore confirmés
+      // sur GitHub (push en cours ou en attente de retry), NE PAS écraser local même si
+      // remote semble plus récent (cas multi-utilisateurs : Quentin push pendant qu'Alexis saisit)
+      if(_hasPendingLocalChanges){
+        // Fusionner quand même les absDemandes du remote sans écraser le reste
+        if(remote.absDemandes&&remote.absDemandes.length){
+          if(!D.absDemandes)D.absDemandes=[];
+          var changed=false;
+          remote.absDemandes.forEach(function(rd){
+            if(!D.absDemandes.find(function(ld){return ld.id===rd.id;})){
+              D.absDemandes.push(rd);changed=true;
+            }
+          });
+          if(changed){localStorage.setItem(SK,JSON.stringify(D));updateAbsDemandesDot();}
+        }
+        return false;
+      }
+
       if(localNewer){
         // Local plus récent : garder local, fusionner quand même les absDemandes du remote
         if(remote.absDemandes&&remote.absDemandes.length){
@@ -1225,6 +1243,7 @@ function _doGithubSave(){
     .then(function(res){
       _pendingSaveCount=Math.max(0,_pendingSaveCount-1);
       if(res.status===200||res.status===201){
+        _hasPendingLocalChanges = false; // push confirmé → données locales = GitHub
         if(res.data.content) _ghSha = res.data.content.sha;
         var now=new Date();
         var readable=now.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" à "+String(now.getHours()).padStart(2,"0")+"h"+String(now.getMinutes()).padStart(2,"0");
@@ -1298,6 +1317,10 @@ function _doGithubSave(){
 var _saveAgainNeeded=false;
 
 var _lastLocalSaveAt = 0;
+// Flag : local a des changements non encore confirmés sur GitHub
+// Mis à true dès qu'une modif est faite, remis à false après push réussi
+// Tant que true → applyRemote() refuse d'écraser les données locales
+var _hasPendingLocalChanges = false;
 
 function _saveLocalBackup(){
   // Backup horaire : 1 par heure, gardés 7 jours (168 entrées max)
@@ -1315,6 +1338,7 @@ function _saveLocalBackup(){
 
 function save(){
   checkPlanningChangeForNotif();
+  _hasPendingLocalChanges = true; // changements locaux non encore confirmés sur GitHub
   _lastLocalSaveAt = Date.now();
   D._savedAt = _lastLocalSaveAt; // timestamp embarqué dans les données
   // Backup horaire avant chaque sauvegarde locale
@@ -1333,6 +1357,7 @@ function save(){
 // on fiches (chantier, salarié, etc.) to avoid data loss if the page is closed right after.
 function saveNow(){
   checkPlanningChangeForNotif();
+  _hasPendingLocalChanges = true; // changements locaux non encore confirmés sur GitHub
   _lastLocalSaveAt = Date.now();
   D._savedAt = _lastLocalSaveAt;
   localStorage.setItem(SK, JSON.stringify(D));
