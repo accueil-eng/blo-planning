@@ -3315,6 +3315,11 @@ function applyProfile(key) {
   var pushBtn2 = document.getElementById("push-now-btn");
   if(pushBtn2) pushBtn2.style.display = "none"; // masqué par défaut, _updateSyncWarning l'affiche si besoin
 
+  // Bouton changement de profil : masqué pour un salarié connecté via QR code
+  // (un salarié ne doit pas pouvoir accéder aux autres comptes)
+  var profileBtn = document.getElementById("profile-btn");
+  if(profileBtn) profileBtn.style.display = (key==="salarie" && _salLockedId) ? "none" : "flex";
+
   // ⚠️ Alerte si token manquant pour un profil bureau (écriture)
   // Ne pas afficher pour le profil salarié (il n'est pas censé avoir le token écriture)
   var noSyncBanner = document.getElementById("no-sync-banner");
