@@ -217,11 +217,13 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
     <button class="tb" onclick="TAB('gantt')">&#128197; Pr&#233;visionnel</button>
     <button class="tb" onclick="TAB('bilan')">&#128202; Bilan heures chantiers</button>
     <button class="tb" onclick="TAB('vehicules')">🚗 Véhicules</button>
+    <button class="tb" onclick="TAB('messages')" style="position:relative">💬 Messages<span id="messages-dot" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#dc2626"></span></button>
   </nav>
   <select id="salarie-tab-select" style="display:none;flex:1;min-width:0;height:44px;border:1px solid var(--brd2);border-radius:10px;padding:0 14px;font-size:14px;background:var(--bg);color:var(--txt);outline:none;font-weight:600" onchange="TAB(this.value)">
     <option value="planning">🗓️ Planning</option>
     <option value="absdemande">🏖 Demande d'absence</option>
     <option value="pointage">🕐 Pointage</option>
+    <option value="messages">💬 Messages</option>
     <option value="urgence">🆘 Urgence</option>
   </select>
   <span class="sind" id="sind">✓ Sauvegardé</span>
@@ -542,6 +544,11 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
   <div id="ad-mesdemandes" style="margin-top:24px;max-width:480px"></div>
 </div>
 
+<div class="pg" id="pg-messages" style="max-width:680px;margin:0 auto;padding-bottom:40px">
+  <h2 class="stitle">Messages</h2>
+  <div id="pg-messages-wrap"></div>
+</div>
+
 <div class="pg" id="pg-monrtt">
   <h2 class="stitle">Mon solde RTT — <span id="mrtt-annee-label"></span></h2>
   <div id="mrtt-wrap"></div>
@@ -594,9 +601,9 @@ var SK = "blo_planning_v1";
 var _saveTimer = null;
 var _ghSha = null; // SHA needed for updates
 
-var _defaultData = {"chantiers":[],"salaries":[],"cells":{},"rowChantiers":{},"absences":[],"livraisons":{},"vehicules":[],"vehAssign":{},"vehIndispo":{}};
+var _defaultData = {"chantiers":[],"salaries":[],"cells":{},"rowChantiers":{},"absences":[],"livraisons":{},"vehicules":[],"vehAssign":{},"vehIndispo":{},"messages":[]};
 var D = JSON.parse(localStorage.getItem(SK)||"null")||_defaultData;
-["chantiers","salaries","absences","vehicules","formations","rdvs"].forEach(function(k){if(!D[k])D[k]=[];});
+["chantiers","salaries","absences","vehicules","formations","rdvs","messages"].forEach(function(k){if(!D[k])D[k]=[];});
 if(!D.pointages)D.pointages={};
 if(!D.grille)D.grille={
   trajet:{Z1A:0,Z1B:0,Z2:0,Z3:0,Z4:0,Z5:0,Z6:0,Z7:0,Z8:0,Z9:0,Z10:0},
@@ -611,7 +618,7 @@ setInterval(function(){
   if(_pendingSaveCount > 0) return;
   if(_lastLocalSaveAt > 0 && (Date.now() - _lastLocalSaveAt) < 10000) return;
   loadFromCloud(function(){
-    RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();
+    RP();RC();RS();RA();RV();updateAbsDemandesDot();updatePointageDot();updateMessagesDot();if(!D.messages)D.messages=[];
     if(_currentProfile==="bureau"){renderPtValidationsList();autoArchiveOldAbsDemandesSilent();}
     if(_currentProfile==="salarie"){renderMesDemandes();}
     // Re-rendre l'onglet actif
@@ -1452,6 +1459,7 @@ function TAB(n){
   if(n==="rttrecap"){RRTTRECAP();}
   if(n==="absdemande"){RABSDEMANDE();if(_currentProfile==="salarie")loadFromCloud(function(){renderMesDemandes();});}
   if(n==="monrtt"){RMONRTT();}
+  if(n==="messages"){RMessages();}
 }
 
 function pd(s){if(!s)return new Date();var p=s.split("-").map(Number);return new Date(p[0],p[1]-1,p[2]);}
@@ -3268,21 +3276,144 @@ function XCSV(){
 }
 
 // ── PROFILS ──
+// ── MESSAGERIE ──────────────────────────────────────────────────────────────
+function _esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function updateMessagesDot(){
+  var dot=document.getElementById("messages-dot");
+  if(!dot)return;
+  if(_currentProfile!=="salarie"||!_salLockedId){dot.style.display="none";return;}
+  if(!D.messages)D.messages=[];
+  var hasUnread=D.messages.some(function(m){
+    var isFor=m.to.indexOf("all")>=0||m.to.indexOf(_salLockedId)>=0;
+    return isFor&&m.readBy.indexOf(_salLockedId)<0;
+  });
+  dot.style.display=hasUnread?"":"none";
+}
+
+function toggleMsgAll(cb){
+  document.querySelectorAll(".msg-sal-cb").forEach(function(c){c.disabled=cb.checked;if(cb.checked)c.checked=false;});
+}
+
+function sendMessage(){
+  if(!D.messages)D.messages=[];
+  var text=(document.getElementById("msg-text")||{}).value||"";
+  text=text.trim();
+  if(!text){showToast("⚠️ Écrivez un message.");return;}
+  var allCb=document.getElementById("msg-all");
+  var to;
+  if(allCb&&allCb.checked){
+    to=["all"];
+  }else{
+    var cbs=document.querySelectorAll(".msg-sal-cb:checked");
+    to=Array.prototype.map.call(cbs,function(c){return c.value;});
+    if(to.length===0){showToast("⚠️ Sélectionnez au moins un destinataire.");return;}
+  }
+  var fromLabel=(PROFILES[_currentProfile]||{}).name||_currentProfile;
+  D.messages.push({id:"msg_"+Date.now(),from:_currentProfile,fromLabel:fromLabel,to:to,text:text,sentAt:new Date().toISOString(),readBy:[]});
+  saveNow();showToast("✉️ Message envoyé !");RMessages();
+}
+
+function delMessage(id){
+  if(!confirm("Supprimer ce message ?"))return;
+  D.messages=(D.messages||[]).filter(function(m){return m.id!==id;});
+  saveNow();RMessages();
+}
+
+function RMessages(){
+  var wrap=document.getElementById("pg-messages-wrap");
+  if(!wrap)return;
+  if(!D.messages)D.messages=[];
+  var sals=D.salaries||[];
+
+  if(_currentProfile==="salarie"&&_salLockedId){
+    // ── Vue salarié : boîte de réception ──
+    var changed=false;
+    D.messages.forEach(function(m){
+      var isFor=m.to.indexOf("all")>=0||m.to.indexOf(_salLockedId)>=0;
+      if(isFor&&m.readBy.indexOf(_salLockedId)<0){m.readBy.push(_salLockedId);changed=true;}
+    });
+    if(changed){saveNow();updateMessagesDot();}
+    var myMsgs=D.messages.filter(function(m){
+      return m.to.indexOf("all")>=0||m.to.indexOf(_salLockedId)>=0;
+    }).slice().reverse();
+    if(myMsgs.length===0){
+      wrap.innerHTML="<div class='empty'><div class='empty-icon'>💬</div><p>Aucun message pour l'instant.</p></div>";
+      return;
+    }
+    var html="";
+    myMsgs.forEach(function(m){
+      var d=new Date(m.sentAt);
+      var dateStr=d.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
+      html+="<div style='background:#fff;border:1px solid var(--brd2);border-left:4px solid #7c3aed;border-radius:10px;padding:16px 20px;margin-bottom:12px'>";
+      html+="<div style='font-size:11px;font-weight:600;color:#7c3aed;margin-bottom:6px'>"+_esc(m.fromLabel)+" · "+dateStr+"</div>";
+      html+="<div style='font-size:14px;line-height:1.5;white-space:pre-wrap'>"+_esc(m.text)+"</div>";
+      html+="</div>";
+    });
+    wrap.innerHTML=html;
+  }else{
+    // ── Vue admin : composer + historique ──
+    var salOpts=sals.map(function(s){
+      return "<label style='display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px'>"+
+        "<input type='checkbox' class='msg-sal-cb' value='"+s.id+"' style='accent-color:#7c3aed;width:14px;height:14px'> "+
+        _esc((s.prenom||"")+" "+(s.nom||""))+"</label>";
+    }).join("");
+    var html="<div style='max-width:580px'>";
+    // Bloc compose
+    html+="<div style='background:#fff;border:1px solid var(--brd2);border-radius:14px;padding:22px;margin-bottom:22px'>";
+    html+="<div style='font-family:Syne,sans-serif;font-weight:800;font-size:15px;margin-bottom:16px'>✉️ Nouveau message</div>";
+    // Destinataires
+    html+="<div style='margin-bottom:14px'>";
+    html+="<div style='font-size:12px;font-weight:600;color:#475569;margin-bottom:8px'>Destinataires</div>";
+    html+="<label style='display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;margin-bottom:10px;font-weight:700'><input type='checkbox' id='msg-all' style='accent-color:#16a34a;width:14px;height:14px' onchange='toggleMsgAll(this)'> 👥 Tous les salariés</label>";
+    if(salOpts)html+="<div id='msg-sal-list' style='padding-left:14px;display:flex;flex-direction:column;gap:5px'>"+salOpts+"</div>";
+    html+="</div>";
+    // Texte
+    html+="<textarea id='msg-text' placeholder='Votre message...' style='width:100%;height:100px;border:1px solid var(--brd2);border-radius:8px;padding:10px;font-size:14px;font-family:DM Sans,sans-serif;outline:none;resize:vertical;background:var(--bg);color:var(--txt);box-sizing:border-box'></textarea>";
+    html+="<button class='btn btn-p' style='margin-top:10px;width:100%;height:40px;font-size:14px' onclick='sendMessage()'>📤 Envoyer</button>";
+    html+="</div>";
+    // Historique
+    var msgs=D.messages.slice().reverse();
+    if(msgs.length>0){
+      html+="<div style='font-family:Syne,sans-serif;font-weight:700;font-size:13px;margin-bottom:10px;color:var(--muted)'>Messages envoyés ("+msgs.length+")</div>";
+      msgs.forEach(function(m){
+        var d=new Date(m.sentAt);
+        var dateStr=d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
+        var toLabel=m.to.indexOf("all")>=0?"👥 Tous":m.to.map(function(id){var s=sals.find(function(x){return x.id===id;});return s?_esc((s.prenom||"")+" "+(s.nom||"").trim()):id;}).join(", ");
+        var readCount=m.readBy.length;
+        var totalDest=m.to.indexOf("all")>=0?sals.length:m.to.length;
+        html+="<div style='background:#fff;border:1px solid var(--brd2);border-radius:10px;padding:14px 16px;margin-bottom:8px'>";
+        html+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
+        html+="<span style='font-size:12px;color:#475569;font-weight:600'>"+toLabel+"</span>";
+        html+="<span style='font-size:11px;color:"+(readCount>=totalDest&&totalDest>0?"#16a34a":"#d97706")+"'>✓ "+readCount+"/"+totalDest+" lu</span>";
+        html+="</div>";
+        html+="<div style='font-size:11px;color:var(--muted);margin-bottom:8px'>"+dateStr+"</div>";
+        html+="<div style='font-size:13px;line-height:1.5;white-space:pre-wrap'>"+_esc(m.text)+"</div>";
+        html+="<button onclick='delMessage(\""+m.id+"\")' style='margin-top:10px;background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;padding:0;font-family:inherit'>🗑 Supprimer</button>";
+        html+="</div>";
+      });
+    }
+    html+="</div>";
+    wrap.innerHTML=html;
+  }
+}
+// ── FIN MESSAGERIE ───────────────────────────────────────────────────────────
+
 var PROFILES = {
   quentin: { name: "Quentin", initiale: "Q", color: "#1d4ed8",
-    tabs: ["planning","rdv","chantiers","salaries","absences","pointage","gantt","bilan"],
+    tabs: ["planning","rdv","chantiers","salaries","absences","pointage","gantt","bilan","messages"],
     readOnlyTabs: ["rdv","salaries","absences","pointage"],
     readOnly: false },
   alexis: { name: "Alexis", initiale: "A", color: "#7c3aed",
-    tabs: ["planning","rdv","chantiers","salaries","absences","pointage","gantt","bilan","vehicules"],
+    tabs: ["planning","rdv","chantiers","salaries","absences","pointage","gantt","bilan","vehicules","messages"],
     readOnlyTabs: ["rdv"],
     readOnly: false },
   valerie: { name: "Valérie", initiale: "V", color: "#db2777",
-    tabs: ["planning","rdv","chantiers","salaries","absences","indemnites","pointage","formation","gantt","bilan"],
+    tabs: ["planning","rdv","chantiers","salaries","absences","indemnites","pointage","formation","gantt","bilan","messages"],
     readOnlyTabs: ["pointage"],
     readOnly: false },
   // Profils techniques conservés
-  salarie: { name: "Espace Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","urgence"], readOnlyTabs: ["pointage"], readOnly: false },
+  salarie: { name: "Espace Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","messages","urgence"], readOnlyTabs: ["pointage"], readOnly: false },
   planningpublic: { name: "Planning (lecture seule)", initiale: "P", pin: null, color: "#0891b2", tabs: ["planning"], readOnlyTabs: [], readOnly: true }
 };
 var _currentProfile = null;
@@ -3297,6 +3428,7 @@ function applyProfile(key) {
   if(salSelect)salSelect.style.display=(key==="salarie")?"block":"none";
   setTimeout(updateAbsDemandesDot,100);
   setTimeout(updatePointageDot,100);
+  setTimeout(updateMessagesDot,100);
   // Rafraîchir le suivi des validations quand on passe sur un profil bureau
   if(key==="alexis"||key==="valerie"){setTimeout(renderPtValidationsList,50);}
 
@@ -3327,7 +3459,7 @@ function applyProfile(key) {
   // Appliquer lecture seule globale (profil salarie/planningpublic) ou par onglet
   var isReadOnly = p.readOnly;
   var roTabs = p.readOnlyTabs || [];
-  var allTabs = ["planning","rdv","chantiers","salaries","absences","formation","pointage","indemnites","gantt","bilan","absdemande","urgence","vehicules"];
+  var allTabs = ["planning","rdv","chantiers","salaries","absences","formation","pointage","indemnites","gantt","bilan","absdemande","urgence","vehicules","messages"];
   allTabs.forEach(function(tab){
     var pg = document.getElementById("pg-"+tab);
     if(!pg) return;
