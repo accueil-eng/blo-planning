@@ -3033,6 +3033,62 @@ function confirmGroupAbs(){
 
 function addAbs(){var salId=document.getElementById("absal").value,debut=document.getElementById("abd").value,fin=document.getElementById("abf").value,type=document.getElementById("abt").value;var heureDebut=document.getElementById("abhd").value,heureFin=document.getElementById("abhf").value;if(!salId||!debut||!fin){alert("Remplir tous les champs.");return;}if(debut>fin){alert("Date fin après début.");return;}var entry={id:"abs_"+Date.now(),salId:salId,debut:debut,fin:fin,type:type};if(heureDebut)entry.heureDebut=heureDebut;if(heureFin)entry.heureFin=heureFin;D.absences.push(entry);if(typeof _cleanedAbsenceMonths!=="undefined")_cleanedAbsenceMonths={};saveNow();document.getElementById("absal").value="";document.getElementById("abd").value="";document.getElementById("abf").value="";document.getElementById("abhd").value="";document.getElementById("abhf").value="";RA();}
 function delAbs(id){D.absences=D.absences.filter(function(a){return a.id!==id;});save();RA();}
+
+function editAbsModal(id){
+  var abs=D.absences.find(function(a){return a.id===id;});
+  if(!abs)return;
+  var existing=document.getElementById("edit-abs-modal");if(existing)existing.remove();
+  var modal=document.createElement("div");modal.id="edit-abs-modal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center";
+  var box=document.createElement("div");
+  box.style.cssText="background:var(--bg);border-radius:12px;padding:24px 28px;max-width:420px;width:92%;box-shadow:0 16px 48px rgba(0,0,0,.2);font-family:'DM Sans',sans-serif";
+  // Titre
+  var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:700;font-size:16px;margin-bottom:16px;color:var(--txt)";title.textContent="✏️ Modifier l'absence";box.appendChild(title);
+  // Salarié (lecture seule — affichage uniquement)
+  var sal=D.salaries.find(function(s){return s.id===abs.salId;});
+  var salRow=document.createElement("div");salRow.style.cssText="margin-bottom:12px;font-size:13px;color:var(--muted)";salRow.textContent="👤 "+(sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"Inconnu");box.appendChild(salRow);
+  // Helper label+input
+  function mkField(lbl,el){var row=document.createElement("div");row.style.cssText="margin-bottom:10px";var l=document.createElement("label");l.style.cssText="display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:3px";l.textContent=lbl;row.appendChild(l);row.appendChild(el);box.appendChild(row);}
+  var inStyle="width:100%;height:34px;border:1px solid var(--brd2);border-radius:8px;padding:0 10px;font-size:13px;background:var(--bg);color:var(--txt);outline:none;box-sizing:border-box";
+  // Type
+  var selType=document.createElement("select");selType.style.cssText=inStyle;
+  [["cp","Congés payés"],["ecole","École"],["formation","Formation"],["intemperies","Intempéries"],["css","Congés sans solde"],["maladie","Arrêt maladie"],["rtt","RTT"],["autre","Autre"]].forEach(function(opt){var o=document.createElement("option");o.value=opt[0];o.textContent=opt[1];if(abs.type===opt[0])o.selected=true;selType.appendChild(o);});
+  mkField("Type d'absence",selType);
+  // Dates
+  var inDebut=document.createElement("input");inDebut.type="date";inDebut.value=abs.debut;inDebut.style.cssText=inStyle;mkField("Date de début",inDebut);
+  var inFin=document.createElement("input");inFin.type="date";inFin.value=abs.fin;inFin.style.cssText=inStyle;mkField("Date de fin",inFin);
+  // Heures (optionnel)
+  var timeRow=document.createElement("div");timeRow.style.cssText="margin-bottom:10px;display:flex;gap:10px";
+  var timeStyle="flex:1;height:34px;border:1px solid var(--brd2);border-radius:8px;padding:0 10px;font-size:13px;background:var(--bg);color:var(--txt);outline:none";
+  var inHD=document.createElement("input");inHD.type="time";inHD.value=abs.heureDebut||"";inHD.style.cssText=timeStyle;inHD.placeholder="HH:MM";
+  var inHF=document.createElement("input");inHF.type="time";inHF.value=abs.heureFin||"";inHF.style.cssText=timeStyle;inHF.placeholder="HH:MM";
+  var lhd=document.createElement("label");lhd.style.cssText="display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:3px";lhd.textContent="Heure début (opt.)";
+  var lhf=document.createElement("label");lhf.style.cssText="display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:3px";lhf.textContent="Heure fin (opt.)";
+  var colHD=document.createElement("div");colHD.style.cssText="flex:1";colHD.appendChild(lhd);colHD.appendChild(inHD);
+  var colHF=document.createElement("div");colHF.style.cssText="flex:1";colHF.appendChild(lhf);colHF.appendChild(inHF);
+  timeRow.appendChild(colHD);timeRow.appendChild(colHF);box.appendChild(timeRow);
+  // Boutons
+  var btns=document.createElement("div");btns.style.cssText="display:flex;gap:10px;margin-top:16px";
+  var okBtn=document.createElement("button");okBtn.textContent="💾 Enregistrer";okBtn.style.cssText="flex:1;height:36px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer";
+  var cancelBtn=document.createElement("button");cancelBtn.textContent="Annuler";cancelBtn.style.cssText="height:36px;padding:0 16px;border:1px solid var(--brd2);border-radius:8px;font-size:13px;cursor:pointer;background:var(--bg);color:var(--txt)";
+  cancelBtn.onclick=function(){modal.remove();};
+  okBtn.onclick=function(){
+    var debut=inDebut.value,fin=inFin.value,type=selType.value;
+    if(!debut||!fin){alert("Dates requises.");return;}
+    if(debut>fin){alert("La date de fin doit être après la date de début.");return;}
+    var absNow=D.absences.find(function(a){return a.id===id;});
+    if(!absNow){modal.remove();return;}
+    absNow.debut=debut;absNow.fin=fin;absNow.type=type;
+    if(inHD.value)absNow.heureDebut=inHD.value; else delete absNow.heureDebut;
+    if(inHF.value)absNow.heureFin=inHF.value; else delete absNow.heureFin;
+    if(typeof _cleanedAbsenceMonths!=="undefined")_cleanedAbsenceMonths={};
+    saveNow();modal.remove();RA();
+  };
+  btns.appendChild(cancelBtn);btns.appendChild(okBtn);box.appendChild(btns);
+  modal.appendChild(box);document.body.appendChild(modal);
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+}
+
 function RA(){
   rafSel();var el=document.getElementById("abslist");
   if(!D.absences.length){el.innerHTML="<div class='empty'><div class='empty-icon'>📅</div><p>Aucune absence.</p></div>";return;}
@@ -3052,6 +3108,9 @@ function RA(){
     var nm=document.createElement("div");nm.style.cssText="flex:1;font-weight:500;font-size:12px";nm.textContent=sal.prenom+(sal.nom?" "+sal.nom:"");card.appendChild(nm);
     var dt=document.createElement("div");dt.style.cssText="font-size:11px;color:var(--muted)";dt.textContent=d1+(abs.debut!==abs.fin?" → "+d2:"")+(abs.heureDebut&&abs.heureFin?" ("+abs.heureDebut+"-"+abs.heureFin+")":"");card.appendChild(dt);
     var badge=document.createElement("span");badge.className="abs-badge "+abs.type;badge.textContent=ABLBLS[abs.type]||abs.type;card.appendChild(badge);
+    var eb=document.createElement("button");eb.className="bico";eb.title="Modifier";eb.textContent="✏️";eb.style.cssText="font-size:12px;margin-right:2px";
+    eb.onclick=(function(aid){return function(e){e.stopPropagation();editAbsModal(aid);};})(abs.id);
+    card.appendChild(eb);
     var xb=document.createElement("button");xb.className="bico";xb.textContent="×";
     xb.onclick=(function(aid){return function(){delAbs(aid);};})(abs.id);
     card.appendChild(xb);
