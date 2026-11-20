@@ -3285,8 +3285,10 @@ function updateMessagesDot(){
   if(_currentProfile!=="salarie"||!_salLockedId){dot.style.display="none";return;}
   if(!D.messages)D.messages=[];
   var hasUnread=D.messages.some(function(m){
-    var isFor=m.to.indexOf("all")>=0||m.to.indexOf(_salLockedId)>=0;
-    return isFor&&m.readBy.indexOf(_salLockedId)<0;
+    var mto=Array.isArray(m.to)?m.to:(m.to?[m.to]:[]);
+    var mrb=Array.isArray(m.readBy)?m.readBy:[];
+    var isFor=mto.indexOf("all")>=0||mto.indexOf(_salLockedId)>=0;
+    return isFor&&mrb.indexOf(_salLockedId)<0;
   });
   dot.style.display=hasUnread?"":"none";
 }
@@ -3330,12 +3332,15 @@ function RMessages(){
     // ── Vue salarié : boîte de réception ──
     var changed=false;
     D.messages.forEach(function(m){
-      var isFor=m.to.indexOf("all")>=0||m.to.indexOf(_salLockedId)>=0;
+      var mto=Array.isArray(m.to)?m.to:(m.to?[m.to]:[]);
+      if(!Array.isArray(m.readBy))m.readBy=[];
+      var isFor=mto.indexOf("all")>=0||mto.indexOf(_salLockedId)>=0;
       if(isFor&&m.readBy.indexOf(_salLockedId)<0){m.readBy.push(_salLockedId);changed=true;}
     });
     if(changed){saveNow();updateMessagesDot();}
     var myMsgs=D.messages.filter(function(m){
-      return m.to.indexOf("all")>=0||m.to.indexOf(_salLockedId)>=0;
+      var mto=Array.isArray(m.to)?m.to:(m.to?[m.to]:[]);
+      return mto.indexOf("all")>=0||mto.indexOf(_salLockedId)>=0;
     }).slice().reverse();
     if(myMsgs.length===0){
       wrap.innerHTML="<div class='empty'><div class='empty-icon'>💬</div><p>Aucun message pour l'instant.</p></div>";
@@ -3379,9 +3384,10 @@ function RMessages(){
       msgs.forEach(function(m){
         var d=new Date(m.sentAt);
         var dateStr=d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
-        var toLabel=m.to.indexOf("all")>=0?"👥 Tous":m.to.map(function(id){var s=sals.find(function(x){return x.id===id;});return s?_esc((s.prenom||"")+" "+(s.nom||"").trim()):id;}).join(", ");
-        var readCount=m.readBy.length;
-        var totalDest=m.to.indexOf("all")>=0?sals.length:m.to.length;
+        var mto=Array.isArray(m.to)?m.to:(m.to?[m.to]:[]);
+        var toLabel=mto.indexOf("all")>=0?"👥 Tous":mto.map(function(id){var s=sals.find(function(x){return x.id===id;});return s?_esc((s.prenom||"")+" "+(s.nom||"").trim()):id;}).join(", ");
+        var readCount=(Array.isArray(m.readBy)?m.readBy:[]).length;
+        var totalDest=mto.indexOf("all")>=0?sals.length:mto.length;
         html+="<div style='background:#fff;border:1px solid var(--brd2);border-radius:10px;padding:14px 16px;margin-bottom:8px'>";
         html+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
         html+="<span style='font-size:12px;color:#475569;font-weight:600'>"+toLabel+"</span>";
