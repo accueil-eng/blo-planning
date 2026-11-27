@@ -34,6 +34,9 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
 /* Onglets en lecture seule — désactive les contrôles via CSS (fonctionne aussi sur contenu dynamique) */
 .pg[data-readonly] input,.pg[data-readonly] select,.pg[data-readonly] textarea{pointer-events:none!important;opacity:.6!important;cursor:default!important;background:#f3f4f6!important}
 .pg[data-readonly] button:not([onclick*="TAB("]):not(.btn-print){pointer-events:none!important;opacity:.5!important;cursor:default!important}
+/* Planning lecture seule : bloquer drag et actions sur cellules */
+#pg-planning[data-readonly] .grp-handle,#pg-planning[data-readonly] .chip-wrap,#pg-planning[data-readonly] .ua-chip,#pg-planning[data-readonly] .liv-chip,#pg-planning[data-readonly] .depot-chip,#pg-planning[data-readonly] .addbtn,#pg-planning[data-readonly] .liv-add,#pg-planning[data-readonly] .crm,#pg-planning[data-readonly] .lbtn{pointer-events:none!important;cursor:default!important}
+#pg-planning[data-readonly] .chip-wrap .crm,#pg-planning[data-readonly] .grp-handle{display:none!important}
 /* Exception : bloc de validation semaine salarié — toujours interactif même en lecture seule */
 /* ID dans le sélecteur = spécificité (1,x,x) > (0,4,1) de la règle data-readonly avec :not() */
 #pt-validate-week-wrap *,#pg-pointage .sal-wk-validate *{pointer-events:auto!important;opacity:1!important}
@@ -3520,7 +3523,7 @@ var PROFILES = {
     readOnlyTabs: ["pointage"],
     readOnly: false },
   // Profils techniques conservés
-  salarie: { name: "Espace Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","messages","urgence"], readOnlyTabs: ["pointage"], readOnly: false },
+  salarie: { name: "Espace Salarié", initiale: "S", pin: null, color: "#16a34a", tabs: ["planning","absdemande","pointage","messages","urgence"], readOnlyTabs: ["pointage","planning"], readOnly: false },
   planningpublic: { name: "Planning (lecture seule)", initiale: "P", pin: null, color: "#0891b2", tabs: ["planning"], readOnlyTabs: [], readOnly: true }
 };
 var _currentProfile = null;
