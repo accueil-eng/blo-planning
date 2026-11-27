@@ -7426,10 +7426,23 @@ function alexisValidateWeek(key){
 }
 
 function updateValerieNotifDot(){
-  var count=(D.ptValerieNotif||[]).length;
-  // Dot dans le sélecteur de profil
+  var weekCount=(D.ptValerieNotif||[]).length;
+  var monthCount=(D.ptValerieMonthNotif||[]).filter(function(n){return !n.traite;}).length;
+  var count=weekCount+monthCount;
   var dot=document.getElementById("valerie-notif-dot");
   if(dot){dot.style.display=count>0?"inline-flex":"none";dot.textContent=count;}
+}
+
+function ptPrintSalMois(salId,mois,annee){
+  // Naviguer sur ce salarié/mois et déclencher l'impression
+  var moisEl=document.getElementById("pt-mois"),anEl=document.getElementById("pt-annee");
+  if(moisEl)moisEl.value=mois;
+  if(anEl)anEl.value=annee;
+  // Trouver et sélectionner le salarié dans le select
+  var salSel=document.getElementById("pt-sal-select");
+  if(salSel){salSel.value=salId;}
+  RPOINTAGE();
+  setTimeout(function(){window.print();},400);
 }
 
 // ── VALIDATION HEBDOMADAIRE COTE ALEXIS ──
@@ -7466,8 +7479,53 @@ function renderBureauWeekValidateBlock(salId,weeks,annee){
     }
     html+="</div>";
   });
-  html+="</div></div>";
+  html+="</div>";
+  // ── Validation mensuelle Alexis → Valérie ──
+  var mois=parseInt((document.getElementById("pt-mois")||{}).value)||new Date().getMonth()+1;
+  var mKey=salId+"|"+mois+"|"+annee;
+  var monthOk=!!(D.alexisMonthValidations&&D.alexisMonthValidations[mKey]);
+  var sal=D.salaries.find(function(s){return s.id===salId;});
+  var salNom=sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?";
+  var MOIS_FR=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  if(monthOk){
+    var mts=new Date(D.alexisMonthValidations[mKey].ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+    html+="<div style='margin:10px 14px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px'>";
+    html+="<div><div style='font-size:12px;font-weight:700;color:#166534'>✅ Mois validé pour Valérie</div><div style='font-size:10px;color:#15803d;margin-top:2px'>"+mts+"</div></div>";
+    html+="<button onclick=\"alexisUnvalidateMonth('"+salId+"',"+mois+","+annee+")\" style='font-size:11px;background:none;border:1px solid #86efac;border-radius:6px;padding:4px 10px;cursor:pointer;color:#166534'>Annuler</button>";
+    html+="</div>";
+  } else {
+    html+="<div style='margin:10px 14px 12px;background:#fef9c3;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px'>";
+    html+="<div style='font-size:12px;color:#92400e'><span style='font-weight:700'>📋 Mois de "+MOIS_FR[mois]+"</span> — envoyer à Valérie pour traitement</div>";
+    html+="<button onclick=\"alexisValidateMonth('"+salId+"',"+mois+","+annee+")\" style='white-space:nowrap;height:34px;padding:0 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📤 Valider le mois</button>";
+    html+="</div>";
+  }
+  html+="</div>";
   return html;
+}
+
+function alexisValidateMonth(salId,mois,annee){
+  if(!D.alexisMonthValidations)D.alexisMonthValidations={};
+  var key=salId+"|"+mois+"|"+annee;
+  var sal=D.salaries.find(function(s){return s.id===salId;});
+  var salNom=sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?";
+  var MOIS_FR=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  D.alexisMonthValidations[key]={salId:salId,nom:salNom,mois:mois,annee:annee,ts:Date.now()};
+  // Notif Valérie
+  if(!D.ptValerieMonthNotif)D.ptValerieMonthNotif=[];
+  D.ptValerieMonthNotif.push({salId:salId,nom:salNom,mois:mois,annee:annee,ts:Date.now(),read:false});
+  save();
+  updateValerieNotifDot();
+  showToast("📤 Mois de "+MOIS_FR[mois]+" validé — Valérie notifiée !");
+  RPOINTAGE();
+}
+
+function alexisUnvalidateMonth(salId,mois,annee){
+  if(!D.alexisMonthValidations)return;
+  var key=salId+"|"+mois+"|"+annee;
+  delete D.alexisMonthValidations[key];
+  save();
+  showToast("↩ Validation mensuelle annulée.");
+  RPOINTAGE();
 }
 
 function validateAlexisWeekDirect(salId,semaine,annee){
@@ -7701,7 +7759,52 @@ function renderPtValidationsList(){
   html+="</div>";
   html+="</div>";
 
+  // ── SECTION VALIDATIONS MENSUELLES (Alexis → Valérie) ──
+  var MOIS_FR=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var monthNotifs=(D.ptValerieMonthNotif||[]).filter(function(n){return !n.traite;}).sort(function(a,b){return b.ts-a.ts;});
+  html+="<div style='background:#fdf2f8;border:1px solid #f0abfc;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
+  html+="<div style='font-size:13px;font-weight:700;color:#a21caf;margin-bottom:10px'>📋 Validations mensuelles — Traitement des salaires"+(monthNotifs.length?" <span style='background:#a21caf;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px'>"+monthNotifs.length+"</span>":"")+"</div>";
+  if(!monthNotifs.length){
+    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucune validation mensuelle en attente ✓</div>";
+  } else {
+    monthNotifs.forEach(function(n,idx){
+      var dStr=new Date(n.ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+      html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #f5d0fe;border-radius:8px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap'>";
+      html+="<div>";
+      html+="<div style='font-size:13px;font-weight:700;color:#a21caf'>"+MOIS_FR[n.mois]+" "+n.annee+" — "+n.nom+"</div>";
+      html+="<div style='font-size:10px;color:#6b7c79;margin-top:2px'>Validé par Alexis le "+dStr+"</div>";
+      html+="</div>";
+      html+="<div style='display:flex;gap:6px;flex-wrap:wrap'>";
+      html+="<button onclick='ptPrintSalMois("+JSON.stringify(n.salId)+","+n.mois+","+n.annee+")' style='height:30px;padding:0 12px;background:#fdf2f8;color:#a21caf;border:1px solid #f0abfc;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
+      html+="<button onclick='marquerMoisTraite("+idx+")' style='height:30px;padding:0 12px;background:#a21caf;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer'>Traité ✓</button>";
+      html+="</div>";
+      html+="</div>";
+    });
+  }
+  // Historique mois traités
+  var monthDone=(D.ptValerieMonthNotif||[]).filter(function(n){return n.traite;});
+  if(monthDone.length){
+    html+="<details style='margin-top:6px'><summary style='font-size:11px;color:#a21caf;cursor:pointer'>Historique ("+monthDone.length+" traité"+(monthDone.length>1?"s":"")+")</summary><div style='margin-top:6px;display:flex;flex-direction:column;gap:4px'>";
+    monthDone.forEach(function(n){
+      var dStr=new Date(n.ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"});
+      html+="<div style='font-size:11px;color:#9ca3af;padding:4px 8px;background:#fdf4ff;border-radius:5px'>"+MOIS_FR[n.mois]+" "+n.annee+" — "+n.nom+" (validé le "+dStr+") ✓</div>";
+    });
+    html+="</div></details>";
+  }
+  html+="</div>";
+
   wrap.innerHTML=html;
+}
+
+function marquerMoisTraite(idx){
+  var actifs=(D.ptValerieMonthNotif||[]).filter(function(n){return !n.traite;});
+  if(!actifs[idx])return;
+  actifs[idx].traite=true;
+  actifs[idx].traiteTs=Date.now();
+  save();
+  updateValerieNotifDot();
+  showToast("✓ Mois marqué comme traité");
+  renderPtValidationsList();
 }
 
 // Validation directe depuis le tableau de suivi (sans passer par les boutons inline)
