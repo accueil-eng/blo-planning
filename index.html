@@ -2514,10 +2514,18 @@ function printQRCode(nom,qrImgUrl){
   var w=window.open("","_blank");
   if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
   w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>QR Code - "+nom+"</title>"+
-    "<style>body{font-family:sans-serif;text-align:center;padding:40px}h2{margin-bottom:4px}p{color:#666;font-size:13px;margin-bottom:24px}img{border:1px solid #ddd;border-radius:8px}</style>"+
-    "</head><body>"+
-    "<h2>"+nom+"</h2><p>Scannez ce QR code pour accéder à votre espace<br>(Planning · Pointage · Demandes d'absence)</p>"+
-    "<img src='"+qrImgUrl+"' width='280' height='280' onload='window.print()' onerror='window.print()'>"+
+    "<style>"+
+    "body{font-family:sans-serif;text-align:center;padding:40px;background:#fff}"+
+    "h2{margin-bottom:4px;font-size:18px}"+
+    "p{color:#666;font-size:13px;margin-bottom:20px}"+
+    "img{border:1px solid #ddd;border-radius:8px;display:block;margin:0 auto 20px}"+
+    ".btn-print{display:inline-block;padding:10px 28px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}"+
+    "@media print{.btn-print{display:none}}"+
+    "</style></head><body>"+
+    "<h2>"+nom+"</h2>"+
+    "<p>Scannez ce QR code pour accéder à votre espace<br>(Planning · Pointage · Demandes d'absence)</p>"+
+    "<img src='"+qrImgUrl+"' width='280' height='280'>"+
+    "<button class='btn-print' onclick='window.print()'>🖨️ Imprimer / Télécharger</button>"+
     "</body></html>");
   w.document.close();
 }
