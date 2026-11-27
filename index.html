@@ -7434,13 +7434,13 @@ function updateValerieNotifDot(){
 }
 
 function ptPrintSalMois(salId,mois,annee){
-  // Naviguer sur ce salarié/mois et déclencher l'impression
   var moisEl=document.getElementById("pt-mois"),anEl=document.getElementById("pt-annee");
   if(moisEl)moisEl.value=mois;
   if(anEl)anEl.value=annee;
-  // Trouver et sélectionner le salarié dans le select
-  var salSel=document.getElementById("pt-sal-select");
-  if(salSel){salSel.value=salId;}
+  if(salId){
+    var salSel=document.getElementById("pt-sal-select");
+    if(salSel)salSel.value=salId;
+  }
   RPOINTAGE();
   setTimeout(function(){window.print();},400);
 }
@@ -7480,52 +7480,31 @@ function renderBureauWeekValidateBlock(salId,weeks,annee){
     html+="</div>";
   });
   html+="</div>";
-  // ── Validation mensuelle Alexis → Valérie ──
-  var mois=parseInt((document.getElementById("pt-mois")||{}).value)||new Date().getMonth()+1;
-  var mKey=salId+"|"+mois+"|"+annee;
-  var monthOk=!!(D.alexisMonthValidations&&D.alexisMonthValidations[mKey]);
-  var sal=D.salaries.find(function(s){return s.id===salId;});
-  var salNom=sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?";
-  var MOIS_FR=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-  if(monthOk){
-    var mts=new Date(D.alexisMonthValidations[mKey].ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
-    html+="<div style='margin:10px 14px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px'>";
-    html+="<div><div style='font-size:12px;font-weight:700;color:#166534'>✅ Mois validé pour Valérie</div><div style='font-size:10px;color:#15803d;margin-top:2px'>"+mts+"</div></div>";
-    html+="<button onclick=\"alexisUnvalidateMonth('"+salId+"',"+mois+","+annee+")\" style='font-size:11px;background:none;border:1px solid #86efac;border-radius:6px;padding:4px 10px;cursor:pointer;color:#166534'>Annuler</button>";
-    html+="</div>";
-  } else {
-    html+="<div style='margin:10px 14px 12px;background:#fef9c3;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px'>";
-    html+="<div style='font-size:12px;color:#92400e'><span style='font-weight:700'>📋 Mois de "+MOIS_FR[mois]+"</span> — envoyer à Valérie pour traitement</div>";
-    html+="<button onclick=\"alexisValidateMonth('"+salId+"',"+mois+","+annee+")\" style='white-space:nowrap;height:34px;padding:0 14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📤 Valider le mois</button>";
-    html+="</div>";
-  }
   html+="</div>";
   return html;
 }
 
-function alexisValidateMonth(salId,mois,annee){
+function alexisValidateMonth(mois,annee){
   if(!D.alexisMonthValidations)D.alexisMonthValidations={};
-  var key=salId+"|"+mois+"|"+annee;
-  var sal=D.salaries.find(function(s){return s.id===salId;});
-  var salNom=sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?";
+  var key=mois+"|"+annee;
   var MOIS_FR=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-  D.alexisMonthValidations[key]={salId:salId,nom:salNom,mois:mois,annee:annee,ts:Date.now()};
+  D.alexisMonthValidations[key]={mois:mois,annee:annee,ts:Date.now()};
   // Notif Valérie
   if(!D.ptValerieMonthNotif)D.ptValerieMonthNotif=[];
-  D.ptValerieMonthNotif.push({salId:salId,nom:salNom,mois:mois,annee:annee,ts:Date.now(),read:false});
+  D.ptValerieMonthNotif.push({mois:mois,annee:annee,ts:Date.now(),read:false});
   save();
   updateValerieNotifDot();
-  showToast("📤 Mois de "+MOIS_FR[mois]+" validé — Valérie notifiée !");
-  RPOINTAGE();
+  showToast("📤 Mois de "+MOIS_FR[mois]+" "+annee+" validé — Valérie notifiée !");
+  renderPtValidationsList();
 }
 
-function alexisUnvalidateMonth(salId,mois,annee){
+function alexisUnvalidateMonth(mois,annee){
   if(!D.alexisMonthValidations)return;
-  var key=salId+"|"+mois+"|"+annee;
+  var key=mois+"|"+annee;
   delete D.alexisMonthValidations[key];
   save();
   showToast("↩ Validation mensuelle annulée.");
-  RPOINTAGE();
+  renderPtValidationsList();
 }
 
 function validateAlexisWeekDirect(salId,semaine,annee){
@@ -7723,6 +7702,25 @@ function renderPtValidationsList(){
     html+="</tbody></table></div>";
     html+="<div style='margin-top:8px;font-size:10px;color:#92400e;opacity:.7'>⏳ = en attente de votre validation &nbsp;·&nbsp; ✅ = validé, en attente du salarié &nbsp;·&nbsp; 🔒 = verrouillé (double validation)</div>";
   }
+
+  // Validation mensuelle globale (une seule pour tout le mois)
+  var MOIS_FR=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var mKey=mois+"|"+annee;
+  var monthOk=!!(D.alexisMonthValidations&&D.alexisMonthValidations[mKey]);
+  html+="<div style='margin-top:12px;border-top:1px solid #fde68a;padding-top:12px'>";
+  if(monthOk){
+    var mts=new Date(D.alexisMonthValidations[mKey].ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+    html+="<div style='background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px'>";
+    html+="<div><div style='font-size:12px;font-weight:700;color:#166534'>✅ Mois de "+MOIS_FR[mois]+" "+annee+" validé — Valérie notifiée</div><div style='font-size:10px;color:#15803d;margin-top:2px'>"+mts+"</div></div>";
+    html+="<button onclick='alexisUnvalidateMonth("+mois+","+annee+")' style='font-size:11px;background:none;border:1px solid #86efac;border-radius:6px;padding:4px 10px;cursor:pointer;color:#166534'>Annuler</button>";
+    html+="</div>";
+  } else {
+    html+="<div style='background:#fef9c3;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px'>";
+    html+="<div style='font-size:12px;color:#92400e'><span style='font-weight:700'>📋 "+MOIS_FR[mois]+" "+annee+"</span> — envoyer à Valérie pour traitement des salaires</div>";
+    html+="<button onclick='alexisValidateMonth("+mois+","+annee+")' style='white-space:nowrap;height:34px;padding:0 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📤 Valider le mois</button>";
+    html+="</div>";
+  }
+  html+="</div>";
   html+="</div>";
 
   // ── SECTION VALÉRIE : semaines validées par les deux parties ──
@@ -7760,7 +7758,6 @@ function renderPtValidationsList(){
   html+="</div>";
 
   // ── SECTION VALIDATIONS MENSUELLES (Alexis → Valérie) ──
-  var MOIS_FR=["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
   var monthNotifs=(D.ptValerieMonthNotif||[]).filter(function(n){return !n.traite;}).sort(function(a,b){return b.ts-a.ts;});
   html+="<div style='background:#fdf2f8;border:1px solid #f0abfc;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
   html+="<div style='font-size:13px;font-weight:700;color:#a21caf;margin-bottom:10px'>📋 Validations mensuelles — Traitement des salaires"+(monthNotifs.length?" <span style='background:#a21caf;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px'>"+monthNotifs.length+"</span>":"")+"</div>";
@@ -7770,15 +7767,11 @@ function renderPtValidationsList(){
     monthNotifs.forEach(function(n,idx){
       var dStr=new Date(n.ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
       html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #f5d0fe;border-radius:8px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap'>";
-      html+="<div>";
-      html+="<div style='font-size:13px;font-weight:700;color:#a21caf'>"+MOIS_FR[n.mois]+" "+n.annee+" — "+n.nom+"</div>";
-      html+="<div style='font-size:10px;color:#6b7c79;margin-top:2px'>Validé par Alexis le "+dStr+"</div>";
-      html+="</div>";
+      html+="<div><div style='font-size:13px;font-weight:700;color:#a21caf'>"+MOIS_FR[n.mois]+" "+n.annee+"</div><div style='font-size:10px;color:#6b7c79;margin-top:2px'>Validé par Alexis le "+dStr+"</div></div>";
       html+="<div style='display:flex;gap:6px;flex-wrap:wrap'>";
-      html+="<button onclick='ptPrintSalMois("+JSON.stringify(n.salId)+","+n.mois+","+n.annee+")' style='height:30px;padding:0 12px;background:#fdf2f8;color:#a21caf;border:1px solid #f0abfc;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
+      html+="<button onclick='ptPrintSalMois(null,"+n.mois+","+n.annee+")' style='height:30px;padding:0 12px;background:#fdf2f8;color:#a21caf;border:1px solid #f0abfc;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
       html+="<button onclick='marquerMoisTraite("+idx+")' style='height:30px;padding:0 12px;background:#a21caf;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer'>Traité ✓</button>";
-      html+="</div>";
-      html+="</div>";
+      html+="</div></div>";
     });
   }
   // Historique mois traités
@@ -7787,7 +7780,7 @@ function renderPtValidationsList(){
     html+="<details style='margin-top:6px'><summary style='font-size:11px;color:#a21caf;cursor:pointer'>Historique ("+monthDone.length+" traité"+(monthDone.length>1?"s":"")+")</summary><div style='margin-top:6px;display:flex;flex-direction:column;gap:4px'>";
     monthDone.forEach(function(n){
       var dStr=new Date(n.ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"});
-      html+="<div style='font-size:11px;color:#9ca3af;padding:4px 8px;background:#fdf4ff;border-radius:5px'>"+MOIS_FR[n.mois]+" "+n.annee+" — "+n.nom+" (validé le "+dStr+") ✓</div>";
+      html+="<div style='font-size:11px;color:#9ca3af;padding:4px 8px;background:#fdf4ff;border-radius:5px'>"+MOIS_FR[n.mois]+" "+n.annee+" (validé le "+dStr+") ✓</div>";
     });
     html+="</div></details>";
   }
