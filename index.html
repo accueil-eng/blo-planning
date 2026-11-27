@@ -2472,6 +2472,9 @@ function RS(){
     var qb=document.createElement("button");qb.className="btn";qb.style.cssText="font-size:11px;padding:2px 8px;margin-right:4px";qb.textContent="📱";qb.title="QR code Mon Pointage";
     qb.onclick=(function(sid){return function(){showQRCode(sid);};})(sal.id);
     tdDel.appendChild(qb);
+    var nb=document.createElement("button");nb.className="btn";nb.style.cssText="font-size:11px;padding:2px 8px;margin-right:4px;background:#f0fdf4;border-color:#86efac;color:#166534";nb.textContent="📄";nb.title="Notice salarié";
+    nb.onclick=(function(sid){return function(){printNoticeSal(sid);};})(sal.id);
+    tdDel.appendChild(nb);
     var xb=document.createElement("button");xb.className="bico";xb.textContent="×";
     xb.onclick=(function(sid){return function(){delSal(sid);};})(sal.id);
     tdDel.appendChild(xb);
@@ -2515,6 +2518,67 @@ function printQRCode(nom,qrImgUrl){
     "</body></html>");
   w.document.close();
   setTimeout(function(){w.print();},400);
+}
+
+function printNoticeSal(salId){
+  var sal=D.salaries.find(function(s){return s.id===salId;});
+  if(!sal)return;
+  var nom=sal.prenom+(sal.nom?" "+sal.nom:"");
+  var netlifyUrl="https://accueil-eng.github.io/blo-planning";
+  var baseUrl=(window.location.protocol==="file:")?netlifyUrl:(window.location.origin+window.location.pathname);
+  var link=baseUrl+"?sal="+salId;
+  var w=window.open("","_blank");
+  if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
+  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>Notice salarié — "+nom+"</title>"+
+  "<style>"+
+  "@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');"+
+  "body{font-family:'DM Sans',sans-serif;max-width:680px;margin:0 auto;padding:32px 28px;font-size:13px;color:#13201e;line-height:1.6}"+
+  "h1{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#16a34a;margin:0 0 12px}"+
+  "h2{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#0d9488;margin:28px 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}"+
+  "p{margin:0 0 10px}"+
+  ".intro-box{background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:14px}"+
+  ".intro-box .name{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#16a34a;margin-bottom:4px}"+
+  ".intro-box .link{font-size:11px;color:#6b7c79;word-break:break-all;background:#e8f5e9;padding:4px 8px;border-radius:4px;display:inline-block;margin-top:4px}"+
+  ".warn{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:10px 14px;margin:14px 0;font-size:12px}"+
+  ".note{background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:10px 14px;margin:10px 0;font-size:12px}"+
+  ".tip{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;padding:10px 14px;margin:10px 0;font-size:12px}"+
+  "ol{margin:6px 0 10px;padding-left:20px}li{margin-bottom:4px}"+
+  "b{font-weight:600}"+
+  "hr{border:none;border-top:1px solid #e2e8f0;margin:24px 0}"+
+  ".footer{font-size:11px;color:#9ca3af;margin-top:28px;text-align:center}"+
+  "@media print{body{padding:16px}h2{margin-top:18px}}"+
+  "</style></head><body>"+
+  "<h1>📱 Votre espace salarié BLO</h1>"+
+  "<div class='intro-box'>"+
+  "<div class='name'>"+nom+"</div>"+
+  "<div>Votre accès personnel — scannez votre QR code ou utilisez le lien ci-dessous.</div>"+
+  "<div class='link'>"+link+"</div>"+
+  "</div>"+
+  "<p>Grâce à votre <b>QR code personnel</b>, accédez instantanément à votre planning, vos pointages, vos demandes d'absence et vos messages — sans identifiant ni mot de passe.</p>"+
+  "<div class='note'>🪪 <b>Votre QR code est unique et personnel.</b> Il est distribué par le bureau. Si vous ne l'avez pas reçu ou si vous l'avez perdu, contactez <b>Alexis ou Valérie</b>.</div>"+
+  "<div class='tip'>📲 <b>Astuce :</b> après le premier scan, ajoutez le lien à l'écran d'accueil de votre téléphone (menu navigateur → \"Ajouter à l'écran d'accueil\"). Les mises à jour se font automatiquement.</div>"+
+  "<div class='warn'>🚀 <b>Phase d'essai</b> — Cet espace est en cours de déploiement et sera ajusté au fur et à mesure de vos retours. N'hésitez pas à faire remonter vos remarques. En cas de problème, contactez <b>Alexis ou Valérie</b>.</div>"+
+  "<h2>🗓️ Planning</h2>"+
+  "<p>Consultez votre planning de la semaine en cours et des semaines à venir. Le planning est géré par le bureau — vous n'avez rien à modifier.</p>"+
+  "<h2>🕐 Pointage mensuel</h2>"+
+  "<p>Retrouvez votre fiche de pointage du mois en cours : heures, trajets, paniers et absences.</p>"+
+  "<p><b>Valider vos semaines est obligatoire.</b> Dès qu'Alexis a validé une semaine, un bouton ✅ Valider la semaine apparaît. Cliquez dessus pour confirmer que les informations sont correctes. Une semaine 🔒 verrouillée ne peut plus être modifiée.</p>"+
+  "<h2>📝 Mes observations</h2>"+
+  "<p>Sous votre pointage, vous pouvez laisser un message à destination du bureau.</p>"+
+  "<ol><li>Écrivez votre observation dans la zone de texte.</li><li>Cliquez sur ✔ Envoyer pour l'enregistrer.</li><li>Vous pouvez en ajouter plusieurs au fil du mois : chaque observation est horodatée et conservée.</li></ol>"+
+  "<h2>🏖 Demandes d'absence</h2>"+
+  "<p>Soumettez une demande directement depuis votre espace.</p>"+
+  "<ol><li>Indiquez le type d'absence, les dates et un motif si besoin.</li><li>Votre demande passe en statut <b>En attente</b>.</li><li>Vous êtes informé dès qu'elle est <b>Acceptée</b> ou <b>Refusée</b>.</li></ol>"+
+  "<h2>💬 Messages</h2>"+
+  "<p>Recevez les messages envoyés par le bureau. Un <b>point rouge</b> sur l'onglet Messages signale un nouveau message non lu.</p>"+
+  "<h2>🆘 Urgence</h2>"+
+  "<p>L'onglet Urgence regroupe les numéros d'urgence essentiels (SAMU, pompiers, police) ainsi que les conduites à tenir en cas d'accident sur chantier, malaise, incendie ou coup de chaleur.</p>"+
+  "<p>Cet onglet est accessible à tout moment, même sans connexion préalable au réseau.</p>"+
+  "<hr>"+
+  "<div class='warn'>⚠️ Votre espace est personnel et lié à votre QR code. Ne partagez pas le lien.</div>"+
+  "</body></html>");
+  w.document.close();
+  setTimeout(function(){w.print();},600);
 }
 
 // ── IMPRESSION UNIVERSELLE ──
