@@ -2512,12 +2512,14 @@ function showQRCode(salId){
 
 function printQRCode(nom,qrImgUrl){
   var w=window.open("","_blank");
-  w.document.write("<html><head><title>QR Code - "+nom+"</title><style>body{font-family:sans-serif;text-align:center;padding:40px}h2{margin-bottom:4px}p{color:#666;font-size:13px;margin-bottom:24px}img{border:1px solid #ddd;border-radius:8px}</style></head><body>"+
+  if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
+  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>QR Code - "+nom+"</title>"+
+    "<style>body{font-family:sans-serif;text-align:center;padding:40px}h2{margin-bottom:4px}p{color:#666;font-size:13px;margin-bottom:24px}img{border:1px solid #ddd;border-radius:8px}</style>"+
+    "</head><body>"+
     "<h2>"+nom+"</h2><p>Scannez ce QR code pour accéder à votre espace<br>(Planning · Pointage · Demandes d'absence)</p>"+
-    "<img src='"+qrImgUrl+"' width='280' height='280'>"+
+    "<img src='"+qrImgUrl+"' width='280' height='280' onload='window.print()' onerror='window.print()'>"+
     "</body></html>");
   w.document.close();
-  setTimeout(function(){w.print();},400);
 }
 
 function printNoticeSal(salId){
