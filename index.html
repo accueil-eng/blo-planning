@@ -2884,7 +2884,7 @@ function printPointage(forcedFilterId){
     // ── Observations ──
     var obsKey=sal.id+"|"+mois+"|"+annee;
     var salObsArr=Array.isArray(D.ptSalObs&&D.ptSalObs[obsKey])?(D.ptSalObs[obsKey]):(D.ptSalObs&&D.ptSalObs[obsKey]?[{text:D.ptSalObs[obsKey],ts:0}]:[]);
-    var bureauObs=(D.ptObservations&&D.ptObservations[obsKey])||"";
+    var bureauObs=(!_ptPrintSalMode&&D.ptObservations&&D.ptObservations[obsKey])||"";
     if(salObsArr.length||bureauObs){
       empHtml+="<div style='margin-top:4px;display:flex;gap:6px;flex-wrap:wrap'>";
       if(salObsArr.length){
@@ -7320,11 +7320,13 @@ function RPOINTAGE(){
         });
         html+="</div></div>";
       }
-      // Observation bureau (Alexis ↔ Valérie uniquement)
-      html+="<div style='padding:10px 14px;border-top:1px solid var(--brd2);background:#fffbeb;display:flex;align-items:flex-start;gap:10px'>";
-      html+="<span style='font-size:12px;font-weight:700;color:#92400e;white-space:nowrap;padding-top:6px'>📝 Bureau</span>";
-      html+="<textarea data-obs-key='"+obsKey+"' style='flex:1;height:52px;border:1px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;resize:vertical;background:#fff;color:#374151;font-family:inherit;outline:none' placeholder='Observation bureau (Alexis / Valérie uniquement)...' onchange=\"ptSaveObs(this)\" onblur=\"ptSaveObs(this)\">"+obsVal.replace(/</g,"&lt;")+"</textarea>";
-      html+="</div>";
+      // Observation bureau (Alexis ↔ Valérie uniquement, invisible pour le salarié)
+      if(!isSalMode){
+        html+="<div style='padding:10px 14px;border-top:1px solid var(--brd2);background:#fffbeb;display:flex;align-items:flex-start;gap:10px'>";
+        html+="<span style='font-size:12px;font-weight:700;color:#92400e;white-space:nowrap;padding-top:6px'>📝 Bureau</span>";
+        html+="<textarea data-obs-key='"+obsKey+"' style='flex:1;height:52px;border:1px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;resize:vertical;background:#fff;color:#374151;font-family:inherit;outline:none' placeholder='Observation bureau (Alexis / Valérie uniquement)...' onchange=\"ptSaveObs(this)\" onblur=\"ptSaveObs(this)\">"+obsVal.replace(/</g,"&lt;")+"</textarea>";
+        html+="</div>";
+      }
     }
     if(!isSalMode){
       html+=renderBureauWeekValidateBlock(sal.id,weeks,annee);
