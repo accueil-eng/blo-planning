@@ -3325,15 +3325,23 @@ function _esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").rep
 function updateMessagesDot(){
   var dot=document.getElementById("messages-dot");
   if(!dot)return;
-  if(_currentProfile!=="salarie"||!_salLockedId){dot.style.display="none";return;}
-  if(!D.messages)D.messages=[];
-  var hasUnread=D.messages.some(function(m){
-    var mto=Array.isArray(m.to)?m.to:(m.to?[m.to]:[]);
-    var mrb=Array.isArray(m.readBy)?m.readBy:[];
-    var isFor=mto.indexOf("all")>=0||mto.indexOf(_salLockedId)>=0;
-    return isFor&&mrb.indexOf(_salLockedId)<0;
-  });
-  dot.style.display=hasUnread?"":"none";
+  if(!D.messages||!D.messages.length){dot.style.display="none";return;}
+  var hasUnread=false;
+  if(_currentProfile==="salarie"&&_salLockedId){
+    hasUnread=D.messages.some(function(m){
+      var mto=Array.isArray(m.to)?m.to:(m.to?[m.to]:[]);
+      var mrb=Array.isArray(m.readBy)?m.readBy:[];
+      var isFor=mto.indexOf("all")>=0||mto.indexOf(_salLockedId)>=0;
+      return isFor&&mrb.indexOf(_salLockedId)<0;
+    });
+  } else if(_currentProfile==="alexis"||_currentProfile==="valerie"){
+    // Bureau : non lus = pas encore marqués comme lus par ce profil
+    hasUnread=D.messages.some(function(m){
+      var mrb=Array.isArray(m.readBy)?m.readBy:[];
+      return mrb.indexOf(_currentProfile)<0;
+    });
+  }
+  dot.style.display=hasUnread?"inline-block":"none";
 }
 
 function toggleMsgAll(cb){
@@ -3405,7 +3413,17 @@ function RMessages(){
     });
     wrap.innerHTML=html;
   }else{
+    // Marquer tous les messages comme lus pour ce profil bureau
+    if(_currentProfile==="alexis"||_currentProfile==="valerie"){
+      var changedB=false;
+      D.messages.forEach(function(m){
+        if(!Array.isArray(m.readBy))m.readBy=[];
+        if(m.readBy.indexOf(_currentProfile)<0){m.readBy.push(_currentProfile);changedB=true;}
+      });
+      if(changedB){saveNow();updateMessagesDot();}
+    }
     // ── Vue admin : composer + historique ──
+    {
     var salOpts=sals.map(function(s){
       return "<label style='display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px'>"+
         "<input type='checkbox' class='msg-sal-cb' value='"+s.id+"' style='accent-color:#7c3aed;width:14px;height:14px'> "+
@@ -3449,6 +3467,7 @@ function RMessages(){
     }
     html+="</div>";
     wrap.innerHTML=html;
+    }
   }
 }
 // ── FIN MESSAGERIE ───────────────────────────────────────────────────────────
