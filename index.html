@@ -432,12 +432,9 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
   <div id="pt-refresh-bar" style="display:none;margin-bottom:12px">
     <button onclick="ptManualRefresh()" style="width:100%;height:40px;background:#0d9488;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><span>🔄</span><span>Actualiser les données</span></button>
   </div>
-  <!-- Boutons PDF/Imprimer salarié -->
-  <div id="pt-sal-pdf-bar" style="display:none;margin-bottom:12px;display:none">
-    <div style="display:flex;gap:8px">
-      <button onclick="ptPrintSalariePDF()" style="flex:1;height:36px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📄 Télécharger PDF</button>
-      <button onclick="window.print()" style="flex:1;height:36px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimer</button>
-    </div>
+  <!-- Bouton Imprimer salarié (QR code) -->
+  <div id="pt-sal-pdf-bar" style="display:none;margin-bottom:12px">
+    <button class="btn-print" onclick="printPointage()" style="width:100%;height:40px;background:#0d9488;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">🖨️ Imprimer / Télécharger mon pointage</button>
   </div>
   <div class="arow" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <select id="pt-mois" style="height:34px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 10px;font-size:13px;background:var(--bg);color:var(--txt);outline:none" onchange="RPOINTAGE()">
@@ -451,7 +448,7 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
       <option value="">— Tous les salariés —</option>
     </select>
     <button class="btn btn-p" id="export-pointage-btn" onclick="exportPointageXLSX()" style="background:#16a34a;border-color:#16a34a">📥 Export Excel</button>
-    <button class="btn btn-print" style="font-size:12px;background:#fef3c7;border-color:#fcd34d;color:#92400e" onclick="printPointage()" title="Imprimer le pointage">🖨️ Imprimer</button>
+    <button id="pt-admin-print-btn" class="btn btn-print" style="font-size:12px;background:#fef3c7;border-color:#fcd34d;color:#92400e" onclick="printPointage()" title="Imprimer le pointage">🖨️ Imprimer</button>
     <select id="archive-select" style="height:34px;border:1px solid var(--brd2);border-radius:var(--rs);padding:0 10px;font-size:12px;background:var(--bg);color:var(--txt);outline:none" onchange="handleArchiveSelect(this)">
       <option value="">🗄️ Archiver...</option>
       <option value="pointages">Pointages de plus d'1 an</option>
@@ -6864,7 +6861,7 @@ function RPOINTAGE(){
     var moisEl=document.getElementById("pt-mois"),anEl=document.getElementById("pt-annee");
     if(moisEl&&!moisEl.dataset.locked){moisEl.value=String(today0.getMonth()+1);moisEl.disabled=true;moisEl.dataset.locked="1";}
     if(anEl&&!anEl.dataset.locked){anEl.value=String(today0.getFullYear());anEl.disabled=true;anEl.dataset.locked="1";}
-    ["reset-conduite-btn","export-pointage-btn","archive-select"].forEach(function(bid){var b=document.getElementById(bid);if(b)b.style.display="none";});
+    ["reset-conduite-btn","export-pointage-btn","archive-select","pt-admin-print-btn"].forEach(function(bid){var b=document.getElementById(bid);if(b)b.style.display="none";});
   }
 
   var wrap=document.getElementById("pointage-wrap");
