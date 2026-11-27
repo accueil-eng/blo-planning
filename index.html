@@ -7723,68 +7723,67 @@ function renderPtValidationsList(){
   html+="</div>";
   html+="</div>";
 
-  // ── SECTION VALÉRIE : semaines validées par les deux parties ──
-  var readyForVal=[];
-  Object.keys(D.alexisValidations).forEach(function(k){
-    if(D.ptWeekValidations[k]){
-      var e=D.alexisValidations[k];
-      var ts=D.alexisValidations[k].ts;
-      var d=new Date(ts);
-      readyForVal.push({key:k,e:e,dateStr:d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0")});
+  // ── SECTIONS VALÉRIE uniquement ──
+  if(_currentProfile==="valerie"){
+    var readyForVal=[];
+    Object.keys(D.alexisValidations).forEach(function(k){
+      if(D.ptWeekValidations[k]){
+        var e=D.alexisValidations[k];
+        var d=new Date(e.ts);
+        readyForVal.push({key:k,e:e,dateStr:d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0")});
+      }
+    });
+
+    html+="<div style='background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
+    html+="<div style='font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px'>📬 À traiter pour les salaires"+(readyForVal.length?" <span style='background:#7c3aed;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px'>"+readyForVal.length+"</span>":"")+"</div>";
+    if(!readyForVal.length){
+      html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucun pointage doublement validé en attente ✓</div>";
+    } else {
+      readyForVal.forEach(function(item){
+        var e=item.e; var k=item.key;
+        html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #ede9fe;border-radius:8px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap'>";
+        html+="<div><div style='font-size:12px;font-weight:600'>Sem. "+e.semaine+" — "+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Validé Alexis le "+item.dateStr+" · Salarié ✅</div></div>";
+        html+="<div style='display:flex;gap:6px;flex-wrap:wrap'>";
+        html+="<button onclick='ptVoirSalarie("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>👁 Voir</button>";
+        html+="<button onclick='ptExportSalSemaine("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>📥 Excel</button>";
+        html+="<button onclick='marquerTransmisValerie("+JSON.stringify(k)+")' style='height:28px;padding:0 10px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>Traité ✓</button>";
+        html+="</div></div>";
+      });
     }
-  });
+    html+="<div style='margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'>";
+    html+="<button onclick='ptPrintAllPDF()' style='height:32px;padding:0 14px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📄 PDF tous les salariés</button>";
+    html+="<button onclick='window.print()' style='height:32px;padding:0 14px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
+    html+="</div>";
+    html+="</div>";
 
-  html+="<div style='background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
-  html+="<div style='font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px'>📬 Valérie — À traiter pour les salaires"+(readyForVal.length?" <span style='background:#7c3aed;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px'>"+readyForVal.length+"</span>":"")+"</div>";
-  if(!readyForVal.length){
-    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucun pointage doublement validé en attente ✓</div>";
-  } else {
-    readyForVal.forEach(function(item){
-      var e=item.e; var k=item.key;
-      html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #ede9fe;border-radius:8px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap'>";
-      html+="<div><div style='font-size:12px;font-weight:600'>Sem. "+e.semaine+" — "+e.nom+"</div><div style='font-size:10px;color:#6b7c79'>Validé Alexis le "+item.dateStr+" · Salarié ✅</div></div>";
-      html+="<div style='display:flex;gap:6px;flex-wrap:wrap'>";
-      html+="<button onclick='ptVoirSalarie("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#f5f3ff;color:#7c3aed;border:1px solid #c4b5fd;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>👁 Voir</button>";
-      html+="<button onclick='ptExportSalSemaine("+JSON.stringify(e.salId)+","+e.semaine+","+e.annee+")' style='height:28px;padding:0 10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>📥 Excel</button>";
-      html+="<button onclick='marquerTransmisValerie("+JSON.stringify(k)+")' style='height:28px;padding:0 10px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer'>Traité ✓</button>";
-      html+="</div></div>";
-    });
+    // Validations mensuelles
+    var monthNotifs=(D.ptValerieMonthNotif||[]).filter(function(n){return !n.traite;}).sort(function(a,b){return b.ts-a.ts;});
+    html+="<div style='background:#fdf2f8;border:1px solid #f0abfc;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
+    html+="<div style='font-size:13px;font-weight:700;color:#a21caf;margin-bottom:10px'>📋 Validations mensuelles"+(monthNotifs.length?" <span style='background:#a21caf;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px'>"+monthNotifs.length+"</span>":"")+"</div>";
+    if(!monthNotifs.length){
+      html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucune validation mensuelle en attente ✓</div>";
+    } else {
+      monthNotifs.forEach(function(n,idx){
+        var dStr=new Date(n.ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+        html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #f5d0fe;border-radius:8px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap'>";
+        html+="<div><div style='font-size:13px;font-weight:700;color:#a21caf'>"+MOIS_FR[n.mois]+" "+n.annee+"</div><div style='font-size:10px;color:#6b7c79;margin-top:2px'>Validé par Alexis le "+dStr+"</div></div>";
+        html+="<div style='display:flex;gap:6px;flex-wrap:wrap'>";
+        html+="<button onclick='ptPrintSalMois(null,"+n.mois+","+n.annee+")' style='height:30px;padding:0 12px;background:#fdf2f8;color:#a21caf;border:1px solid #f0abfc;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
+        html+="<button onclick='marquerMoisTraite("+idx+")' style='height:30px;padding:0 12px;background:#a21caf;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer'>Traité ✓</button>";
+        html+="</div></div>";
+      });
+    }
+    var monthDone=(D.ptValerieMonthNotif||[]).filter(function(n){return n.traite;});
+    if(monthDone.length){
+      html+="<details style='margin-top:6px'><summary style='font-size:11px;color:#a21caf;cursor:pointer'>Historique ("+monthDone.length+" traité"+(monthDone.length>1?"s":"")+")</summary><div style='margin-top:6px;display:flex;flex-direction:column;gap:4px'>";
+      monthDone.forEach(function(n){
+        var dStr=new Date(n.ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"});
+        html+="<div style='font-size:11px;color:#9ca3af;padding:4px 8px;background:#fdf4ff;border-radius:5px'>"+MOIS_FR[n.mois]+" "+n.annee+" (validé le "+dStr+") ✓</div>";
+      });
+      html+="</div></details>";
+    }
+    html+="</div>";
   }
-  // Boutons globaux
-  html+="<div style='margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'>";
-  html+="<button onclick='ptPrintAllPDF()' style='height:32px;padding:0 14px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>📄 PDF tous les salariés</button>";
-  html+="<button onclick='window.print()' style='height:32px;padding:0 14px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
-  html+="</div>";
-  html+="</div>";
-
-  // ── SECTION VALIDATIONS MENSUELLES (Alexis → Valérie) ──
-  var monthNotifs=(D.ptValerieMonthNotif||[]).filter(function(n){return !n.traite;}).sort(function(a,b){return b.ts-a.ts;});
-  html+="<div style='background:#fdf2f8;border:1px solid #f0abfc;border-radius:12px;padding:14px 16px;margin-bottom:14px'>";
-  html+="<div style='font-size:13px;font-weight:700;color:#a21caf;margin-bottom:10px'>📋 Validations mensuelles — Traitement des salaires"+(monthNotifs.length?" <span style='background:#a21caf;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px'>"+monthNotifs.length+"</span>":"")+"</div>";
-  if(!monthNotifs.length){
-    html+="<div style='font-size:12px;color:#6b7c79;font-style:italic'>Aucune validation mensuelle en attente ✓</div>";
-  } else {
-    monthNotifs.forEach(function(n,idx){
-      var dStr=new Date(n.ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
-      html+="<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid #f5d0fe;border-radius:8px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap'>";
-      html+="<div><div style='font-size:13px;font-weight:700;color:#a21caf'>"+MOIS_FR[n.mois]+" "+n.annee+"</div><div style='font-size:10px;color:#6b7c79;margin-top:2px'>Validé par Alexis le "+dStr+"</div></div>";
-      html+="<div style='display:flex;gap:6px;flex-wrap:wrap'>";
-      html+="<button onclick='ptPrintSalMois(null,"+n.mois+","+n.annee+")' style='height:30px;padding:0 12px;background:#fdf2f8;color:#a21caf;border:1px solid #f0abfc;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer'>🖨️ Imprimer</button>";
-      html+="<button onclick='marquerMoisTraite("+idx+")' style='height:30px;padding:0 12px;background:#a21caf;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer'>Traité ✓</button>";
-      html+="</div></div>";
-    });
-  }
-  // Historique mois traités
-  var monthDone=(D.ptValerieMonthNotif||[]).filter(function(n){return n.traite;});
-  if(monthDone.length){
-    html+="<details style='margin-top:6px'><summary style='font-size:11px;color:#a21caf;cursor:pointer'>Historique ("+monthDone.length+" traité"+(monthDone.length>1?"s":"")+")</summary><div style='margin-top:6px;display:flex;flex-direction:column;gap:4px'>";
-    monthDone.forEach(function(n){
-      var dStr=new Date(n.ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"});
-      html+="<div style='font-size:11px;color:#9ca3af;padding:4px 8px;background:#fdf4ff;border-radius:5px'>"+MOIS_FR[n.mois]+" "+n.annee+" (validé le "+dStr+") ✓</div>";
-    });
-    html+="</div></details>";
-  }
-  html+="</div>";
 
   wrap.innerHTML=html;
 }
