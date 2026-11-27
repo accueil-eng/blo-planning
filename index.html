@@ -7437,29 +7437,47 @@ function unlockWeek(salId,semaine,annee){
 function renderValidateWeekButton(mois,annee,salId){
   var wrap=document.getElementById("pt-validate-week-wrap");
   if(!wrap||!salId)return;
-  var today=new Date();
-  var curWeek=getISOWeek(today);
   if(!D.ptWeekValidations)D.ptWeekValidations={};
   if(!D.alexisValidations)D.alexisValidations={};
   if(!D.ptSalMessages)D.ptSalMessages={};
-  var vKey=salId+"|"+curWeek+"|"+annee;
-  var alexisOk=!!D.alexisValidations[vKey];
-  var salOk=!!D.ptWeekValidations[vKey];
-  var locked=alexisOk&&salOk;
-  if(locked){
-    wrap.innerHTML="<div style='background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:12px 16px;text-align:center;font-size:13px;font-weight:600;color:#166534'>🔒 Semaine "+curWeek+" verrouillée — tout le monde a validé ✅</div>";
-  } else if(!alexisOk){
-    wrap.innerHTML="<div style='background:#fef9c3;border:1px solid #fcd34d;border-radius:10px;padding:12px 16px;text-align:center;font-size:13px;color:#92400e'>⏳ En attente de validation par Alexis</div>";
-  } else if(salOk){
-    wrap.innerHTML="<div style='background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:12px 16px;text-align:center;font-size:13px;font-weight:600;color:#1e40af'>✅ Semaine "+curWeek+" validée — en attente du verrouillage</div>";
-  } else {
-    wrap.innerHTML=
-      "<div style='background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:12px 16px'>"+
-      "<div style='font-size:13px;font-weight:600;color:#0f766e;margin-bottom:8px'>✅ Alexis a validé votre pointage S"+curWeek+"</div>"+
-      "<textarea id='sal-msg-field' placeholder='Observation (optionnel)...' style='width:100%;height:56px;border:1px solid var(--brd2);border-radius:6px;padding:6px 8px;font-size:12px;resize:none;box-sizing:border-box'></textarea>"+
-      "<button onclick='validateMyWeek("+JSON.stringify(salId)+","+curWeek+","+annee+")' style='width:100%;height:36px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px'>✅ Valider ma semaine</button>"+
-      "</div>";
-  }
+  var today=new Date();
+  var curWeek=getISOWeek(today);
+  var curYear=today.getFullYear();
+  var weeks=getWeeksOfMonth(mois,annee);
+  var html="";
+  weeks.forEach(function(wk){
+    // Ne pas proposer la validation pour les semaines futures
+    var isFuture=(annee>curYear)||(annee===curYear&&wk>curWeek);
+    var vKey=salId+"|"+wk+"|"+annee;
+    var alexisOk=!!D.alexisValidations[vKey];
+    var salOk=!!D.ptWeekValidations[vKey];
+    var locked=alexisOk&&salOk;
+    html+="<div style='margin-bottom:8px'>";
+    if(locked){
+      html+="<div style='background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:#166534'>"+
+        "<span>S"+wk+"</span><span>🔒 Verrouillée ✅</span></div>";
+    } else if(isFuture){
+      html+="<div style='background:#f1f5f9;border:1px solid var(--brd2);border-radius:10px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted)'>"+
+        "<span>S"+wk+"</span><span>Semaine future</span></div>";
+    } else if(!alexisOk){
+      html+="<div style='background:#fef9c3;border:1px solid #fcd34d;border-radius:10px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#92400e'>"+
+        "<span>S"+wk+"</span><span>⏳ En attente d'Alexis</span></div>";
+    } else if(salOk){
+      html+="<div style='background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:#1e40af'>"+
+        "<span>S"+wk+"</span><span>✅ Validée par vous</span></div>";
+    } else {
+      // Alexis a validé, le salarié peut valider
+      html+="<div style='background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:12px 16px'>"+
+        "<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px'>"+
+        "<span style='font-size:13px;font-weight:700;color:#0f766e'>S"+wk+"</span>"+
+        "<span style='font-size:12px;color:#0f766e'>✅ Alexis a validé</span></div>"+
+        "<textarea id='sal-msg-field-"+wk+"' placeholder='Observation (optionnel)...' style='width:100%;height:48px;border:1px solid #99f6e4;border-radius:6px;padding:6px 8px;font-size:12px;resize:none;box-sizing:border-box'></textarea>"+
+        "<button onclick='validateMyWeek("+JSON.stringify(salId)+","+wk+","+annee+")' style='width:100%;height:36px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px'>✅ Valider la semaine "+wk+"</button>"+
+        "</div>";
+    }
+    html+="</div>";
+  });
+  wrap.innerHTML=html||"<div style='color:var(--muted);font-size:13px'>Aucune semaine ce mois.</div>";
 }
 
 function ptSaveObs(el){
@@ -7478,7 +7496,7 @@ function validateMyWeek(salId,semaine,annee){
   var key=salId+"|"+semaine+"|"+annee;
   D.ptWeekValidations[key]={salId:salId,nom:sal?(sal.prenom+(sal.nom?" "+sal.nom:"")):"?",semaine:semaine,annee:annee,ts:Date.now()};
   // Sauvegarder le message si saisi
-  var msgField=document.getElementById("sal-msg-field");
+  var msgField=document.getElementById("sal-msg-field-"+semaine)||document.getElementById("sal-msg-field");
   var msg=msgField?msgField.value.trim():"";
   if(msg){D.ptSalMessages[key]={text:msg,ts:Date.now(),salId:salId};}
   // Notifier Valérie quand la semaine est verrouillée (les deux ont validé)
