@@ -35,9 +35,9 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
 .pg[data-readonly] input,.pg[data-readonly] select,.pg[data-readonly] textarea{pointer-events:none!important;opacity:.6!important;cursor:default!important;background:#f3f4f6!important}
 .pg[data-readonly] button:not([onclick*="TAB("]):not(.btn-print){pointer-events:none!important;opacity:.5!important;cursor:default!important}
 /* Exception : bloc de validation semaine salarié — toujours interactif même en lecture seule */
-#pt-validate-week-wrap *{pointer-events:auto!important;opacity:1!important}
-#pt-validate-week-wrap button{cursor:pointer!important}
-#pt-validate-week-wrap textarea{background:#fff!important;cursor:text!important}
+#pt-validate-week-wrap *,.sal-wk-validate *{pointer-events:auto!important;opacity:1!important}
+#pt-validate-week-wrap button,.sal-wk-validate button{cursor:pointer!important}
+#pt-validate-week-wrap textarea,.sal-wk-validate textarea{background:#fff!important;cursor:text!important}
 .sind{font-size:11px;color:var(--green);padding:0 6px;opacity:0;transition:opacity .4s;flex-shrink:0}
 .pg{display:none;padding:16px}.pg.on{display:block}
 .stitle{font-family:"Syne",sans-serif;font-weight:700;font-size:18px;margin-bottom:16px}
@@ -7204,8 +7204,7 @@ function RPOINTAGE(){
       var today0=new Date();
       var curWk=getISOWeek(today0);
       var curYr=today0.getFullYear();
-      html+="<div style='padding:12px 14px;display:flex;flex-direction:column;gap:8px'>";
-      html+="<div style='font-size:12px;font-weight:700;color:#374151;margin-bottom:2px'>✅ Validation de mes semaines</div>";
+      html+="<div class='sal-wk-validate' style='padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px'>";
       weeks.forEach(function(wk){
         var isFuture=(annee>curYr)||(annee===curYr&&wk>curWk);
         var vKey=sal.id+"|"+wk+"|"+annee;
@@ -7213,20 +7212,18 @@ function RPOINTAGE(){
         var salOk=!!((D.ptWeekValidations||{})[vKey]);
         var locked=alexisOk&&salOk;
         if(locked){
-          html+="<div style='background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:#166534'><span>S"+wk+"</span><span>🔒 Verrouillée ✅</span></div>";
+          html+="<div style='flex:1;min-width:120px;background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#166534'><div>S"+wk+"</div><div>🔒 Verrouillée</div></div>";
         } else if(isFuture){
-          html+="<div style='background:#f1f5f9;border:1px solid var(--brd2);border-radius:10px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted)'><span>S"+wk+"</span><span>Semaine future</span></div>";
+          html+="<div style='flex:1;min-width:120px;background:#f1f5f9;border:1px solid var(--brd2);border-radius:10px;padding:10px 12px;text-align:center;font-size:12px;color:var(--muted)'><div>S"+wk+"</div><div>Semaine future</div></div>";
         } else if(!alexisOk){
-          html+="<div style='background:#fef9c3;border:1px solid #fcd34d;border-radius:10px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#92400e'><span>S"+wk+"</span><span>⏳ En attente d'Alexis</span></div>";
+          html+="<div style='flex:1;min-width:120px;background:#fef9c3;border:1px solid #fcd34d;border-radius:10px;padding:10px 12px;text-align:center;font-size:12px;color:#92400e'><div style='font-weight:700'>S"+wk+"</div><div>⏳ En attente<br>d'Alexis</div></div>";
         } else if(salOk){
-          html+="<div style='background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:#1e40af'><span>S"+wk+"</span><span>✅ Validée par vous</span></div>";
+          html+="<div style='flex:1;min-width:120px;background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#1e40af'><div>S"+wk+"</div><div>✅ Validée</div></div>";
         } else {
-          html+="<div style='background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:12px 16px'>";
-          html+="<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px'>";
-          html+="<span style='font-size:13px;font-weight:700;color:#0f766e'>S"+wk+"</span>";
-          html+="<span style='font-size:12px;color:#0f766e'>✅ Alexis a validé</span></div>";
-          html+="<textarea id='sal-msg-field-"+wk+"' placeholder='Observation (optionnel)...' style='width:100%;height:48px;border:1px solid #99f6e4;border-radius:6px;padding:6px 8px;font-size:12px;resize:none;box-sizing:border-box'></textarea>";
-          html+="<button onclick='validateMyWeek("+JSON.stringify(sal.id)+","+wk+","+annee+")' style='width:100%;height:36px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px'>✅ Valider la semaine "+wk+"</button>";
+          html+="<div style='flex:1;min-width:140px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:10px 12px'>";
+          html+="<div style='font-size:12px;font-weight:700;color:#0f766e;margin-bottom:4px'>S"+wk+" — Alexis ✅</div>";
+          html+="<textarea id='sal-msg-field-"+wk+"' placeholder='Observation...' style='width:100%;height:40px;border:1px solid #99f6e4;border-radius:6px;padding:4px 6px;font-size:11px;resize:none;box-sizing:border-box'></textarea>";
+          html+="<button onclick='validateMyWeek("+JSON.stringify(sal.id)+","+wk+","+annee+")' style='width:100%;height:32px;background:#0d9488;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;margin-top:4px'>✅ Valider S"+wk+"</button>";
           html+="</div>";
         }
       });
