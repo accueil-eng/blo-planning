@@ -2851,6 +2851,30 @@ function printPointage(forcedFilterId){
       "<span><span class='leg-box' style='background:#fef9c3;border-color:#fde047'></span>Non validé Bureau</span>"+
       "</div>";
 
+    // ── Observations ──
+    var obsKey=sal.id+"|"+mois+"|"+annee;
+    var salObsArr=Array.isArray(D.ptSalObs&&D.ptSalObs[obsKey])?(D.ptSalObs[obsKey]):(D.ptSalObs&&D.ptSalObs[obsKey]?[{text:D.ptSalObs[obsKey],ts:0}]:[]);
+    var bureauObs=(D.ptObservations&&D.ptObservations[obsKey])||"";
+    if(salObsArr.length||bureauObs){
+      empHtml+="<div style='margin-top:4px;display:flex;gap:6px;flex-wrap:wrap'>";
+      if(salObsArr.length){
+        empHtml+="<div style='flex:1;min-width:180px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;padding:5px 8px;font-size:9px'>";
+        empHtml+="<div style='font-weight:700;color:#0f766e;margin-bottom:3px'>🗒️ Observations salarié</div>";
+        salObsArr.forEach(function(o){
+          var d=o.ts?new Date(o.ts).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" ":"";
+          empHtml+="<div style='margin-bottom:2px;color:#374151'>"+(d?"<span style='color:#6b7280;font-size:8px'>"+d+"</span> ":"")+o.text.replace(/</g,"&lt;")+"</div>";
+        });
+        empHtml+="</div>";
+      }
+      if(bureauObs){
+        empHtml+="<div style='flex:1;min-width:180px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:5px 8px;font-size:9px'>";
+        empHtml+="<div style='font-weight:700;color:#92400e;margin-bottom:3px'>📝 Observation bureau</div>";
+        empHtml+="<div style='color:#374151'>"+bureauObs.replace(/</g,"&lt;")+"</div>";
+        empHtml+="</div>";
+      }
+      empHtml+="</div>";
+    }
+
     empHtml+="</div>"; // fin .emp
     pageHtml+=empHtml;
     }catch(e){console.error("printPointage err",sal&&sal.prenom,e);}
