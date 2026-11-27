@@ -7435,8 +7435,13 @@ function unlockWeek(salId,semaine,annee){
 }
 
 function renderValidateWeekButton(mois,annee,salId){
-  var wrap=document.getElementById("pt-validate-week-wrap");
+  // Pour le salarié : utiliser le panneau du HAUT (pt-validations-wrap) pour visibilité immédiate
+  var wrap=document.getElementById("pt-validations-wrap")||document.getElementById("pt-validate-week-wrap");
   if(!wrap||!salId)return;
+  wrap.style.display="";  // s'assurer que c'est visible
+  // Vider aussi pt-validate-week-wrap si différent
+  var btm=document.getElementById("pt-validate-week-wrap");
+  if(btm&&btm!==wrap)btm.innerHTML="";
   if(!D.ptWeekValidations)D.ptWeekValidations={};
   if(!D.alexisValidations)D.alexisValidations={};
   if(!D.ptSalMessages)D.ptSalMessages={};
