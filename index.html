@@ -35,9 +35,10 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
 .pg[data-readonly] input,.pg[data-readonly] select,.pg[data-readonly] textarea{pointer-events:none!important;opacity:.6!important;cursor:default!important;background:#f3f4f6!important}
 .pg[data-readonly] button:not([onclick*="TAB("]):not(.btn-print){pointer-events:none!important;opacity:.5!important;cursor:default!important}
 /* Exception : bloc de validation semaine salarié — toujours interactif même en lecture seule */
-#pt-validate-week-wrap *,.pg[data-readonly] .sal-wk-validate *{pointer-events:auto!important;opacity:1!important}
-#pt-validate-week-wrap button,.pg[data-readonly] .sal-wk-validate button{cursor:pointer!important}
-#pt-validate-week-wrap textarea,.pg[data-readonly] .sal-wk-validate textarea{background:#fff!important;cursor:text!important}
+/* ID dans le sélecteur = spécificité (1,x,x) > (0,4,1) de la règle data-readonly avec :not() */
+#pt-validate-week-wrap *,#pg-pointage .sal-wk-validate *{pointer-events:auto!important;opacity:1!important}
+#pt-validate-week-wrap button,#pg-pointage .sal-wk-validate button{cursor:pointer!important}
+#pt-validate-week-wrap textarea,#pg-pointage .sal-wk-validate textarea{background:#fff!important;cursor:text!important}
 .sind{font-size:11px;color:var(--green);padding:0 6px;opacity:0;transition:opacity .4s;flex-shrink:0}
 .pg{display:none;padding:16px}.pg.on{display:block}
 .stitle{font-family:"Syne",sans-serif;font-weight:700;font-size:18px;margin-bottom:16px}
