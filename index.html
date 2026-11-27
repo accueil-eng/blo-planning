@@ -3393,8 +3393,13 @@ function RMessages(){
     myMsgs.forEach(function(m){
       var d=new Date(m.sentAt);
       var dateStr=d.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
+      var mto2=Array.isArray(m.to)?m.to:(m.to?[m.to]:[]);
+      var toL2=mto2.indexOf("all")>=0?"👥 Tous les salariés":mto2.map(function(id){var s=sals.find(function(x){return x.id===id;});return s?_esc((s.prenom||"")+" "+(s.nom||"").trim()):id;}).join(", ");
       html+="<div style='background:#fff;border:1px solid var(--brd2);border-left:4px solid #7c3aed;border-radius:10px;padding:16px 20px;margin-bottom:12px'>";
-      html+="<div style='font-size:11px;font-weight:600;color:#7c3aed;margin-bottom:6px'>"+_esc(m.fromLabel)+" · "+dateStr+"</div>";
+      html+="<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;flex-wrap:wrap'>";
+      html+="<div><div style='font-size:11px;font-weight:700;color:#7c3aed'>De : "+_esc(m.fromLabel||"Bureau")+"</div><div style='font-size:10px;color:#94a3b8;margin-top:1px'>À : "+toL2+"</div></div>";
+      html+="<div style='font-size:10px;color:#94a3b8;white-space:nowrap'>"+dateStr+"</div>";
+      html+="</div>";
       html+="<div style='font-size:14px;line-height:1.5;white-space:pre-wrap'>"+_esc(m.text)+"</div>";
       html+="</div>";
     });
@@ -3432,11 +3437,11 @@ function RMessages(){
         var readCount=(Array.isArray(m.readBy)?m.readBy:[]).length;
         var totalDest=mto.indexOf("all")>=0?sals.length:mto.length;
         html+="<div style='background:#fff;border:1px solid var(--brd2);border-radius:10px;padding:14px 16px;margin-bottom:8px'>";
-        html+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
-        html+="<span style='font-size:12px;color:#475569;font-weight:600'>"+toLabel+"</span>";
-        html+="<span style='font-size:11px;color:"+(readCount>=totalDest&&totalDest>0?"#16a34a":"#d97706")+"'>✓ "+readCount+"/"+totalDest+" lu</span>";
+        html+="<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;flex-wrap:wrap'>";
+        html+="<div><div style='font-size:11px;color:var(--muted);margin-bottom:2px'>De : <strong>"+_esc(m.fromLabel||"Bureau")+"</strong> · "+dateStr+"</div>";
+        html+="<div style='font-size:12px;font-weight:600;color:#475569'>À : "+toLabel+"</div></div>";
+        html+="<span style='font-size:11px;color:"+(readCount>=totalDest&&totalDest>0?"#16a34a":"#d97706")+";white-space:nowrap'>✓ "+readCount+"/"+totalDest+" lu</span>";
         html+="</div>";
-        html+="<div style='font-size:11px;color:var(--muted);margin-bottom:8px'>"+dateStr+"</div>";
         html+="<div style='font-size:13px;line-height:1.5;white-space:pre-wrap'>"+_esc(m.text)+"</div>";
         html+="<button onclick='delMessage(\""+m.id+"\")' style='margin-top:10px;background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;padding:0;font-family:inherit'>🗑 Supprimer</button>";
         html+="</div>";
