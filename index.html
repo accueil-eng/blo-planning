@@ -2511,23 +2511,28 @@ function showQRCode(salId){
 }
 
 function printQRCode(nom,qrImgUrl){
-  var w=window.open("","_blank");
-  if(!w){showToast("⚠️ Autorisez les popups pour imprimer.");return;}
-  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>QR Code - "+nom+"</title>"+
-    "<style>"+
-    "body{font-family:sans-serif;text-align:center;padding:40px;background:#fff}"+
-    "h2{margin-bottom:4px;font-size:18px}"+
-    "p{color:#666;font-size:13px;margin-bottom:20px}"+
-    "img{border:1px solid #ddd;border-radius:8px;display:block;margin:0 auto 20px}"+
-    ".btn-print{display:inline-block;padding:10px 28px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}"+
-    "@media print{.btn-print{display:none}}"+
-    "</style></head><body>"+
-    "<h2>"+nom+"</h2>"+
-    "<p>Scannez ce QR code pour accéder à votre espace<br>(Planning · Pointage · Demandes d'absence)</p>"+
-    "<img src='"+qrImgUrl+"' width='280' height='280'>"+
-    "<button class='btn-print' onclick='window.print()'>🖨️ Imprimer / Télécharger</button>"+
-    "</body></html>");
-  w.document.close();
+  var area=document.getElementById("_qr-print-zone");
+  if(!area){
+    area=document.createElement("div");area.id="_qr-print-zone";
+    area.style.cssText="display:none;position:fixed;inset:0;background:#fff;z-index:99999;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px";
+    document.body.appendChild(area);
+  }
+  area.innerHTML=
+    "<div style='font-family:Syne,sans-serif;font-weight:800;font-size:20px;margin-bottom:6px'>"+nom+"</div>"+
+    "<div style='font-size:13px;color:#6b7c79;margin-bottom:20px'>Scannez ce QR code pour accéder à votre espace<br>(Planning · Pointage · Demandes d'absence)</div>"+
+    "<img src='"+qrImgUrl+"' width='260' height='260' style='border:1px solid #ddd;border-radius:8px;margin-bottom:24px'>"+
+    "<div style='display:flex;gap:12px;justify-content:center'>"+
+    "<button onclick='window.print()' style='padding:10px 28px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer'>🖨️ Imprimer / Télécharger</button>"+
+    "<button onclick=\"document.getElementById('_qr-print-zone').style.display='none'\" style='padding:10px 20px;background:#f1f5f9;border:1px solid #ddd;border-radius:8px;font-size:14px;cursor:pointer'>Fermer</button>"+
+    "</div>";
+  area.style.display="flex";
+  // CSS print : masquer tout sauf cette zone
+  var st=document.getElementById("_qr-print-css");
+  if(!st){
+    st=document.createElement("style");st.id="_qr-print-css";
+    st.textContent="@media print{body>*:not(#_qr-print-zone){display:none!important}#_qr-print-zone{display:flex!important;position:fixed!important;inset:0!important}#_qr-print-zone button{display:none!important}}";
+    document.head.appendChild(st);
+  }
 }
 
 function printNoticeSal(salId){
