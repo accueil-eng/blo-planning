@@ -2494,18 +2494,20 @@ function showQRCode(salId){
   modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center";
   var box=document.createElement("div");
   box.style.cssText="background:#fff;border-radius:16px;padding:28px;max-width:340px;width:92%;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.25)";
+  var nom=sal.prenom+(sal.nom?" "+sal.nom:"");
   var qrImgUrl="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data="+encodeURIComponent(link);
-  box.innerHTML=
-    "<div id='qr-print-area'>"+
-    "<div style='font-family:Syne,sans-serif;font-weight:800;font-size:16px;margin-bottom:4px'>📱 "+sal.prenom+(sal.nom?" "+sal.nom:"")+"</div>"+
-    "<div style='font-size:11px;color:#6b7c79;margin-bottom:16px'>Scanner pour accéder à Mon Espace (Planning · Pointage · Absences)</div>"+
-    "<img src='"+qrImgUrl+"' style='border:1px solid #e2e8f0;border-radius:8px;margin-bottom:14px' alt='QR Code'>"+
-    "</div>"+
-    "<div style='font-size:10px;color:#9ca3af;word-break:break-all;margin-bottom:14px;background:#f8f7f4;padding:8px;border-radius:6px'>"+link+"</div>"+
-    "<div style='display:flex;gap:8px'>"+
-    "<button onclick=\"printQRCode("+JSON.stringify(sal.prenom+(sal.nom?" "+sal.nom:""))+","+JSON.stringify(qrImgUrl)+")\" style='flex:1;height:36px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer'>🖨️ Imprimer</button>"+
-    "<button onclick=\"document.getElementById('qr-modal').remove()\" style='height:36px;padding:0 20px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer'>Fermer</button>"+
-    "</div>";
+  // Contenu du modal via DOM (évite les problèmes de guillemets dans onclick)
+  var title=document.createElement("div");title.style.cssText="font-family:Syne,sans-serif;font-weight:800;font-size:16px;margin-bottom:4px";title.textContent="📱 "+nom;
+  var sub=document.createElement("div");sub.style.cssText="font-size:11px;color:#6b7c79;margin-bottom:16px";sub.textContent="Scanner pour accéder à Mon Espace (Planning · Pointage · Absences)";
+  var img=document.createElement("img");img.src=qrImgUrl;img.alt="QR Code";img.style.cssText="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:14px;display:block;margin-left:auto;margin-right:auto";
+  var linkBox=document.createElement("div");linkBox.style.cssText="font-size:10px;color:#9ca3af;word-break:break-all;margin-bottom:14px;background:#f8f7f4;padding:8px;border-radius:6px";linkBox.textContent=link;
+  var btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:8px";
+  var printBtn=document.createElement("button");printBtn.style.cssText="flex:1;height:36px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";printBtn.textContent="🖨️ Imprimer";
+  printBtn.onclick=function(){printQRCode(nom,qrImgUrl);};
+  var closeBtn=document.createElement("button");closeBtn.style.cssText="height:36px;padding:0 20px;background:#13201e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer";closeBtn.textContent="Fermer";
+  closeBtn.onclick=function(){modal.remove();};
+  btnRow.appendChild(printBtn);btnRow.appendChild(closeBtn);
+  box.appendChild(title);box.appendChild(sub);box.appendChild(img);box.appendChild(linkBox);box.appendChild(btnRow);
   modal.appendChild(box);document.body.appendChild(modal);
   modal.onclick=function(e){if(e.target===modal)modal.remove();};
 }
