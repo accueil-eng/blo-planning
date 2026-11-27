@@ -322,6 +322,22 @@ body.profile-salarie .crm{pointer-events:none!important;display:none!important}
     <button class="btn" style="background:#f3e8ff;border-color:#c4b5fd;color:#6d28d9" onclick="showGroupAbsModal()">👥 Ajout groupé (plusieurs salariés)</button>
   </div>
   <div style="font-size:10px;color:#9ca3af;margin:-4px 0 10px">Laissez les heures vides pour une absence journée complète.</div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:var(--bg2);border-radius:10px;border:1px solid var(--brd2)">
+    <span style="font-size:11px;font-weight:600;color:var(--muted)">🔍 Filtrer :</span>
+    <select id="abs-filter-sal" onchange="RA()" style="font-size:12px;border:1px solid var(--brd2);border-radius:6px;padding:4px 8px;background:var(--bg);color:var(--txt);min-width:130px"><option value="">Tous les salariés</option></select>
+    <select id="abs-filter-type" onchange="RA()" style="font-size:12px;border:1px solid var(--brd2);border-radius:6px;padding:4px 8px;background:var(--bg);color:var(--txt);min-width:120px">
+      <option value="">Tous les types</option>
+      <option value="cp">Congés payés</option>
+      <option value="ecole">École</option>
+      <option value="formation">Formation</option>
+      <option value="intemperies">Intempéries</option>
+      <option value="css">Congés sans solde</option>
+      <option value="maladie">Arrêt maladie</option>
+      <option value="rtt">RTT</option>
+      <option value="autre">Autre</option>
+    </select>
+    <button onclick="document.getElementById('abs-filter-sal').value='';document.getElementById('abs-filter-type').value='';RA();" style="font-size:11px;background:none;border:1px solid var(--brd2);border-radius:6px;padding:4px 8px;color:var(--muted);cursor:pointer">✕ Réinitialiser</button>
+  </div>
   <div class="ilist" id="abslist"></div>
 </div>
 
@@ -3141,10 +3157,28 @@ function editAbsModal(id){
 
 function RA(){
   rafSel();var el=document.getElementById("abslist");
-  if(!D.absences.length){el.innerHTML="<div class='empty'><div class='empty-icon'>📅</div><p>Aucune absence.</p></div>";return;}
+  // ── Alimenter le filtre salarié ──
+  var fSalEl=document.getElementById("abs-filter-sal");
+  if(fSalEl){
+    var fSalCur=fSalEl.value;
+    fSalEl.innerHTML="<option value=''>Tous les salariés</option>";
+    D.salaries.forEach(function(s){var o=document.createElement("option");o.value=s.id;o.textContent=s.prenom+(s.nom?" "+s.nom:"");fSalEl.appendChild(o);});
+    fSalEl.value=fSalCur;
+  }
+  var filterSal=fSalEl?fSalEl.value:"";
+  var filterType=document.getElementById("abs-filter-type")?document.getElementById("abs-filter-type").value:"";
+
+  var source=D.absences.filter(function(a){
+    if(filterSal&&a.salId!==filterSal)return false;
+    if(filterType&&a.type!==filterType)return false;
+    return true;
+  });
+
+  if(!source.length&&!D.absences.length){el.innerHTML="<div class='empty'><div class='empty-icon'>📅</div><p>Aucune absence.</p></div>";return;}
+  if(!source.length){el.innerHTML="<div class='empty'><div class='empty-icon'>🔍</div><p>Aucune absence pour ce filtre.</p></div>";return;}
   el.innerHTML="";
   var today=ds(new Date());
-  var sorted=D.absences.slice().sort(function(a,b){return b.debut.localeCompare(b.debut)||b.debut.localeCompare(a.debut);});
+  var sorted=source.slice().sort(function(a,b){return b.debut.localeCompare(b.debut)||b.debut.localeCompare(a.debut);});
   var actives=sorted.filter(function(a){return a.fin>=today;}).sort(function(a,b){return a.debut.localeCompare(b.debut);});
   var archivees=sorted.filter(function(a){return a.fin<today;}).sort(function(a,b){return b.fin.localeCompare(a.fin);});
 
